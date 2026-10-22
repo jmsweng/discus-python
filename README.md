@@ -37,7 +37,7 @@ prepared = runner.prepare(cfg)  # no execution; inspect generated run.mac
 print((prepared.directory / "run.mac").read_text())
 
 # After confirming the macro runs in your DISCUS installation:
-result = runner.run(cfg)
+result = runner.execute(prepared)  # runs the exact inspected macro
 r, gr = result.load()
 result.plot()
 ```
@@ -50,7 +50,7 @@ The example notebook sets the working directory to the project root if launched 
 
 ## Safety/reproducibility
 
-Each run directory records the copied `.cll` input, a SHA-256 hash, the generated `run.mac`, parameters (`config.json`), log (`run.log`) and status. Do not delete these when comparing calculations. The wrapper verifies a numeric PDF exists, but always inspect DISCUS logs and benchmark one result manually.
+Each run directory records the copied `.cll` input, a SHA-256 hash, the generated `run.mac`, parameters (`config.json`), log (`run.log`) and status. Do not delete these when comparing calculations. The wrapper also verifies the expected r-grid and checks basic engine errors; always inspect DISCUS logs and benchmark one result manually.
 
 ## 3D-ΔPDF analysis
 
@@ -60,7 +60,7 @@ For quantitative work, add mask/window handling, correct reciprocal-space intens
 
 ## Next stages
 
-1. Validate the macro and 1D PDF output against your local DISCUS version.
+1. Run the unit tests and validate the 1D PDF output against your local DISCUS version.
 2. Add your frequently changed structure/disorder command blocks and partial PDFs.
 3. Write a 3D reciprocal-volume output adapter for an existing validated DISCUS macro.
 4. Standardize Q-grid metadata and mask/Bragg subtraction for 3D-ΔPDF analysis.
@@ -69,3 +69,8 @@ For quantitative work, add mask/window handling, correct reciprocal-space intens
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.
+## Explicit powder settings
+
+`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`.
+
+Run `python -m pytest -q` for unit tests; see the separately documented manual DISCUS integration check. The local installer previously added `/etc/sudoers.d/90-discus` for passwordless sudo; review and remove it with administrator approval if no longer required.
