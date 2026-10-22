@@ -20,14 +20,16 @@ real DISCUS 3D simulation).
 ## 2. Repository
 
 - **GitHub:** `https://github.com/jmsweng/discus-python` (private), branch `main`
-- **Local (Windows):** `C:\Users\jmswe\Documents\Programming projects\discuspdf_starter`
+- **Local (Windows):** `C:\Users\jmswe\Documents\Programming projects\discus-python`
 - **Local (WSL, where DISCUS + venv live):** `~/projects/discuspdf_starter`
+  (the WSL working copy is still named `discuspdf_starter`; only the Windows folder was
+  renamed to match the repo. Rename the WSL copy too if you want the names to agree.)
 - Keep DISCUS and the Python venv in the **same OS context** (WSL Ubuntu). Do not mix native
   Windows Python with the Linux `discus_suite`.
 
 ### Layout
 ```
-discuspdf_starter/
+discus-python/
 ├─ pyproject.toml            # package: discuspdf-starter 0.1.0; needs Python >=3.10
 ├─ src/discuspdf/
 │  ├─ __init__.py            # public API
