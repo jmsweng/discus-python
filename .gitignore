@@ -23,3 +23,11 @@ Thumbs.db
 # Local secrets / tokens
 *.token
 .env
+
+# Local orchestrator handoff (not for the repo)
+HANDOFF.md
+
+# Local setup/process docs (not for the repo)
+SETUP_WINDOWS10_OPENCODE.md
+SETUP_REPORT.md
+plan.md
