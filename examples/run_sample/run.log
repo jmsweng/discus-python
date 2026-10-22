@@ -1,0 +1,83 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : \home\user\projects\discuspdf_starter\runs\20261022T184012Z_46badf04\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mrun.mac
+ suite>  
+ suite> discus
+ discus> read
+ discus/read> cell model.cll,5,5,5
+ F -4 3 m          216
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    5.65370    5.65370    5.65370   90.00000   90.00000   90.00000    180.717    
+
+ Metric Tensor     :
+      31.96432      0.00000      0.00000
+       0.00000     31.96432      0.00000
+       0.00000      0.00000     31.96432
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.17688    0.17688    0.17688   90.00000   90.00000   90.00000   0.553352E-02
+
+ Reciprocal metric tensor     : 
+       0.03128     -0.00000     -0.00000
+      -0.00000      0.03128     -0.00000
+      -0.00000     -0.00000      0.03128
+
+ discus> powder
+ discus/powd> reset
+ discus/powd> xray
+ discus/powd> set axis,q
+ discus/powd> set calc,debye
+ discus/powd> set qmin,0.5
+ discus/powd> set qmax,30
+ discus/powd> set dq,0.01
+ discus/powd> set delta,0
+ discus/powd> set wvle,1.5406
+ discus/powd> run
+ Computing powder sine lookup table ...
+ Computing sin(theta)/lambda table ...
+  Starting histogram
+
+ Elapsed time H  :  0.334501E-02 sec
+ Elapsed time      Powder :  0.570900E-02 sec
+ Elapsed time Convolution :  0.300930E-05 sec
+ discus/powd> exit
+ discus> output
+ discus/output> outf result.pdf
+ discus/output> form pdf, r, 0.0, 12, 0.02
+ discus/output> value PDF
+ discus/output> run
+ discus/output> exit
+ discus> exit
+  
+ suite >exit
+
+--- STDERR ---
+xdpyinfo:  unable to open display "".
+pgxwin_server: cannot connect to X server []

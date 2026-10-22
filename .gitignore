@@ -1,0 +1,25 @@
+# Python virtual environment (never commit)
+.venv/
+venv/
+env/
+
+# Python caches / artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+build/
+dist/
+
+# Simulation output (regenerable; a single sample is kept under examples/run_sample/)
+runs/
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local secrets / tokens
+*.token
+.env

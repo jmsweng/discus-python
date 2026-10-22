@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "discuspdf-starter"
+version = "0.1.0"
+description = "Minimal Jupyter-friendly DISCUS PDF automation prototype"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "matplotlib>=3.7"]
+
+[project.optional-dependencies]
+notebook = ["jupyterlab>=4", "ipykernel>=6", "h5py>=3.9"]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

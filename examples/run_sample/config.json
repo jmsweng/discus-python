@@ -1,0 +1,21 @@
+{
+  "structure": "/home/user/projects/discuspdf_starter/examples/gaas.cll",
+  "supercell": [
+    5,
+    5,
+    5
+  ],
+  "rmax": 12.0,
+  "dr": 0.02,
+  "qmax": 30.0,
+  "qsig": 0.0,
+  "radiation": "xray",
+  "input_sha256": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691",
+  "generated_utc": "2026-10-22T18:40:12.276950+00:00",
+  "launcher": [
+    "discus_suite",
+    "-noautorun",
+    "-macro",
+    "run.mac"
+  ]
+}
