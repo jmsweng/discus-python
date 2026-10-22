@@ -10,7 +10,7 @@ This directory contains a **real** DISCUS_SUITE 1D powder-PDF run produced by
 | `config.json` | Recorded parameters + SHA-256 of the input + launcher used |
 | `run.log` | DISCUS stdout/stderr for the run |
 | `status.json` | Runner status (`complete`, return code, output presence) |
-| `result.csv` | The numeric 1D PDF output (two columns: `r` in Å, `G(r)`) |
+| `result.pdf` | The numeric 1D PDF output (two columns: `r` in Å, `G(r)`) — **not** an Adobe PDF |
 
 Regenerate an equivalent run with:
 
