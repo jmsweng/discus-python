@@ -246,9 +246,14 @@ class PDFRunner:
         )
         if not success:
             raise RuntimeError(f"DISCUS run failed or did not save a PDF. Inspect {run.directory / 'run.log'}")
-        # Prepend column headings to the CSV (DISCUS writes raw data without headers).
-        data = run.output.read_text(encoding="utf-8", errors="replace")
-        run.output.write_text("r (Angstrom)\tG(r)\n" + data, encoding="utf-8")
+        # Convert DISCUS space-delimited output to comma-delimited CSV with headers.
+        lines = run.output.read_text(encoding="utf-8", errors="replace").splitlines()
+        csv_lines = ["r (Angstrom),G(r)"]
+        for line in lines:
+            stripped = line.strip()
+            if stripped:
+                csv_lines.append(",".join(stripped.split()))
+        run.output.write_text("\n".join(csv_lines) + "\n", encoding="utf-8")
         # Ensure that DISCUS produced an actual, well-formed numeric PDF.
         try:
             run.load()
