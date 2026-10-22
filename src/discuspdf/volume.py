@@ -1,6 +1,7 @@
 """3D-Delta PDF analysis helpers. Not a replacement for diffuse-scattering calculation."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 import numpy as np
@@ -19,13 +20,28 @@ def read_hdf5_volume(
     import h5py
     if len(q_datasets) != 3:
         raise ValueError("Specify three HDF5 coordinate dataset paths")
+    if not Path(path).is_file():
+        raise ValueError(f"HDF5 file not found: {path}")
+    if not h5py.is_hdf5(path):
+        raise ValueError(f"File is not a valid HDF5 file: {path}")
     with h5py.File(path, "r") as file:
+        for key in (intensity_dataset, *q_datasets):
+            if key not in file:
+                raise ValueError(f"Dataset not found in {path}: {key}")
         intensity = np.asarray(file[intensity_dataset], dtype=float)
         q_axes = tuple(np.asarray(file[key], dtype=float) for key in q_datasets)
+    if intensity.ndim != 3:
+        raise ValueError(f"Intensity dataset {intensity_dataset!r} is {intensity.ndim}D, expected 3D")
+    if not np.all(np.isfinite(intensity)):
+        raise ValueError(f"Intensity dataset {intensity_dataset!r} contains NaN/Inf values")
+    for i, axis in enumerate(q_axes):
+        if axis.ndim != 1:
+            raise ValueError(f"Q dataset {q_datasets[i]!r} is {axis.ndim}D, expected 1D")
+        if len(axis) != intensity.shape[i]:
+            raise ValueError(f"Q axis {i} length {len(axis)} does not match intensity shape {intensity.shape[i]}")
+        if not np.all(np.isfinite(axis)):
+            raise ValueError(f"Q dataset {q_datasets[i]!r} contains NaN/Inf values")
     return intensity, q_axes
-
-
-from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -37,6 +53,28 @@ class FFTDiagnostics:
     dq: tuple[float, float, float]
     reciprocal_voxel_volume: float
     normalization: str
+
+
+class FFTValidationError(ValueError):
+    """Imaginary/real norm ratio exceeded ``imaginary_tolerance``.
+
+    Carries the fully computed :class:`FFTResult` so the caller can inspect
+    the complex volume, real-space axes, and diagnostics even when the
+    transform is rejected::
+
+        try:
+            result = delta_pdf_from_diffuse(intensity, q_axes)
+        except FFTValidationError as exc:
+            print(exc.result.diagnostics)
+            complex_volume = exc.result.complex_volume
+
+    Malformed raw inputs (non-finite data, non-centered or non-uniform axes,
+    wrong dimensions) still raise a plain ``ValueError``.
+    """
+
+    def __init__(self, message: str, result: "FFTResult") -> None:
+        super().__init__(message)
+        self.result = result
 
 
 @dataclass(frozen=True)
@@ -124,14 +162,15 @@ def delta_pdf_from_diffuse(
         reciprocal_voxel_volume=voxel,
         normalization="dQx*dQy*dQz/(2*pi)^3; exp(-i Q.r)",
     )
+    result = FFTResult(complex_volume, tuple(r_axes), diagnostics)
     if ratio > imaginary_tolerance:
         import warnings
         message = (f"FFT imaginary/real norm ratio {ratio:.3g} exceeds "
                    f"tolerance {imaginary_tolerance:.3g}; Friedel error {friedel:.3g}")
         if raise_on_imaginary:
-            raise ValueError(message)
+            raise FFTValidationError(message, result)
         warnings.warn(message, RuntimeWarning, stacklevel=2)
-    return FFTResult(complex_volume, tuple(r_axes), diagnostics)
+    return result
 
 
 def plot_delta_pdf_slice(volume: np.ndarray, r_axes: Sequence[np.ndarray], axis: int = 2, index: int | None = None):

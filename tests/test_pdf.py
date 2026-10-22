@@ -83,3 +83,58 @@ def test_reject_staged_input_tampering(tmp_path):
     (prepared.directory / "model.cll").write_text("modified")
     with pytest.raises(ValueError, match="hash"):
         runner.execute(prepared)
+    # E3: the failed preflight is recorded; the directory does not stay "prepared".
+    st = json.loads((prepared.directory / "status.json").read_text())
+    assert st["status"] == "failed"
+    assert st["engine_started"] is False
+    assert "returncode" not in st
+    assert not (prepared.directory / "run.log").exists()
+
+
+def test_reject_tampered_macro(tmp_path):
+    runner, cfg = fake_runner(tmp_path, "0.0 1\n0.1 2\n0.2 3\n")
+    prepared = runner.prepare(cfg)
+    (prepared.directory / "run.mac").write_text("tampered macro")
+    with pytest.raises(ValueError, match="macro"):
+        runner.execute(prepared)
+    st = json.loads((prepared.directory / "status.json").read_text())
+    assert st["status"] == "failed"
+    assert st["engine_started"] is False
+
+
+def test_rerun_rejected_with_failed_status(tmp_path):
+    runner, cfg = fake_runner(tmp_path, "0.0 1\n0.1 2\n0.2 3\n")
+    prepared = runner.prepare(cfg)
+    runner.execute(prepared)
+    assert json.loads((prepared.directory / "status.json").read_text())["status"] == "complete"
+    with pytest.raises(FileExistsError):
+        runner.execute(prepared)
+    st = json.loads((prepared.directory / "status.json").read_text())
+    assert st["status"] == "failed"
+    assert st["engine_started"] is False
+
+
+def test_missing_binary_records_failed_without_engine(tmp_path):
+    cell = tmp_path / "cell.cll"
+    cell.write_text("dummy")
+    runner = PDFRunner(runs_directory=tmp_path / "runs",
+                       launcher=["definitely_not_a_binary_xyz"])
+    prepared = runner.prepare(PDFConfig(cell, rmax=.2, dr=.1))
+    with pytest.raises(RuntimeError):
+        runner.execute(prepared)
+    st = json.loads((prepared.directory / "status.json").read_text())
+    assert st["status"] == "failed"
+    assert st["engine_started"] is False
+    assert "returncode" not in st
+
+
+def test_prepare_records_macro_hash(tmp_path):
+    cell = tmp_path / "cell.cll"
+    cell.write_text("dummy")
+    runner = PDFRunner(runs_directory=tmp_path / "runs",
+                       launcher=[sys.executable, str(tmp_path / "unused.py")])
+    prepared = runner.prepare(PDFConfig(cell, rmax=.2, dr=.1))
+    import hashlib
+    params = json.loads((prepared.directory / "config.json").read_text())
+    assert params["macro_sha256"] == hashlib.sha256(
+        (prepared.directory / "run.mac").read_bytes()).hexdigest()

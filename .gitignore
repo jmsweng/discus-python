@@ -14,6 +14,9 @@ dist/
 
 # Simulation output (regenerable; a single sample is kept under examples/run_sample/)
 runs/
+runs_3d/
+# Test-produced temporary simulation outputs
+tests/tmp*/
 
 # OS / editor clutter
 .DS_Store

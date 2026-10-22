@@ -214,6 +214,8 @@ class PDFRunner:
         params = asdict(config)
         params["structure"] = str(source)
         params["input_sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
+        # The exact staged macro is the exact executed macro: record its hash.
+        params["macro_sha256"] = hashlib.sha256((run_dir / "run.mac").read_bytes()).hexdigest()
         params["generated_utc"] = datetime.now(timezone.utc).isoformat()
         params["launcher"] = [*self.launcher, "run.mac"]
         (run_dir / "config.json").write_text(json.dumps(params, indent=2), encoding="utf-8")
@@ -221,27 +223,44 @@ class PDFRunner:
         return PDFRun(run_dir)
 
     def execute(self, prepared: PDFRun) -> PDFRun:
-        """Execute the exact macro that was inspected via prepare()."""
+        """Execute the exact macro that was inspected via prepare().
+
+        Status transitions: ``prepared`` → ``running`` → ``complete`` /
+        ``failed``.  Any preflight failure (invalid config, tampered staged
+        files, missing macro) is recorded as ``failed`` *before* the exception
+        is raised, and notes that no engine process was started, so a run
+        directory never stays ``prepared`` after an attempted execution.
+        """
         params = json.loads((prepared.directory / "config.json").read_text(encoding="utf-8"))
         config_keys = ("structure", "supercell", "rmax", "dr", "qmax", "qsig",
                        "radiation", "qmin", "dq", "wavelength")
-        config = PDFConfig(**{key: params[key] for key in config_keys if key in params})
-        staged = prepared.directory / "model.cll"
-        if not staged.is_file() or hashlib.sha256(staged.read_bytes()).hexdigest() != params["input_sha256"]:
-            raise ValueError("Staged structure is missing or differs from the recorded hash")
-        if not (prepared.directory / "run.mac").is_file():
-            raise FileNotFoundError("Missing prepared macro")
-        if prepared.output.exists():
-            raise FileExistsError(f"Refusing to overwrite existing output: {prepared.output}")
-        command = [*self.launcher, "run.mac"]
-        env = os.environ.copy()
-        env.pop("DISPLAY", None)
-        env["PGPLOT"] = "none"
 
         def status(state: str, **details: object) -> None:
             (prepared.directory / "status.json").write_text(
                 json.dumps({"status": state, **details}, indent=2), encoding="utf-8"
             )
+
+        def preflight_fail(exc: Exception) -> None:
+            status("failed", reason=f"Preflight check failed: {exc}", engine_started=False)
+            raise exc
+
+        config = PDFConfig(**{key: params[key] for key in config_keys if key in params})
+        staged = prepared.directory / "model.cll"
+        if not staged.is_file() or hashlib.sha256(staged.read_bytes()).hexdigest() != params["input_sha256"]:
+            preflight_fail(ValueError("Staged structure is missing or differs from the recorded hash"))
+        macro = prepared.directory / "run.mac"
+        if not macro.is_file():
+            preflight_fail(FileNotFoundError("Missing prepared macro"))
+        if "macro_sha256" in params and hashlib.sha256(macro.read_bytes()).hexdigest() != params["macro_sha256"]:
+            preflight_fail(ValueError("Staged macro differs from the recorded hash; the inspected macro is not the executed macro"))
+        if prepared.output.exists():
+            preflight_fail(FileExistsError(f"Refusing to overwrite existing output: {prepared.output}; "
+                                          "delete it or use a new run directory to rerun"))
+
+        command = [*self.launcher, "run.mac"]
+        env = os.environ.copy()
+        env.pop("DISPLAY", None)
+        env["PGPLOT"] = "none"
 
         status("running")
         try:
@@ -250,7 +269,7 @@ class PDFRunner:
                 capture_output=True, timeout=self.timeout_seconds, check=False, env=env,
             )
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
-            status("failed", reason=str(exc))
+            status("failed", reason=str(exc), engine_started=False)
             raise RuntimeError(f"DISCUS could not complete; see {prepared.directory}") from exc
 
         log = completed.stdout + "\n--- STDERR ---\n" + completed.stderr
