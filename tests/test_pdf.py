@@ -61,3 +61,6 @@ def test_runner_end_to_end_with_fake_executable(tmp_path):
     x, y = result.load()
     assert len(x) == 2
     assert (result.directory / "status.json").read_text().find('"complete"') >= 0
+    # Column headings are prepended to the CSV
+    content = (result.directory / "result.csv").read_text()
+    assert content.startswith("r (Angstrom)\tG(r)")
