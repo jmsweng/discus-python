@@ -17,7 +17,7 @@ Regenerate an equivalent run with:
 ```python
 from discuspdf import PDFConfig, PDFRunner
 cfg = PDFConfig("examples/gaas.cll", supercell=(5, 5, 5),
-                rmax=12.0, dr=0.02, qmax=25.0, qsig=0.0, radiation="xray")
+                rmax=12.0, dr=0.02, qmax=30.0, qsig=0.0, radiation="xray")
 job = PDFRunner(runs_directory="runs").run(cfg)
 r, gr = job.load()
 ```
