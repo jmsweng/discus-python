@@ -9,3 +9,6 @@ __all__ = [
 from .reciprocal import ReciprocalVolume
 from .diffuse3d import Diffuse3DRunner, Diffuse3DRun
 __all__ += ["ReciprocalVolume", "Diffuse3DRunner", "Diffuse3DRun"]
+
+from .volume import FFTDiagnostics, FFTResult
+__all__ += ["FFTDiagnostics", "FFTResult"]
