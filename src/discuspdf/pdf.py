@@ -69,7 +69,7 @@ def render_pdf_macro(config: PDFConfig) -> str:
       run
       exit
       output
-      outf result.pdf
+      outf result.csv
       form pdf, r, 0.0, <rmax>, <dr>
       value PDF
       run
@@ -113,7 +113,7 @@ def render_pdf_macro(config: PDFConfig) -> str:
         "run",
         "exit",  # back to DISCUS main menu
         "output",
-        "outf result.pdf",
+        "outf result.csv",
         f"form pdf, r, 0.0, {config.rmax:.12g}, {config.dr:.12g}",
         "value PDF",
         "run",
@@ -124,8 +124,8 @@ def render_pdf_macro(config: PDFConfig) -> str:
     return "\n".join(lines)
 
 
-def read_pdf(path: Path | str) -> tuple[np.ndarray, np.ndarray]:
-    """Read a DISCUS ASCII PDF file (r, G(r), possibly other columns)."""
+def read_csv(path: Path | str) -> tuple[np.ndarray, np.ndarray]:
+    """Read a DISCUS CSV PDF file (r, G(r), possibly other columns)."""
     rows: list[tuple[float, float]] = []
     with Path(path).open(encoding="utf-8", errors="replace") as stream:
         for line in stream:
@@ -155,10 +155,10 @@ class PDFRun:
 
     @property
     def output(self) -> Path:
-        return self.directory / "result.pdf"
+        return self.directory / "result.csv"
 
     def load(self) -> tuple[np.ndarray, np.ndarray]:
-        return read_pdf(self.output)
+        return read_csv(self.output)
 
     def plot(self, *, ax=None, label=None):
         import matplotlib.pyplot as plt
