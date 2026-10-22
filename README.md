@@ -69,4 +69,8 @@ For quantitative work, add mask/window handling, correct reciprocal-space intens
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.
-\n## Explicit powder settings\n\n\`PDFConfig\` exposes \`qmin\`, \`qmax\`, \`dq\`, \`qsig\` (DISCUS \`set delta\`), and optional \`wavelength\` (Å), in addition to \`rmax\` and \`dr\`. They are saved with every run. \`qmax=0\` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by \`dr\`.\n\nRun \`python -m pytest -q\` for unit tests; see the separately documented manual DISCUS integration check. The local installer previously added \`/etc/sudoers.d/90-discus\` for passwordless sudo; review and remove it with administrator approval if no longer required.\n
+## Explicit powder settings
+
+`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`.
+
+Run `python -m pytest -q` for unit tests; see the separately documented manual DISCUS integration check. The local installer previously added `/etc/sudoers.d/90-discus` for passwordless sudo; review and remove it with administrator approval if no longer required.
