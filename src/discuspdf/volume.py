@@ -25,21 +25,62 @@ def read_hdf5_volume(
     return intensity, q_axes
 
 
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class FFTDiagnostics:
+    imaginary_ratio: float
+    max_imaginary: float
+    max_real: float
+    friedel_relative_error: float
+    dq: tuple[float, float, float]
+    reciprocal_voxel_volume: float
+    normalization: str
+
+
+@dataclass(frozen=True)
+class FFTResult:
+    complex_volume: np.ndarray
+    r_axes: tuple[np.ndarray, np.ndarray, np.ndarray]
+    diagnostics: FFTDiagnostics
+
+    @property
+    def real_volume(self) -> np.ndarray:
+        return self.complex_volume.real
+
+
 def delta_pdf_from_diffuse(
     diffuse_intensity: np.ndarray,
-    q_axes: Sequence[np.ndarray],
-) -> tuple[np.ndarray, tuple[np.ndarray, np.ndarray, np.ndarray]]:
-    """Illustrative 3D Fourier transform of BRAGG-SUBTRACTED diffuse intensity.
+    q_axes: Sequence[np.ndarray] | None = None,
+    *,
+    imaginary_tolerance: float = 1e-4,
+    raise_on_imaginary: bool = True,
+) -> FFTResult:
+    """Transform a Bragg-subtracted diffuse volume to complex real-space data.
 
-    Requires a finite cubic/rectangular reciprocal-space lattice sampled on
-    *uniform centered Cartesian* Q axes (Å^-1), not raw h,k,l axes. Returns
-    the real component of 1/(2π)^3 ∫ I_diff(Q) exp(-i Q.r) dQ on r axes (Å).
-    Absolute experimental normalization, form factors, masking, apodization,
-    missing voxels and background corrections are not handled here.
+    Inputs must be finite and sampled on centered uniform Cartesian Q axes
+    expressed in Å^-1 (rad/Å). The FFT uses exp(-i Q.r) with
+    1/(2π)^3 times the reciprocal voxel volume normalization.
+
+    When supplied a ReciprocalVolume, requires explicit Bragg preprocessing
+    metadata. Raw arrays are accepted for backwards-compatible analysis, but
+    their units/preprocessing cannot be verified automatically.
     """
-    intensity = np.asarray(diffuse_intensity, dtype=float)
-    if intensity.ndim != 3 or len(q_axes) != 3:
-        raise ValueError("Provide a 3D intensity array and three 1D Q axes")
+    from .reciprocal import ReciprocalVolume
+    if isinstance(diffuse_intensity, ReciprocalVolume):
+        volume_input = diffuse_intensity
+        volume_input.require_bragg_subtracted()
+        if q_axes is not None:
+            raise ValueError("Do not supply q_axes separately with ReciprocalVolume")
+        q_axes = volume_input.q_axes
+        intensity = np.asarray(volume_input.intensity, dtype=float)
+    else:
+        intensity = np.asarray(diffuse_intensity, dtype=float)
+    if not np.isfinite(imaginary_tolerance) or imaginary_tolerance < 0:
+        raise ValueError("imaginary_tolerance must be finite and >= 0")
+    if intensity.ndim != 3 or q_axes is None or len(q_axes) != 3:
+        raise ValueError("Provide 3D intensity and three centered Cartesian Q axes")
     if not np.all(np.isfinite(intensity)):
         raise ValueError("Intensity contains missing/NaN/Inf values; preprocess first")
 
@@ -59,15 +100,38 @@ def delta_pdf_from_diffuse(
         spacings.append(dq)
         r_axes.append(np.fft.fftshift(np.fft.fftfreq(n, d=dq)) * 2*np.pi)
 
-    # fftn implements exp(-i Q.r) when Q-grid's origin has been shifted to index 0.
-    volume = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(intensity)))
-    volume = volume * (np.prod(spacings) / (2*np.pi)**3)
-    # A physical centrosymmetric I(Q) should give a nearly real ΔPDF.
-    imag_ratio = np.linalg.norm(volume.imag) / max(np.linalg.norm(volume.real), 1e-30)
-    if imag_ratio > 1e-4:
+    voxel = float(np.prod(spacings))
+    complex_volume = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(intensity)))
+    complex_volume = complex_volume * (voxel / (2*np.pi)**3)
+    real_norm = float(np.linalg.norm(complex_volume.real))
+    imag_norm = float(np.linalg.norm(complex_volume.imag))
+    ratio = imag_norm / max(real_norm, 1e-30)
+
+    # I(Q) and I(-Q) are related through periodic FFT-index inversion.
+    # This diagnostic assumes the discrete periodic representation and is
+    # meaningful independently of array parity.
+    unshifted = np.fft.ifftshift(intensity)
+    negate = tuple((-np.arange(n)) % n for n in intensity.shape)
+    opposite = unshifted[np.ix_(*negate)]
+    friedel = float(np.linalg.norm(unshifted - opposite) /
+                    max(np.linalg.norm(unshifted), 1e-30))
+    diagnostics = FFTDiagnostics(
+        imaginary_ratio=ratio,
+        max_imaginary=float(np.max(np.abs(complex_volume.imag))),
+        max_real=float(np.max(np.abs(complex_volume.real))),
+        friedel_relative_error=friedel,
+        dq=tuple(spacings),
+        reciprocal_voxel_volume=voxel,
+        normalization="dQx*dQy*dQz/(2*pi)^3; exp(-i Q.r)",
+    )
+    if ratio > imaginary_tolerance:
         import warnings
-        warnings.warn("Large imaginary component: check Friedel symmetry, background, and Q axes")
-    return volume.real, tuple(r_axes)
+        message = (f"FFT imaginary/real norm ratio {ratio:.3g} exceeds "
+                   f"tolerance {imaginary_tolerance:.3g}; Friedel error {friedel:.3g}")
+        if raise_on_imaginary:
+            raise ValueError(message)
+        warnings.warn(message, RuntimeWarning, stacklevel=2)
+    return FFTResult(complex_volume, tuple(r_axes), diagnostics)
 
 
 def plot_delta_pdf_slice(volume: np.ndarray, r_axes: Sequence[np.ndarray], axis: int = 2, index: int | None = None):
