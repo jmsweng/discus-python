@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from discuspdf import ReciprocalVolume, delta_pdf_from_diffuse
+from discuspdf import ReciprocalVolume, delta_pdf_from_diffuse, FFTValidationError
 
 
 def axes(n, dq=.2):
@@ -48,13 +48,36 @@ def test_complex_and_threshold():
     q=axes(n)
     a=np.zeros((n,n,n))
     a[n//2+1,n//2,n//2]=1.
-    with pytest.raises(ValueError, match="exceeds"):
+    with pytest.raises(FFTValidationError, match="exceeds") as excinfo:
         delta_pdf_from_diffuse(a, (q,q,q), imaginary_tolerance=1e-8)
-    with pytest.warns(RuntimeWarning):
-        result=delta_pdf_from_diffuse(a, (q,q,q), imaginary_tolerance=1e-8,
-                                      raise_on_imaginary=False)
+    # The computed FFT and diagnostics are preserved on the exception.
+    result = excinfo.value.result
     assert result.diagnostics.imaginary_ratio > 1e-8
     assert np.max(np.abs(result.complex_volume.imag)) > 0
+    assert result.complex_volume.shape == (n, n, n)
+    assert len(result.r_axes) == 3
+    with pytest.warns(RuntimeWarning):
+        result = delta_pdf_from_diffuse(a, (q,q,q), imaginary_tolerance=1e-8,
+                                        raise_on_imaginary=False)
+    assert result.diagnostics.imaginary_ratio > 1e-8
+    assert np.max(np.abs(result.complex_volume.imag)) > 0
+    # Warning-only mode returns the same computed values as the raised case.
+    assert np.allclose(result.complex_volume, excinfo.value.result.complex_volume)
+
+
+def test_malformed_input_still_plain_valueerror():
+    n = 16
+    q = axes(n)
+    with pytest.raises(ValueError, match="NaN/Inf"):
+        delta_pdf_from_diffuse(np.full((n, n, n), np.nan), (q, q, q))
+    with pytest.raises(ValueError, match="centered"):
+        delta_pdf_from_diffuse(np.ones((n, n, n)), (np.arange(n) * .2,) * 3)
+    with pytest.raises(ValueError, match="3D"):
+        delta_pdf_from_diffuse(np.ones((n, n)), (q, q, q))
+
+
+def test_fft_validation_error_is_valueerror_subclass():
+    assert issubclass(FFTValidationError, ValueError)
 
 
 def test_metadata_gate():

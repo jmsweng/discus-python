@@ -1,6 +1,6 @@
 # OpenCode project instructions — DISCUS PDF automation
 
-Read `SETUP_WINDOWS10_OPENCODE.md` before any system change. Implement its staged Windows 10 / Ubuntu WSL2 installation and verification workflow.
+Read the tracked docs before working: `README.md`, `docs/VERIFIED_DISCUS_MACRO.md`, `docs/3D_INTEGRATION.md`, and `docs/INTEGRATION_HISTORY.md`. DISCUS_SUITE 6.23.01 is already installed and verified (see `docs/VERIFIED_DISCUS_MACRO.md`); do **not** reinstall it by default. Local-only setup logs (`SETUP_WINDOWS10_OPENCODE.md`, `SETUP_REPORT.md`) are gitignored and optional: consult them only if present on the machine.
 
 ## Working conventions
 
@@ -22,9 +22,9 @@ jupyter lab --no-browser --ip=127.0.0.1 --port=8888
 
 ## Deliverables
 
-- `SETUP_REPORT.md`: exact commands, versions, executables, tests, output paths and blockers.
-- `docs/VERIFIED_DISCUS_MACRO.md`: verified engine CLI and 1D PDF macro details.
-- At least one real job through `PDFRunner` with nonempty, validated numeric output when installation succeeds.
+- `docs/VERIFIED_DISCUS_MACRO.md`: verified engine CLI and 1D PDF macro details (tracked in Git).
+- At least one real job through `PDFRunner` with nonempty, validated numeric output (recorded in `examples/run_sample/`).
 - Document 3D-ΔPDF notebook as synthetic demonstration, not end-to-end simulation.
+- Local-only setup reports (e.g. `SETUP_REPORT.md`) are optional and gitignored; keep them out of Git.
 
 If prerequisite access or required software is unavailable, report the blocker rather than bypassing permissions or inventing a result.

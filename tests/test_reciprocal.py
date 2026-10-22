@@ -38,3 +38,34 @@ def test_prepare_isolated_3d_macro(tmp_path):
     (prepared.directory / "model.cll").write_text("tampered")
     with pytest.raises(ValueError, match="modified"):
         runner.execute(prepared)
+    # The failed preflight is recorded; the directory does not stay "prepared".
+    import json
+    assert json.loads((prepared.directory / "status.json").read_text())["status"] == "failed"
+
+
+def test_read_hdf5_volume_validation(tmp_path):
+    import h5py
+    from discuspdf import read_hdf5_volume
+    q = (np.arange(8) - 4) * .2
+    with h5py.File(tmp_path / "v.h5", "w") as f:
+        f.create_dataset("intensity", data=np.ones((8, 8, 8)))
+        for key in ("qx", "qy", "qz"):
+            f.create_dataset(key, data=q)
+    intensity, axes = read_hdf5_volume(tmp_path / "v.h5", "intensity", ("qx", "qy", "qz"))
+    assert intensity.shape == (8, 8, 8)
+    assert all(np.allclose(a, q) for a in axes)
+    # Non-HDF5 bytes are rejected with a clear message.
+    (tmp_path / "bad.h5").write_bytes(b"garbage")
+    with pytest.raises(ValueError, match="not a valid HDF5"):
+        read_hdf5_volume(tmp_path / "bad.h5", "intensity", ("qx", "qy", "qz"))
+    # Missing dataset is rejected.
+    with pytest.raises(ValueError, match="not found"):
+        read_hdf5_volume(tmp_path / "v.h5", "missing", ("qx", "qy", "qz"))
+    # Mismatched axis length is rejected.
+    with h5py.File(tmp_path / "bad2.h5", "w") as f:
+        f.create_dataset("intensity", data=np.ones((8, 8, 8)))
+        f.create_dataset("qx", data=q)
+        f.create_dataset("qy", data=q)
+        f.create_dataset("qz", data=np.arange(4) * .2)
+    with pytest.raises(ValueError, match="does not match"):
+        read_hdf5_volume(tmp_path / "bad2.h5", "intensity", ("qx", "qy", "qz"))
