@@ -7,7 +7,8 @@ def test_fft_peak_for_constant_intensity():
     n = 16
     q = (np.arange(n) - n//2) * 0.2
     intensity = np.ones((n, n, n))
-    volume, r = delta_pdf_from_diffuse(intensity, (q, q, q))
+    result = delta_pdf_from_diffuse(intensity, (q, q, q))
+    volume, r = result.complex_volume, result.r_axes
     assert len(r) == 3
     center = n//2
     assert np.argmax(np.abs(volume)) == np.ravel_multi_index((center,)*3, (n,)*3)

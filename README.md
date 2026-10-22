@@ -56,7 +56,7 @@ Each run directory records the copied `.cll` input, a SHA-256 hash, the generate
 
 See `notebooks/02_3d_delta_pdf.ipynb` for a **synthetic demonstration only**. For real 3D data, start with a measured or simulated volume after Bragg/background removal, on a centered, uniform Cartesian Q grid in Å⁻¹. Inspect HDF5 datasets and use `read_hdf5_volume(...)` with *explicit* dataset paths, or load NumPy arrays yourself. A grid in h,k,l reciprocal-lattice units is not interchangeable with Cartesian Q for real-space axis calibration.
 
-For quantitative work, add mask/window handling, correct reciprocal-space intensity normalization, and compare one FFT result to a trusted 3D-ΔPDF workflow. No 3D-ΔPDF calculations are run automatically inside DISCUS by this starter.
+For quantitative work, add mask/window handling, correct reciprocal-space intensity normalization, and compare one FFT result to a trusted 3D-ΔPDF workflow. The 3D FFT now returns an \`FFTResult\` containing \`complex_volume\`, \`r_axes\`, and \`diagnostics\`; \`real_volume\` is available for plotting. The transform raises \`ValueError\` if the imaginary/real norm ratio exceeds \`imaginary_tolerance\` (default \`1e-4\`); pass \`raise_on_imaginary=False\` to get a warning and inspect the complex result. No 3D-ΔPDF calculations are run automatically inside DISCUS by this starter.
 
 ## Next stages
 
@@ -74,3 +74,5 @@ The DiffuseCode repository contains an initial, explicitly *not release-ready* F
 `PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`.
 
 Run `python -m pytest -q` for unit tests; see the separately documented manual DISCUS integration check. The local installer previously added `/etc/sudoers.d/90-discus` for passwordless sudo; review and remove it with administrator approval if no longer required.
+
+For new work, pass a ReciprocalVolume carrying explicit coordinate_system='cartesian_q', units='1/angstrom', and confirmed Bragg removal metadata. See [3D integration notes](docs/3D_INTEGRATION.md). This does not by itself validate quantitative 3D-ΔPDF interpretation.
