@@ -25,7 +25,9 @@ def test_analytic_cosine_pair(n):
     q = axes(n)
     dq = .2
     r0 = 2*np.pi / (n*dq) * 2
-    intensity = 2 + np.cos(q[:, None, None] * r0) * np.ones((1,n,n))
+    # Broadcast to a full 3D volume (delta_pdf_from_diffuse requires
+    # intensity.shape to match the Q-axis lengths exactly).
+    intensity = np.broadcast_to(2 + np.cos(q[:, None, None] * r0), (n, n, n)).copy()
     result = delta_pdf_from_diffuse(intensity, (q,q,q))
     line = np.abs(result.real_volume[:, n//2, n//2])
     assert line[n//2 + 2] > .1 * line[n//2]
