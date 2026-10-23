@@ -1,0 +1,36 @@
+# C4: monoclinic 2-atom cell (a,b,c=5,6,7 A, beta=105 deg), 8x8x8 cells, UNEQUAL axis sizes 33/41/49.
+# SKEWED grid (ul shifted by +1 rlu in h): tests orientation of data_increment_vector; no 3DPDF.
+# Bragg present (set aver,0.0): total intensity; then DISCUS 3DPDF (= Patterson) of the same data.
+# Expected Patterson peak at fractional u=(0.30,0.20,0.10) [and its negative]; Cartesian length computable from the cell.
+discus
+read
+  cell mono2.cll,8,8,8
+fourier
+  xray
+  wvle moa1
+  ll -4.0,-5.0,-6.0
+  lr  4.0,-5.0,-6.0
+  ul -3.0, 5.0,-6.0
+  tl -4.0,-5.0, 6.0
+  na 33
+  no 41
+  nt 49
+  abs h
+  ord k
+  top l
+  temp use
+  disp off
+  lots off
+  set technique:turbo
+  set aver,0.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf C4_total.h5
+  run
+exit
+exit
+exit
