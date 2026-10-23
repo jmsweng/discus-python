@@ -19,22 +19,13 @@ Javelin source reference: [rosswhitfield/javelin](https://github.com/rosswhitfie
 
 These four packages cover all 21 features in the initial Javelin comparison.
 
-## Coordination with work already in progress
-
-- **Claude** is already working on real DISCUS 3D macro verification, HDF5 coordinates, Bragg/diffuse separation and scientific benchmarking. **Do not duplicate or override these activities.** Package B should integrate their validated outcome rather than invent alternative Fortran syntax.
-- **OpenCode** is already working on post-merge engineering validation, error diagnostics, tests, notebooks and documentation. Avoid editing their active branches or overlapping files without coordinating.
-- The present package is a **future backlog**. Agents should take one work package or small sub-PR at a time, work on new branches, run tests, and seek approval before merging to `main`.
-- The existing [3D integration limitations](../docs/3D_INTEGRATION.md) still apply until a real end-to-end benchmark passes.
-
 ## Suggested development order
 
-1. Finish current reliability and scientifically validated DISCUS 3D deliverables.
+1. Establish validated DISCUS 3D inputs, outputs, and coordinate conventions before adding dependent analysis features.
 2. Package A foundations: structure, coordinate/lattice operations, interchange and round-trip tests.
 3. Package B foundations: xarray/grid models and validated native/experimental data adapters. Add 3D visualization/export after coordinates and masking are reliable.
 4. Package C: neighbor and correlation measurements validated on analytical toy models.
 5. Package D: small Python API for verified DISCUS Monte Carlo commands, then optional independent physics engines and additional viewers.
-
-Small independent features may be done earlier only if they do not compete with active scientific-validation work.
 
 ## Cross-cutting definition of done
 
