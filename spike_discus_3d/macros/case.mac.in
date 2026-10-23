@@ -1,0 +1,60 @@
+# S1 candidate macro for DISCUS_SUITE 6.23.01 -- UNVERIFIED until run.
+# Sources: discus_man.pdf (v6.23) sec 3.1 (3D Fourier example, p.31-32), 3.4 (outputs, p.43-46),
+#          A.? 'set' in fourier (aver, technique), 'value' in output (3DPDF), 'replace'.
+# Model: GaAs F-43m, 8x8x8 cells (4096 atoms), a = 5.6537 A. Grid in hkl (rlu), -4..4, 65 pts/axis:
+#        step = 8/64 = 0.125 rlu = 1/N_cells (manual: use n/N grid to avoid finite-size ripples).
+discus
+read
+  cell gaas.cll,8,8,8
+@DISORDER@
+fourier
+  xray
+  wvle moa1
+  ll -4.0,-4.0,-4.0
+  lr  4.0,-4.0,-4.0
+  ul -4.0, 4.0,-4.0
+  tl -4.0,-4.0, 4.0
+  na 65
+  no 65
+  nt 65
+  abs h
+  ord k
+  top l
+  temp use
+  disp off
+  lots off
+  set technique:turbo
+  set aver,0.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf @CASE@_total.h5
+  run
+exit
+# Second pass: subtract the average structure factor <F> (Bragg removed) from the SAME crystal.
+fourier
+  set aver,100.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf @CASE@_diffuse.h5
+  run
+# DISCUS's own 3D-PDF of the Bragg-subtracted intensity = 3D-Delta-PDF. Written LAST (manual: it truncates data).
+  value 3DPDF
+  form nexus
+  outf @CASE@_diffuse_3dpdf.h5
+  run
+exit
+save
+  format keyword
+  outfile @CASE@_model.stru
+  run
+exit
+exit
+exit
