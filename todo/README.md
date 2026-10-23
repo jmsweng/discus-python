@@ -1,12 +1,16 @@
 # Javelin-inspired development roadmap
 
-**Status: proposed / not started.** This directory is a planning backlog, not evidence that its features already work.
+**Status:** The four Javelin-inspired packages are proposed development work. For completed foundations, outstanding scientific milestones, and all 21 feature checkboxes, see the **[development task tracker](TASKS.md)**. A planning document is not evidence that a feature works.
 
 ## Goal
 
 Extend [discus-python](https://github.com/jmsweng/discus-python) with the most useful Python-native ideas from [Javelin](https://github.com/rosswhitfield/javelin) while keeping the installed DISCUS_SUITE as the primary, validated physics engine. Prioritize scientific correctness, provenance, inspectable macros, real-data validation, and notebook usability.
 
 Javelin source reference: [rosswhitfield/javelin](https://github.com/rosswhitfield/javelin) (MIT license, older codebase). DISCUS already offers many of these **underlying physics** capabilities; the new value here is clean Python-facing access, interoperability, and validated workflows. Do not assume an item is absent from DISCUS simply because it is absent from the current Python wrapper.
+
+## Progress tracking
+
+**[Open the checklist of completed and outstanding work →](TASKS.md)**. Check off a task only when its implementation and validation evidence are recorded; avoid agent-specific or rapidly changing status notes here.
 
 ## Work packages
 
