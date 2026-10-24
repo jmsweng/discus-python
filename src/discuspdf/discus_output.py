@@ -18,6 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import hashlib
+import warnings
 import numpy as np
 
 _GROUP = "/entry/data"
@@ -31,6 +32,34 @@ def _text(value) -> str:
     return value.decode("utf-8", "replace") if isinstance(value, (bytes, np.bytes_)) else str(value)
 
 
+def _validated_direct_basis(lengths, angles) -> np.ndarray:
+    """Construct a cell basis without concealing degenerate/impossible metrics."""
+    lengths = np.asarray(lengths, dtype=float)
+    angles = np.asarray(angles, dtype=float)
+    if lengths.shape != (3,) or not np.isfinite(lengths).all() or np.any(lengths <= 0):
+        raise ValueError("unit_cell_lengths must be three finite positive values in Å")
+    if angles.shape != (3,) or not np.isfinite(angles).all() or np.any(angles <= 0) or np.any(angles >= 180):
+        raise ValueError("unit_cell_angles must be finite degrees strictly between 0 and 180")
+    a, b, c = lengths
+    alpha, beta, gamma = np.deg2rad(angles)
+    ca, cb, cg = np.cos((alpha, beta, gamma))
+    metric = np.array([[1, cg, cb], [cg, 1, ca], [cb, ca, 1]], dtype=float)
+    eigenvalues = np.linalg.eigvalsh(metric)
+    if eigenvalues[0] <= 1e-12 * eigenvalues[-1]:
+        raise ValueError("Invalid or degenerate unit cell: metric is not positive definite")
+    sg = np.sin(gamma)
+    bx, by = b * cg, b * sg
+    cx = c * cb
+    cy = c * (ca - cb * cg) / sg
+    cz_sq = c*c - cx*cx - cy*cy
+    if not np.isfinite(cz_sq) or cz_sq <= 0:
+        raise ValueError("Invalid unit cell: nonpositive squared c_z component")
+    basis = np.array([[a, 0.0, 0.0], [bx, by, 0.0], [cx, cy, np.sqrt(cz_sq)]])
+    if not np.isfinite(basis).all() or np.linalg.det(basis) <= 0:
+        raise ValueError("Invalid unit cell basis")
+    return basis
+
+
 @dataclass(frozen=True)
 class DiscusVolume:
     values: np.ndarray
@@ -41,6 +70,28 @@ class DiscusVolume:
     with_bragg: str
     meta: dict = field(default_factory=dict)
     provenance: dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Validate physical cell and reciprocal-grid geometry, including direct construction."""
+        v = np.asarray(self.values)
+        if v.ndim != 3 or any(n < 1 for n in v.shape) or not np.issubdtype(v.dtype, np.number):
+            raise ValueError("data_values must be a numeric 3D array")
+        if not np.all(np.isfinite(v)):
+            raise ValueError("data_values must be finite")
+        shapes = {"data_corner": ((3,), self.corner),
+                  "data_increment_vector": ((3, 3), self.increments),
+                  "unit_cell_lengths": ((3,), self.cell_lengths),
+                  "unit_cell_angles": ((3,), self.cell_angles)}
+        for name, (shape, raw) in shapes.items():
+            a = np.asarray(raw)
+            if a.shape != shape or not np.issubdtype(a.dtype, np.number) or not np.isfinite(a).all():
+                raise ValueError(f"{name} must be a finite numeric array with shape {shape}")
+        inc = np.asarray(self.increments, dtype=float)
+        if abs(np.linalg.det(inc)) < 1e-14 * (np.linalg.norm(inc, ord=2) ** 3) or np.linalg.cond(inc) > 1e10:
+            raise ValueError("data_increment_vector is singular or nearly singular")
+        if self.with_bragg not in ("bragg_present", "bragg_subtracted"):
+            raise ValueError("Unknown Bragg metadata")
+        _validated_direct_basis(self.cell_lengths, self.cell_angles)
 
     # -- geometry ---------------------------------------------------------
     def is_axis_aligned(self, tol: float = 1e-9) -> bool:
@@ -55,13 +106,8 @@ class DiscusVolume:
                      for k, n in enumerate(self.values.shape))
 
     def direct_basis(self) -> np.ndarray:
-        """Rows a, b, c in Cartesian Å: a || x, b in the xy plane (orientation is a convention only)."""
-        a, b, c = self.cell_lengths
-        al, be, ga = np.radians(self.cell_angles)
-        cx = c * np.cos(be)
-        cy = c * (np.cos(al) - np.cos(be) * np.cos(ga)) / np.sin(ga)
-        cz = np.sqrt(max(c * c - cx * cx - cy * cy, 0.0))
-        return np.array([[a, 0, 0], [b * np.cos(ga), b * np.sin(ga), 0], [cx, cy, cz]])
+        """Rows a, b, c in Cartesian Å; orientation is a convention."""
+        return _validated_direct_basis(self.cell_lengths, self.cell_angles)
 
     def reciprocal_basis(self, two_pi: bool = True) -> np.ndarray:
         """Rows a*, b*, c*. Q (Å^-1) = h @ reciprocal_basis(two_pi=True); two_pi=False gives d* (Å^-1)."""
@@ -157,6 +203,8 @@ class FractionalFFTResult:
 
 def _centered_steps(vol: DiscusVolume) -> np.ndarray:
     steps = np.diag(vol.increments)
+    if not np.isfinite(steps).all() or np.any(steps <= 0):
+        raise ValueError("Fractional FFT requires positive, increasing hkl grid steps")
     for k, n in enumerate(vol.values.shape):
         if not np.isclose(vol.corner[k], -(n // 2) * steps[k], rtol=1e-6, atol=1e-9):
             raise ValueError(f"hkl axis {k} is not centered on 0 at index n//2 (corner={vol.corner[k]}, "
@@ -165,7 +213,8 @@ def _centered_steps(vol: DiscusVolume) -> np.ndarray:
 
 
 def delta_pdf_fractional(vol: DiscusVolume, *, require_diffuse: bool = True,
-                         imaginary_tolerance: float = 1e-4) -> FractionalFFTResult:
+                         imaginary_tolerance: float = 1e-4,
+                         raise_on_imaginary: bool = True) -> FractionalFFTResult:
     """Transform in fractional coordinates: rho(u) = dh dk dl / V_cell * sum_h I(h) exp(-2 pi i h.u).
 
     Equals the Cartesian formula dQx dQy dQz/(2 pi)^3 * sum I exp(-i Q.r) for any cell (no regridding,
@@ -175,6 +224,8 @@ def delta_pdf_fractional(vol: DiscusVolume, *, require_diffuse: bool = True,
     if require_diffuse and vol.with_bragg != "bragg_subtracted":
         raise ValueError("Volume is 'bragg_present'; a 3D-ΔPDF needs bragg_subtracted input "
                          "(or pass require_diffuse=False to obtain a Patterson function).")
+    if not np.isfinite(imaginary_tolerance) or imaginary_tolerance < 0:
+        raise ValueError("imaginary_tolerance must be finite and >= 0")
     vol.hkl_axes()                      # raises for skewed grids
     steps = _centered_steps(vol)
     I = vol.values
@@ -184,10 +235,16 @@ def delta_pdf_fractional(vol: DiscusVolume, *, require_diffuse: bool = True,
     un = np.fft.ifftshift(I)
     opp = un[np.ix_(*[(-np.arange(n)) % n for n in I.shape])]
     fr = float(np.linalg.norm(un - opp) / max(np.linalg.norm(un), 1e-30))
+    result = FractionalFFTResult(c, u_axes, vol.direct_basis(), ratio, fr,
+                                 "dh*dk*dl/V_cell; exp(-2*pi*i*h.u); u step = 1/(n*dh)", dict(vol.provenance))
     if ratio > imaginary_tolerance:
-        raise ValueError(f"imaginary/real ratio {ratio:.3g} > {imaginary_tolerance:g}; Friedel error {fr:.3g}")
-    return FractionalFFTResult(c, u_axes, vol.direct_basis(), ratio, fr,
-                               "dh*dk*dl/V_cell; exp(-2*pi*i*h.u); u step = 1/(n*dh)", dict(vol.provenance))
+        from .volume import FFTValidationError
+        message = (f"imaginary/real ratio {ratio:.3g} > {imaginary_tolerance:g}; "
+                   f"Friedel error {fr:.3g}")
+        if raise_on_imaginary:
+            raise FFTValidationError(message, result)
+        warnings.warn(message, RuntimeWarning, stacklevel=2)
+    return result
 
 
 def evaluate_real_space(vol: DiscusVolume, u_points) -> np.ndarray:
