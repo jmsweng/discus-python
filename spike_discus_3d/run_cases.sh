@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # S1 step 2: run C0 (perfect), C1 and C2 (random Ga->As antisites, seeds 1 and 2) in WSL.
-# Usage (from spike_discus_3d):  bash run_cases.sh [rundir]     default ~/probe_3d
+# Usage (from spike_discus_3d): bash run_cases.sh [rundir] [C0 C1 C2 C3 C4 C5...]\n# Without any case names, defaults to C0 C1 C2 C3 C4. Default rundir: ~/probe_3d.
 # Observation-only apart from writing into <rundir>. No sudo, no installs.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"

@@ -41,13 +41,17 @@
 
 - [ ] **P0 — Reconcile the GaAs reference fixture with its opt-in integration test.** The archived [`config.json`](../examples/run_sample/config.json) and [`run.mac`](../examples/run_sample/run.mac) specify `qmax=30`, but [`tests/test_integration_discus.py`](../tests/test_integration_discus.py) runs `qmax=25`; the archived macro uses `outf result.csv` while the retained artifact is `result.pdf`. Establish which output is authoritative, regenerate or correct the fixture/provenance, and run the opt-in comparison under DISCUS 6.23.01; **do not change numerical tolerances just to make the test pass**.
 - [ ] **P1 — Verify powder settings against real DISCUS outputs**, including `set delta`/Gaussian width, Qmin, Qmax, DQ, wavelength and termination behavior. Record test inputs and numeric differences.
-- [ ] **P1 — Validate FFT normalization and real-space scale** against independent analytical and trusted diffuse-scattering/3D-ΔPDF references, not only internal NumPy consistency tests.
+- [ ] **P1 — Validate FFT normalization and real-space scale** against independent analytical and trusted diffuse-scattering/3D-ΔPDF references, not only internal NumPy consistency tests. Follow [the reproducible scientific benchmark plan](../docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md); the current C3/C4 real fixtures are Bragg-present Patterson tests.
 - [ ] **P2 — Keep smoke tests reproducible** in supported WSL and report engine version, executable, fixture checksums, logs, output hashes, numerical tolerances and observed outcomes.
+
+### Native runner integration (review pending)
+
+- [ ] **P1 — Integrate the new common/NeXus reader with the 3D runner** so a configured output filename is loaded with verified source metadata and invalid geometry is rejected. [Draft PR #7](https://github.com/jmsweng/discus-python/pull/7) implements this; check it off **only after review and merge**.
 
 ### Real 3D DISCUS pipeline (critical path)
 
 - [ ] **P0 — Create and verify a genuine DISCUS_SUITE 6.23.01 macro** that calculates a 3D diffuse-scattering reciprocal-space dataset from a known disordered supercell. Retain input structure, exact macro, engine log and output.
-- [ ] **P0 — Identify actual native output layout and metadata** from that engine run; do not invent `diffuse.h5` schema or coordinate dataset paths. Adapt output writer/loader as required.
+- [x] **P0 — Identify actual native output layout and metadata.** C3/C4 real DISCUS 6.23.01 NeXus fixtures establish the `/entry/data` layout, `data_values`, `data_corner`, and `data_increment_vector` semantics. The [native reader](../src/discuspdf/discus_output.py) validates these values. This checks **file interpretation**, not scientific absolute normalization.
 - [ ] **P0 — Calibrate Q coordinates** from lattice/reciprocal basis or trustworthy file metadata; correctly handle r.l.u. ↔ Cartesian-Q, (2\pi), axis orientation, centering and non-orthogonal cells. Reject unsupported geometry.
 - [ ] **P0 — Produce physically characterized diffuse-only scattering** using a verified Bragg exclusion/average-structure handling workflow; document whether correction acts on amplitudes or intensities.
 - [ ] **P0 — Demonstrate end-to-end `structure → real DISCUS 3D intensity → calibrated Python volume → 3D-ΔPDF`**, record numerical evidence and compare to at least one independently trusted reference.
