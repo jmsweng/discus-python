@@ -148,7 +148,7 @@ class Diffuse3DRunner:
         if (not isinstance(output_filename, str)
                 or output_filename in ("", ".", "..")
                 or Path(output_filename).name != output_filename
-                or "/" in output_filename or "\\\\" in output_filename
+                or chr(92) in output_filename
                 or not output_filename.lower().endswith((".h5", ".hdf5"))):
             raise ValueError("output_filename must be a simple .h5/.hdf5 filename")
         self.output_filename = output_filename

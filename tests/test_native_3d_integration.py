@@ -1,0 +1,203 @@
+"""Regression tests for native DISCUS 3D output wiring and crystallographic validity.
+
+Real C3/C4 HDF5 fixtures were produced by DISCUS_SUITE 6.23.01.
+A tiny fake executable is used to test runner plumbing without claiming a
+fresh Fortran calculation occurred in CI.
+"""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+import h5py
+import numpy as np
+import pytest
+
+from discuspdf import Diffuse3DRunner, FFTValidationError
+from discuspdf.discus_output import DiscusVolume, delta_pdf_fractional, read_discus_volume
+
+
+ROOT = Path(__file__).resolve().parents[1]
+FIX = ROOT / "tests" / "fixtures" / "discus_6.23.01"
+
+
+def make_native(path, *, values=None, corner=None, inc=None,
+                lengths=(5.0, 6.0, 7.0), angles=(90.0, 105.0, 90.0)):
+    n = 9
+    if values is None:
+        values = np.ones((n, n, n))
+    if corner is None:
+        corner = [-1., -1., -1.]
+    if inc is None:
+        inc = np.eye(3) * .25
+    with h5py.File(path, "w") as f:
+        g = f.create_group("entry/data")
+        for name, text in {
+            "audit_conform_dict_name": "Disorder unified data",
+            "coordinate_unit": "basecell_fractional",
+            "data_type_axes": "hkl",
+            "data_type_reciprocal": "reciprocal",
+            "data_type_content": "intensity",
+            "data_type_with_bragg": "bragg_subtracted",
+        }.items():
+            g.create_dataset(name, data=np.bytes_(text))
+        for name, value in {
+            "data_values": values, "data_dimension": np.array(values.shape),
+            "data_axes": np.array([1, 2, 3]),
+            "data_corner": corner, "data_increment_vector": inc,
+            "unit_cell_lengths": lengths, "unit_cell_angles": angles,
+        }.items():
+            g.create_dataset(name, data=value)
+
+
+@pytest.mark.parametrize("lengths,angles,error", [
+    ((0, 6, 7), (90, 90, 90), "lengths"),
+    ((-5, 6, 7), (90, 90, 90), "lengths"),
+    ((5, 6, 7), (0, 90, 90), "angles"),
+    ((5, 6, 7), (180, 90, 90), "angles"),
+    ((5, 6, 7), (10, 10, 179), "positive definite"),
+    ((5, 6, 7), (float("nan"), 90, 90), "angles"),
+])
+def test_reject_unphysical_cell(tmp_path, lengths, angles, error):
+    p = tmp_path / "bad.h5"
+    make_native(p, lengths=lengths, angles=angles)
+    with pytest.raises(ValueError, match=error):
+        read_discus_volume(p)
+
+
+@pytest.mark.parametrize("case,corner,inc,error", [
+    ("badcorner", [0, 0], np.eye(3)*.25, "data_corner"),
+    ("nan", [0, np.nan, 0], np.eye(3)*.25, "data_corner"),
+    ("zero", [-1]*3, np.zeros((3, 3)), "singular"),
+    ("flat", [-1]*3, np.diag([.25, .25, 0]), "singular"),
+    ("shape", [-1]*3, np.eye(2), "data_increment_vector"),
+])
+def test_reject_malformed_reciprocal_grid(tmp_path, case, corner, inc, error):
+    p = tmp_path / (case + ".h5")
+    make_native(p, corner=corner, inc=inc)
+    with pytest.raises(ValueError, match=error):
+        read_discus_volume(p)
+
+
+def test_directly_constructed_volume_is_validated():
+    with pytest.raises(ValueError, match="lengths"):
+        DiscusVolume(
+            np.ones((3, 3, 3)), np.zeros(3), np.eye(3)*.5,
+            np.array([4., -1., 6.]), np.array([90., 90., 90.]), "bragg_subtracted")
+
+
+def test_fractional_fft_error_preserves_data(tmp_path):
+    n = 9
+    values = np.zeros((n, n, n))
+    values[n//2 + 1, n//2, n//2] = 1.0  # no Friedel partner
+    p = tmp_path / "asym.h5"
+    make_native(p, values=values)
+    vol = read_discus_volume(p)
+    with pytest.raises(FFTValidationError) as caught:
+        delta_pdf_fractional(vol, imaginary_tolerance=1e-8)
+    result = caught.value.result
+    assert result.complex_volume.shape == (n, n, n)
+    assert result.imaginary_ratio > 1e-8
+    assert result.friedel_relative_error > 0
+    assert len(result.u_axes) == 3
+    assert result.provenance["sha256"] == vol.provenance["sha256"]
+    with pytest.warns(RuntimeWarning):
+        alternative = delta_pdf_fractional(vol, imaginary_tolerance=1e-8,
+                                           raise_on_imaginary=False)
+    assert np.allclose(alternative.complex_volume, result.complex_volume)
+    with pytest.raises(ValueError, match="imaginary_tolerance"):
+        delta_pdf_fractional(vol, imaginary_tolerance=-1)
+
+
+def make_fake_runner(tmp_path, output_name, python_body):
+    script = tmp_path / "fake_engine.py"
+    script.write_text(python_body, encoding="utf-8")
+    macro = tmp_path / "input.mac"
+    macro.write_text("# staged simulation macro\n", encoding="utf-8")
+    runner = Diffuse3DRunner(runs_directory=tmp_path / "runs",
+                             output_filename=output_name,
+                             launcher=(sys.executable, str(script)))
+    return runner, macro
+
+
+def test_native_runner_loads_real_fixture_and_preserves_metadata(tmp_path):
+    output = "C3_total.h5"
+    body = "import shutil\nshutil.copyfile(" + repr(str(FIX / output)) + ", " + repr(output) + ")\n"
+    runner, macro = make_fake_runner(tmp_path, output, body)
+    job = runner.prepare(macro)
+    done = runner.execute(job, native_nexus=True)
+    assert done.output.name == output
+    volume = done.load_discus_volume()
+    assert volume.values.shape == (33, 41, 49)
+    assert volume.with_bragg == "bragg_present"
+    status = __import__("json").loads((done.directory / "status.json").read_text())
+    assert status["status"] == "complete"
+    assert status["output_filename"] == output
+    assert status["output_validation"]["native_nexus"] is True
+    assert status["output_validation"]["physical_validation"] is False
+    with pytest.raises(ValueError, match="bragg_present"):
+        delta_pdf_fractional(volume)
+
+
+def test_native_runner_reports_wrong_schema_failed(tmp_path):
+    body = ("import h5py\n"
+            "with h5py.File('native.h5', 'w') as f:\n"
+            "    f.create_dataset('intensity', data=[1,2,3])\n")
+    runner, macro = make_fake_runner(tmp_path, "native.h5", body)
+    job = runner.prepare(macro)
+    with pytest.raises(RuntimeError, match="Invalid 3D output"):
+        runner.execute(job, native_nexus=True)
+    import json
+    status = json.loads((job.directory / "status.json").read_text())
+    assert status["status"] == "failed"
+    assert "common/nexus" in status["reason"]
+
+
+@pytest.mark.parametrize("name", [
+    "../escape.h5", "nested/foo.h5", r"C:\\escape.h5", "run.mac", ".", "",
+])
+def test_output_filename_is_restricted(name):
+    with pytest.raises(ValueError, match="output_filename"):
+        Diffuse3DRunner(output_filename=name)
+
+
+def test_conflicting_native_validation_modes(tmp_path):
+    from discuspdf import OutputSpec
+    runner, macro = make_fake_runner(tmp_path, "native.h5", "print('unused')\n")
+    job = runner.prepare(macro)
+    with pytest.raises(ValueError, match="OR"):
+        runner.execute(job, native_nexus=True,
+                       output_spec=OutputSpec("i", ("qx", "qy", "qz")))
+
+
+def test_probe_case_arguments_with_stub_discus(tmp_path):
+    """Run the real shell entrypoint with a no-op engine, not DISCUS_SUITE."""
+    source = ROOT / "spike_discus_3d"
+    copied = tmp_path / "spike_discus_3d"
+    shutil.copytree(source, copied)
+    (tmp_path / "examples").mkdir()
+    shutil.copy2(ROOT / "examples" / "gaas.cll", tmp_path / "examples" / "gaas.cll")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    engine = fake_bin / "discus_suite"
+    engine.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    engine.chmod(0o755)
+    env = dict(os.environ, PATH=str(fake_bin) + os.pathsep + os.environ.get("PATH", ""))
+    selected = tmp_path / "probe_selected"
+    subprocess.run(["bash", str(copied / "run_cases.sh"), str(selected), "C3", "C4"],
+                   env=env, check=True, capture_output=True, text=True)
+    assert (selected / "C3.mac").exists()
+    assert (selected / "C4.mac").exists()
+    assert not (selected / "C0.mac").exists()
+    default = tmp_path / "probe_default"
+    subprocess.run(["bash", str(copied / "run_cases.sh"), str(default)],
+                   env=env, check=True, capture_output=True, text=True)
+    assert sorted(x.stem for x in default.glob("C?.mac")) == ["C0", "C1", "C2", "C3", "C4"]
+    assert not (default / "probe_default.mac").exists()
+    unknown = subprocess.run(["bash", str(copied / "run_cases.sh"), str(tmp_path / "invalid"), "BAD"],
+                             env=env, capture_output=True, text=True)
+    assert unknown.returncode == 2
+    assert "Unknown case" in unknown.stderr
