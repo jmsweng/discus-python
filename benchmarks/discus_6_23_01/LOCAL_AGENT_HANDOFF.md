@@ -27,20 +27,38 @@ If anything deviates from this document, stop and report.
 4. **Do not reinstall or rebuild DISCUS**, and do not touch other WSL distributions. Ask the owner before any installation. The only exception is a missing Python package in the project venv: `pip install h5py numpy pytest`, nothing else.
 5. **Each attempt gets a new evidence directory.** Never write into an existing one. If a run fails, keep everything, start a new directory, and record why.
 
-## Step 0: get the branch (read-only checks first)
+## Step 0: make a fresh, LF-only clone inside the WSL filesystem
+
+**Revised 2026-10-28 by the reviewer, after the first attempt correctly stopped here.** The existing clone at `/mnt/c/Users/jmswe/Documents/Programming projects/discus-python` shows ~53 files as modified, and they differ only in line endings. git stores every text file with LF; the Windows-side checkout wrote CRLF. If the registered inputs arrived the same way, their SHA-256 hashes would not match and DISCUS might misread the macros.
+
+So: **do not use, change, clean, pull or commit in the `/mnt/c` clone.** Leave its modified and untracked files exactly as they are; the owner will deal with them separately. Make a new clone on the Linux filesystem, with no line-ending conversion:
 
 ```bash
-# Locate the clone. Previous runs used one of:
-#   "/mnt/c/Users/jmswe/Documents/Programming projects/discus-python"   (note the space; always quote)
-#   ~/projects/discuspdf_starter
-cd "<REPO>"
-git status --short          # must be clean. If not clean: STOP and report the output; do not stash or discard.
-git fetch origin
-git checkout science/discus-3d-dpdf-benchmarks
-git pull --ff-only          # must fast-forward; if it cannot: STOP and report
-git log -1 --format='%H %s' # record this commit hash (REGISTERED_COMMIT)
+WORK=~/gate2_prereg_runs/discus-python
+test ! -e "$WORK" || { echo "STOP: $WORK already exists"; exit 1; }
+mkdir -p ~/gate2_prereg_runs
+git -c core.autocrlf=false clone --branch science/discus-3d-dpdf-benchmarks \
+    https://github.com/jmsweng/discus-python "$WORK"     # if authentication fails: STOP and report
+cd "$WORK"
+git config core.autocrlf false        # this clone only
+git log -1 --format='%H %s'           # record (REGISTERED_COMMIT); must be c3ab156... or a later commit on this branch
+git status --short                    # must print nothing
+
+# Line-ending check: every registered file must be LF in git AND in the working tree.
+git ls-files --eol benchmarks/discus_6_23_01/gate2_prereg benchmarks/discus_6_23_01/gate1_c1_dyadic tests/test_gate2_prereg.py \
+  | awk '$1 != "i/-text" && ($1 != "i/lf" || $2 != "w/lf")'   # must print nothing
 ls benchmarks/discus_6_23_01/gate2_prereg/inputs benchmarks/discus_6_23_01/gate1_c1_dyadic/inputs
 ```
+
+Use `"$WORK"` wherever this document says `<REPO>`.
+
+**Python environment for this clone.** Create a fresh venv here; installing only these three packages is approved:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate && pip install numpy h5py pytest
+```
+
+Nothing needs to be installed into the package itself, because the scripts add `src/` to the path.
 
 Expected inputs:
 - **Gate 2:** `gate2_block.stru`, `gate2_random.stru`, `gate2_{block,random}_{total,diffuse}.mac`, `gate2_probe.mac`.
@@ -48,10 +66,10 @@ Expected inputs:
 
 ## Step 1: Python environment and registration self-checks
 
-Use the project venv, in the same WSL context as DISCUS:
+Use the venv created in Step 0 (same WSL context as DISCUS):
 
 ```bash
-source .venv/bin/activate            # or the venv the project already uses
+cd "$WORK" && source .venv/bin/activate
 python -c "import numpy, h5py; print(numpy.__version__, h5py.__version__)"
 python -m pytest -q tests/test_gate2_prereg.py      # expect: 7 passed
 python benchmarks/discus_6_23_01/gate2_prereg/selftest.py "$(mktemp -d)"   # expect 8 lines starting "ok"
@@ -65,7 +83,7 @@ Registered values:
 | `gate2_prereg/predictions.json` | `203fe236c3cb1fefe497974db652d1233388aeeb2b9444e4eb595df0cf794fc1` |
 | `gate1_c1_dyadic/predictions.json` | `77d7972effa5eb04e261e530f411cc3113aae025112e3b6bbc3f0c4148480a73` |
 
-If either test step fails or a hash differs: **STOP and report.** Do not "fix" it.
+If either test step fails or a hash differs: **STOP and report.** Do not "fix" it. A hash difference on a fresh LF clone is not expected; report `git ls-files --eol` for the affected file.
 
 ## Step 2: record the engine identity
 
