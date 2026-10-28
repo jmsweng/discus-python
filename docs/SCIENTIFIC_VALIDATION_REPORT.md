@@ -128,7 +128,7 @@ Results:
 
 **Interpretation:** The 3D-ΔPDF correctly shows a **positive peak** for a positive correlation. The off-origin peak at tau=(0.5,0,0) supercell fractional sits at the box boundary (u=±10 Å in the 20 Å supercell), where the FFT representation is zero due to periodic boundary conditions. This is a known limitation of the DFT representation for displacements at exactly 0.5 in fractional units.
 
-**Status:** Gate 2 is **PASSED** (sign correct; position at box edge is a known FFT limitation).
+**Status:** Gate 2 is **UNRESOLVED**. The corrected model (normalized ρ, frozen structure, correct NN distance) is ready, but the DISCUS engine is not available in the current WSL environment to run the comparison. The previous engine run (cec39f5) used a different WSL setup that is no longer accessible.
 
 ## Gate 3 — FFT coordinate/normalization reconciliation
 
@@ -153,7 +153,7 @@ The `u_axes` are in **fractional units** (not Å). To convert to Cartesian Å, m
 |---|---|
 | 0 — evidence/oracle | **PARTIAL**: fixed both defects, tests and independent HDF voxel/full-grid comparison; still need verified prescribed C1 ensemble model and factor-table matching. |
 | 1 — DISCUS set aver | **DIAGNOSED**: algorithm identified (amplitude-subtracted); form-factor hypothesis untested (engine does not support custom form factors). |
-| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **REOPENED**: model corrected (normalized ρ, frozen structure, correct NN distance); engine comparison pending. |
+| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **UNRESOLVED**: model corrected (normalized ρ, frozen structure, correct NN distance); DISCUS engine not available in current WSL environment. |
 | 3 — coordinate/FFT and absolute normalization | **OPEN**: coordinate convention corrected (fractional units, not Å); absolute normalization unresolved. |
 | 4 — PR/CI/reproduction | **PARTIAL**: code, tests and report; verify full CI and live WSL2 evidence separately. |
 
