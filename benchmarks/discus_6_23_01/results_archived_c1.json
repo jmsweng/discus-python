@@ -1,0 +1,121 @@
+{
+  "description": "Observed versus predicted full 33x33x33 archived C1 off-commensurate volumes; no fitting",
+  "date": "2026-10-28",
+  "status": "Gate 0 partial; not scientific calibration",
+  "engine_execution": "archived DISCUS 6.23.01, NOT rerun in current environment",
+  "reference_form_factors": "IT92; archived engine uses Waasmaier-Kirfel",
+  "average_model": "site occupancy fitted from exact frozen C1; conditional, NOT independent ensemble",
+  "normalization": "absolute physical calibration unresolved",
+  "volume_dimensions": [
+    33,
+    33,
+    33
+  ],
+  "source_SHA256": {
+    "C1_frozen.stru": "ceefca57e26ab40e03d2adfd443cff559bd7fc3c837402f418f6e8def35406b9",
+    "C1_offcomm_total.h5": "b7a36c50f64c0f1f92feea8e0bf1a49c8d7047defb638f6f2ce77c0f3c6fa4fe",
+    "C1_offcomm_diffuse.h5": "d2c2e913ad6b7c123af3d0a8a3b68895bc7112fc180bef8c414bad4b11c25ce4"
+  },
+  "relative_error_definition": "L2(predicted-observed)/L2(observed), no fitted scale; pointwise error uses observed denominator",
+  "comparisons": {
+    "total_IT92": {
+      "relative_l2": 0.000388801454570068,
+      "pearson": 0.9999999981494843,
+      "mean_absolute_error": 276154.5656389458,
+      "max_absolute_error": 6847305.379611969,
+      "worst_hkl": [
+        0,
+        0,
+        0
+      ],
+      "worst_observed": 17335903916.41131,
+      "worst_predicted": 17329056611.031696
+    },
+    "diffuse_empirical_IT92": {
+      "relative_l2": 0.01771557110125707,
+      "pearson": 0.9996229568683263,
+      "mean_absolute_error": 14.671154811852608,
+      "max_absolute_error": 192.91669214452804,
+      "worst_hkl": [
+        0,
+        0.11,
+        0
+      ],
+      "worst_observed": 1363.4828053299998,
+      "worst_predicted": 1170.5661131854717
+    },
+    "difference_of_intensities_empirical_IT92": {
+      "relative_l2": 604.3770005934067,
+      "pearson": 0.020943987707492017,
+      "mean_absolute_error": 415155.95306043664,
+      "max_absolute_error": 4490826.235015873,
+      "worst_hkl": [
+        -0.01,
+        0.05,
+        -0.05
+      ]
+    }
+  },
+  "diffuse_signal_strata": {
+    "zero": {
+      "voxels": 1
+    },
+    "nonzero_below_or_equal_0_01percent_of_max": {
+      "voxels": 32,
+      "relative_l2": 28.02239962604477
+    },
+    "nonzero_0_01_to_1percent_of_max": {
+      "voxels": 1722,
+      "relative_l2": 0.6697226571049159
+    },
+    "above_1percent_of_max": {
+      "voxels": 34182,
+      "relative_l2": 0.01743337618680924
+    }
+  },
+  "sample_points": [
+    {
+      "hkl": [
+        0.05,
+        0,
+        0
+      ],
+      "discus_diffuse": 14.080137739902447,
+      "reference_diffuse": 32.36403148740987
+    },
+    {
+      "hkl": [
+        0.1,
+        0,
+        0
+      ],
+      "discus_diffuse": 134.43751448684483,
+      "reference_diffuse": 148.00737141962188
+    },
+    {
+      "hkl": [
+        0.1,
+        0.15,
+        0.07
+      ],
+      "discus_diffuse": 287.10684608370684,
+      "reference_diffuse": 285.52349305425975
+    },
+    {
+      "hkl": [
+        0.07,
+        0.03,
+        0.01
+      ],
+      "discus_diffuse": 93.71836008721428,
+      "reference_diffuse": 125.79368674296335
+    }
+  ],
+  "gates": {
+    "0": "partial",
+    "1": "open",
+    "2": "not run",
+    "3": "open",
+    "4": "partial"
+  }
+}
