@@ -288,6 +288,60 @@ class TestPDFPeaks:
         assert np.isclose(abs(peak["amplitude"][4]), abs(peak["amplitude"][5]), atol=1e-10), \
             "z+ and z- amplitudes should have the same magnitude"
 
+    def test_peak_amplitudes_exact_values(self):
+        """Test exact peak amplitude values (corrected scattering contrast).
+
+        With the corrected scattering contrast (f_Ga - f_As)²/4 = 1.0:
+        - c(2.5, 0, 0) = -0.142857, N_pairs = 112, V = 8000 Å³
+        - Amplitude = 1.0 * (-0.142857) * 112 / 8000 = -0.002000
+
+        Expected values:
+        - x-axis: -0.002000 (negative)
+        - y-axis: +0.002000 (positive)
+        - z-axis: -0.002000 (negative)
+        """
+        struct = build_frozen_structure(n=4, a=5.0)
+        pair_corr = compute_directional_pair_correlations(struct)
+        peak = predict_pdf_peaks(struct, pair_corr)
+
+        # Exact expected values (corrected contrast = 1.0)
+        expected_x = -0.002000
+        expected_y = +0.002000
+        expected_z = -0.002000
+
+        # Check x-axis amplitudes
+        assert np.isclose(peak["amplitude"][0], expected_x, atol=1e-6), \
+            f"x+ amplitude should be {expected_x}, got {peak['amplitude'][0]}"
+        assert np.isclose(peak["amplitude"][1], expected_x, atol=1e-6), \
+            f"x- amplitude should be {expected_x}, got {peak['amplitude'][1]}"
+
+        # Check y-axis amplitudes
+        assert np.isclose(peak["amplitude"][2], expected_y, atol=1e-6), \
+            f"y+ amplitude should be {expected_y}, got {peak['amplitude'][2]}"
+        assert np.isclose(peak["amplitude"][3], expected_y, atol=1e-6), \
+            f"y- amplitude should be {expected_y}, got {peak['amplitude'][3]}"
+
+        # Check z-axis amplitudes
+        assert np.isclose(peak["amplitude"][4], expected_z, atol=1e-6), \
+            f"z+ amplitude should be {expected_z}, got {peak['amplitude'][4]}"
+        assert np.isclose(peak["amplitude"][5], expected_z, atol=1e-6), \
+            f"z- amplitude should be {expected_z}, got {peak['amplitude'][5]}"
+
+    def test_scattering_contrast_corrected(self):
+        """Test that the scattering contrast is (f_Ga - f_As)²/4, not (f_Ga - f_As)².
+
+        With f_Ga = 31, f_As = 33:
+        - (f_Ga - f_As)² = 4.0 (incorrect)
+        - (f_Ga - f_As)²/4 = 1.0 (correct)
+        """
+        struct = build_frozen_structure(n=4, a=5.0)
+        pair_corr = compute_directional_pair_correlations(struct)
+        peak = predict_pdf_peaks(struct, pair_corr)
+
+        # The contrast should be 1.0 (not 4.0)
+        assert np.isclose(peak["contrast"], 1.0, atol=1e-10), \
+            f"Scattering contrast should be 1.0 (corrected), got {peak['contrast']}"
+
 
 class TestInvalidAssumptions:
     """Test explicit rejection of invalid coordinate/metadata assumptions."""

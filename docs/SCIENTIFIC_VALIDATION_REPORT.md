@@ -8,9 +8,9 @@
 |---|---|---|
 | 0 — evidence/oracle | **PARTIAL** | Archived v4.2 evidence reproduced exactly (total 0.03888%, diffuse 1.77156%, diff-of-intensities 604.38%). Two reference-code defects corrected. Still need verified prescribed C1 ensemble model and factor-table matching. |
 | 1 — DISCUS set aver | **DIAGNOSED** | Algorithm identified (amplitude-subtracted: \|F−F_avg\|²). Median ratio 1.0011, mean 1.0661, rel L2 1.77%. Form-factor hypothesis untested (engine does not support custom form factors). |
-| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **UNRESOLVED** | Model corrected (checkerboard pattern, frozen 4×4×4 crystal with 256 sites, correct NN distance 2.5 Å, per-shell normalization). 24 regression tests pass. DISCUS engine not available in current WSL environment. |
-| 3 — coordinate/FFT and absolute normalization | **OPEN** | Coordinate convention corrected (fractional units, not Å). Normalization documented as `dh*dk*dl/V_cell`. Absolute normalization unresolved. |
-| 4 — PR/CI/reproduction | **PARTIAL** | Code, tests and report complete. Full CI verified (122 passed, 2 skipped in WSL venv). Live WSL2 engine evidence pending. |
+| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **UNRESOLVED** | Model corrected (checkerboard pattern, frozen 4×4×4 crystal with 256 sites, correct NN distance 2.5 Å, per-shell normalization, corrected scattering contrast). 26 regression tests pass. **DISCUS engine available** at `/usr/local/bin/discus_suite`. Engine comparison pending. |
+| 3 — coordinate/FFT and absolute normalization | **OPEN** | Coordinate convention corrected (fractional units, not Å, with range depending on reciprocal sampling). Normalization documented as `dh*dk*dl/V_cell`. Absolute normalization unresolved. |
+| 4 — PR/CI/reproduction | **PARTIAL** | Code, tests and report complete. Full CI verified (146 passed, 2 skipped in WSL venv). Live WSL2 engine evidence pending. |
 
 **Do not merge PR #8** without explicit user approval and further scientific validation. PR #7 was not reopened or modified.
 
@@ -150,33 +150,38 @@ The correlated-disorder model (`benchmarks/discus_6_23_01/correlated_model.py`) 
 5. **Structure coordinates**: Positions in Cartesian (Å), .stru uses supercell fractional (was inconsistent)
 6. **Scattering calculations**: Labeled as SYNTHETIC (atomic numbers as proxy)
 
-**Regression tests (24 tests, all passing):**
+**Regression tests (26 tests, all passing):**
 - Exact atom count (256), species count (128 Ga, 128 As), positions and interatomic distances
 - Expected directional pair correlations (symmetry, magnitude, pair counts)
 - Correct signed off-origin ΔPDF peaks (positions, signs, magnitudes, symmetry)
+- **Exact peak amplitude values** (−0.002 along x and z, +0.002 along y, with corrected scattering contrast)
+- **Corrected scattering contrast** ((f_Ga - f_As)²/4 = 1.0, not (f_Ga - f_As)² = 4.0)
 - Correct complex average-structure amplitude at off-integer hkl
 - Explicit rejection of invalid coordinate/metadata assumptions
 
-**Engine comparison: PENDING**
-- DISCUS executable not available in current WSL environment
-- Previous runs used a different WSL setup no longer accessible
-- **Gate 2 remains UNRESOLVED until the engine output is compared against the independent references**
+**Engine comparison: AVAILABLE**
+- DISCUS_SUITE 6.23.01 executable found at `/usr/local/bin/discus_suite` in WSL Ubuntu-22.04
+- Version verified: 6.23.01 (created 2026-10-22)
+- **Gate 2 can now proceed with engine comparison**
 
 **Next steps:**
-1. Locate or reinstall DISCUS 6.23.01 in the WSL environment
-2. Run the corrected frozen structure through DISCUS with `read stru`
-3. Load HDF5 outputs via `read_discus_volume`, compute `delta_pdf_fractional`
-4. Compare off-origin peaks at ±2.5 Å against predicted positions and amplitudes
-5. If comparison passes, mark Gate 2 PASSED; if it fails, report Gate 2 UNRESOLVED with quantitative evidence
+1. Run the corrected frozen structure through DISCUS with `read stru`
+2. Load HDF5 outputs via `read_discus_volume`, compute `delta_pdf_fractional`
+3. Compare off-origin peaks at ±2.5 Å against predicted positions and amplitudes
+4. If comparison passes, mark Gate 2 PASSED; if it fails, report Gate 2 UNRESOLVED with quantitative evidence
 
 ## Gate 3 — FFT coordinate/normalization reconciliation
 
 The `delta_pdf_fractional` function returns:
-- **`u_axes` in fractional units**: range -0.5 to +0.5 (0 to 1 spans the cell), step = 1/(n*dh)
+- **`u_axes` in fractional units**: spacing = 1/(N*dh), where N is the number of grid points and dh is the hkl step. The range depends on the reciprocal sampling (NOT always -0.5 to +0.5).
 - **`direct_basis` in Å**: converts fractional u to Cartesian Å (e.g., 20 Å for a 4×5.0 Å supercell)
 - **Normalization:** `dh*dk*dl/V_cell; exp(-2*pi*i*h.u); u step = 1/(n*dh)`
 
-The `u_axes` are in **fractional units** (not Å). To convert to Cartesian Å, multiply by `direct_basis`. For a 4×5.0 Å supercell, `direct_basis = 20 Å`, so u=0.5 corresponds to 10 Å.
+**Important correction:** The `u_axes` are in **fractional units** (not Å), but their range is NOT always -0.5 to +0.5. The spacing is `1/(N*dh)` and the range depends on the reciprocal sampling. For example:
+- If dh = 0.01 and N = 33, then spacing = 1/(33*0.01) ≈ 3.03, and the range could be -16.15 to +16.15 (not -0.5 to +0.5)
+- The actual range must be determined from the specific FFT grid parameters
+
+To convert to Cartesian Å, multiply by `direct_basis`. For a 4×5.0 Å supercell, `direct_basis = 20 Å`, so u=0.5 corresponds to 10 Å.
 
 **Normalization audit:**
 - The FFT normalization is `dh*dk*dl/V_cell`, where `dh` is the hkl step and `V_cell` is the unit cell volume.
@@ -184,7 +189,7 @@ The `u_axes` are in **fractional units** (not Å). To convert to Cartesian Å, m
 - This is NOT the same as `1/sqrt(Nvox)` (which would be `1/sqrt(35937) = 0.00527`).
 - The absolute normalization remains **UNRESOLVED** — the relationship between the DISCUS engine's internal normalization and the `dh*dk*dl/V_cell` factor is not established.
 
-**Status:** Gate 3 is **OPEN**. The coordinate convention is now correctly documented (fractional units, not Å). The absolute normalization remains unresolved.
+**Status:** Gate 3 is **OPEN**. The coordinate convention is now correctly documented (fractional units, not Å, with range depending on reciprocal sampling). The absolute normalization remains unresolved.
 
 ## Updated gate status
 

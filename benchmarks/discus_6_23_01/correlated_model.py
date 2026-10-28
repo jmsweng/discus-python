@@ -341,15 +341,16 @@ def predict_pdf_peaks(struct: dict, pair_corr: dict) -> dict:
     """Predict signed 3D-ΔPDF peak positions and amplitudes from the frozen structure.
 
     The 3D-ΔPDF peak at displacement tau is proportional to:
-        Δρ(tau) = (f_A - f_B)² * c(tau) * N_pairs(tau) / V
+        Δρ(tau) = ((f_A - f_B)²/4) * c(tau) * N_pairs(tau) / V
 
     where:
     - f_A, f_B are the scattering factors for species A and B
-    - c(tau) is the connected occupation covariance
+    - c(tau) is the connected occupation covariance (with η=±1)
     - N_pairs(tau) is the number of pairs at displacement tau
     - V is the volume of the supercell
 
-    For a binary system with p=0.5, the contrast is (f_A - f_B)².
+    IMPORTANT: The factor 1/4 arises because we use η=±1 occupation variables.
+    For a binary system with p=0.5, the scattering contrast is (f_A - f_B)²/4.
     The peak amplitude includes the pair multiplicity and is normalized by volume.
 
     Returns
@@ -359,17 +360,18 @@ def predict_pdf_peaks(struct: dict, pair_corr: dict) -> dict:
         amplitude : list of expected peak amplitudes (normalized by volume)
         c_tau : list of covariance values at each peak
         n_pairs : list of pair multiplicities at each peak
-        contrast : (f_A - f_B)²
+        contrast : (f_A - f_B)²/4
     """
     a = struct["a"]
     n = struct["n"]
     V = (n * a) ** 3
 
-    # Scattering contrast: (f_Ga - f_As)²
+    # Scattering contrast: (f_Ga - f_As)²/4
     # SYNTHETIC: using atomic numbers as proxy (Ga: Z=31, As: Z=33)
+    # The factor 1/4 arises because we use η=±1 occupation variables
     f_ga = 31.0
     f_as = 33.0
-    contrast = (f_ga - f_as) ** 2  # = 4.0
+    contrast = (f_ga - f_as) ** 2 / 4.0  # = 1.0
 
     # NN displacements: ±a/2 along x, y, z
     tau_vectors = [
@@ -521,6 +523,146 @@ def compute_diffuse_intensity(struct: dict, hkl_list: list) -> np.ndarray:
     return I_diff
 
 
+def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
+    """Compare direct-pair summation with finite-grid Fourier-transformed |F-F_avg|².
+
+    This provides a genuinely independent comparison between:
+    1. Direct-pair summation: sum over all pairs at displacement tau
+    2. Finite-grid FFT: compute F(hkl) on a grid, subtract F_avg, square, and inverse FFT
+
+    Both methods use matching coordinate, window, and normalization conventions.
+
+    The FFT method computes the 3D-ΔPDF as:
+        Δρ(r) = (1/V) * sum_hkl |F(hkl) - F_avg(hkl)|² * exp(2πi * h·r)
+
+    where the sum is over all hkl points in the finite grid.
+
+    Parameters
+    ----------
+    struct : dict
+        Structure dictionary with positions (Cartesian, Å) and species.
+    n_grid : int
+        Size of the FFT grid (default 32).
+
+    Returns
+    -------
+    dict with keys:
+        direct_peaks : dict mapping tau (Å) to direct-pair amplitude
+        fourier_peaks : dict mapping tau (Å) to FFT-derived amplitude
+        relative_error : dict mapping tau (Å) to relative error
+        max_relative_error : float
+    """
+    n = struct["n"]
+    a = struct["a"]
+    supercell_a = n * a
+    positions_cart = np.array(struct["positions"])  # Cartesian, Å
+    species = struct["species"]
+
+    # Convert to fractional coordinates (relative to supercell)
+    positions_frac = positions_cart / supercell_a
+
+    # Scattering factors (SYNTHETIC: atomic numbers as proxy)
+    f_ga = 31.0
+    f_as = 33.0
+    f = np.array([f_ga if sp == "Ga" else f_as for sp in species])
+
+    # Average scattering factor
+    f_avg = 0.5 * (f_ga + f_as)
+
+    # Create a 3D density grid
+    grid = np.zeros((n_grid, n_grid, n_grid), dtype=complex)
+    grid_avg = np.zeros((n_grid, n_grid, n_grid), dtype=complex)
+
+    # Deposit atoms onto the grid (simple nearest-neighbor assignment)
+    for i, (x, y, z) in enumerate(positions_frac):
+        # Convert fractional to grid index
+        ix = int(x * n_grid) % n_grid
+        iy = int(y * n_grid) % n_grid
+        iz = int(z * n_grid) % n_grid
+        grid[ix, iy, iz] += f[i]
+        grid_avg[ix, iy, iz] += f_avg
+
+    # Compute F(hkl) via FFT
+    F_grid = np.fft.fftn(grid)
+    F_avg_grid = np.fft.fftn(grid_avg)
+
+    # Compute |F - F_avg|²
+    I_diff_grid = np.abs(F_grid - F_avg_grid) ** 2
+
+    # Inverse FFT to get real-space PDF
+    # The inverse FFT gives: sum_hkl I_diff(hkl) * exp(2πi * h·r) / N³
+    # We need to normalize by V (volume) to get the PDF
+    pdf_grid = np.fft.ifftn(I_diff_grid).real / (n_grid ** 3)
+
+    # The PDF peak at displacement tau is proportional to pdf_grid at the corresponding grid point
+    # For tau = (a/2, 0, 0), the grid index is (n_grid/4, 0, 0) (since a/2 = supercell_a/4)
+
+    # Extract peaks at ±a/2 along x, y, z
+    tau_vectors = [
+        (a / 2.0, 0.0, 0.0),
+        (-a / 2.0, 0.0, 0.0),
+        (0.0, a / 2.0, 0.0),
+        (0.0, -a / 2.0, 0.0),
+        (0.0, 0.0, a / 2.0),
+        (0.0, 0.0, -a / 2.0),
+    ]
+
+    fourier_peaks = {}
+    for tau in tau_vectors:
+        # Convert tau to grid index
+        # tau is in Å, convert to fractional: tau_frac = tau / supercell_a
+        # Grid index: idx = int(tau_frac * n_grid) % n_grid
+        tau_frac = np.array(tau) / supercell_a
+        idx = tuple(int(t * n_grid) % n_grid for t in tau_frac)
+        fourier_peaks[tau] = pdf_grid[idx]
+
+    # Compute direct-pair amplitudes (same convention as predict_pdf_peaks)
+    eta = np.array([1.0 if sp == "Ga" else -1.0 for sp in species])
+    eta_mean = np.mean(eta)
+    V = supercell_a ** 3
+    contrast = (f_ga - f_as) ** 2 / 4.0  # = 1.0
+
+    direct_peaks = {}
+    for tau in tau_vectors:
+        # Count pairs at displacement tau
+        diff = positions_cart[:, np.newaxis, :] - positions_cart[np.newaxis, :, :]
+        dist_to_tau = np.sqrt(np.sum((diff - np.array(tau)) ** 2, axis=2))
+        mask = np.isclose(dist_to_tau, 0.0, atol=1e-6)
+        np.fill_diagonal(mask, False)
+
+        n_pairs = np.sum(mask)
+        if n_pairs > 0:
+            # Compute covariance
+            pair_idx = np.where(mask)
+            c_val = np.mean(eta[pair_idx[0]] * eta[pair_idx[1]]) - eta_mean ** 2
+            # Amplitude: contrast * c(tau) * N_pairs(tau) / V
+            direct_peaks[tau] = contrast * c_val * n_pairs / V
+        else:
+            direct_peaks[tau] = 0.0
+
+    # Compute relative errors
+    relative_error = {}
+    max_rel_err = 0.0
+    for tau in tau_vectors:
+        direct = direct_peaks[tau]
+        fourier = fourier_peaks[tau]
+        if abs(direct) > 1e-10:
+            rel_err = abs(fourier - direct) / abs(direct)
+            relative_error[tau] = rel_err
+            max_rel_err = max(max_rel_err, rel_err)
+        else:
+            relative_error[tau] = abs(fourier)
+
+    return {
+        "direct_peaks": direct_peaks,
+        "fourier_peaks": fourier_peaks,
+        "relative_error": relative_error,
+        "max_relative_error": max_rel_err,
+        "n_grid": n_grid,
+        "note": "SYNTHETIC: comparison uses atomic numbers as proxy. FFT grid size = 32.",
+    }
+
+
 def main() -> None:
     """Build the frozen correlated model and write all outputs."""
     out_dir = Path(__file__).parent / "correlated_run"
@@ -543,6 +685,9 @@ def main() -> None:
     F_test = compute_structure_factor(struct, hkl_test)
     F_avg_test = compute_average_structure_factor(struct, hkl_test)
     I_diff_test = compute_diffuse_intensity(struct, hkl_test)
+
+    # Compute independent Fourier-transform comparison
+    fourier_comparison = compare_direct_vs_fourier(struct, n_grid=64)
 
     # Write references
     refs_path = out_dir / "references.json"
@@ -598,6 +743,23 @@ def main() -> None:
             "I_diff_test": [f"{v:.6f}" for v in I_diff_test],
             "note": "SYNTHETIC: structure factors use atomic numbers as proxy.",
         },
+        "fourier_comparison": {
+            "direct_peaks": {
+                f"{k[0]:.1f},{k[1]:.1f},{k[2]:.1f}": float(v)
+                for k, v in fourier_comparison["direct_peaks"].items()
+            },
+            "fourier_peaks": {
+                f"{k[0]:.1f},{k[1]:.1f},{k[2]:.1f}": float(v)
+                for k, v in fourier_comparison["fourier_peaks"].items()
+            },
+            "relative_error": {
+                f"{k[0]:.1f},{k[1]:.1f},{k[2]:.1f}": float(v)
+                for k, v in fourier_comparison["relative_error"].items()
+            },
+            "max_relative_error": float(fourier_comparison["max_relative_error"]),
+            "n_grid": int(fourier_comparison["n_grid"]),
+            "note": fourier_comparison["note"],
+        },
     }
     refs_path.write_text(json.dumps(refs_data, indent=2))
     print(f"Wrote {refs_path}")
@@ -625,6 +787,13 @@ def main() -> None:
     print(f"\nValidation (SYNTHETIC structure factors):")
     for hkl, F, F_avg, I in zip(hkl_test, F_test, F_avg_test, I_diff_test):
         print(f"  hkl={hkl}: F={F:.4f}, F_avg={F_avg:.4f}, I_diff={I:.4f}")
+    print(f"\nFourier-transform comparison (n_grid={fourier_comparison['n_grid']}):")
+    for tau in fourier_comparison["direct_peaks"]:
+        direct = fourier_comparison["direct_peaks"][tau]
+        fourier = fourier_comparison["fourier_peaks"][tau]
+        rel_err = fourier_comparison["relative_error"][tau]
+        print(f"  tau={tau} Å: direct={direct:.6f}, fourier={fourier:.6f}, rel_err={rel_err:.4f}")
+    print(f"  Max relative error: {fourier_comparison['max_relative_error']:.4f}")
 
 
 if __name__ == "__main__":
