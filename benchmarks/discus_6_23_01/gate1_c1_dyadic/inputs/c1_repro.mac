@@ -1,0 +1,44 @@
+# Archived C1 macro, output names changed only (generated)
+discus
+read
+  stru C1_frozen.stru
+fourier
+  xray
+  wvle moa1
+  ll -0.16,-0.16,-0.16
+  lr  0.16,-0.16,-0.16
+  ul -0.16, 0.16,-0.16
+  tl -0.16,-0.16, 0.16
+  na 33
+  no 33
+  nt 33
+  abs h
+  ord k
+  top l
+  temp use
+  disp off
+  lots off
+  set technique:turbo
+  set aver,0.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf c1_repro_total.h5
+  run
+exit
+fourier
+  set aver,100.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf c1_repro_diffuse.h5
+  run
+exit
+exit
+exit

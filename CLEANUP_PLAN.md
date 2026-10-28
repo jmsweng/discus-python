@@ -15,7 +15,10 @@ These are historical evidence from previous PRs and should remain as external ev
 - `structure_factor_benchmark_v3.tar.gz` (7.2 MB)
 - `structure_factor_benchmark_v4.tar.gz` (7.2 MB)
 - `structure_factor_benchmark_v4.1.tar.gz` (0.6 MB)
-- `structure_factor_benchmark_v4.2.tar.gz` (0.6 MB)
+- `structure_factor_benchmark_v4.2.tar.gz` (0.6 MB). **Do not remove (2026-10-28):** this is the
+  archived C1 evidence, and `benchmarks/discus_6_23_01/gate1_c1_dyadic/c1_dyadic.py` reads the
+  archived volumes from it (SHA-256 checked). Keep it until those files are preserved elsewhere
+  with the owner's approval.
 - `structure_factor_benchmark_v4.zip` (7.2 MB)
 
 **Action:** Remove from the repository. These should be stored as external evidence (e.g., in a separate archive or cloud storage).

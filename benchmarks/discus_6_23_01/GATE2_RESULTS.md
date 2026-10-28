@@ -1,5 +1,21 @@
 # Gate 2: Real DISCUS Engine Comparison Results
 
+> **RETRACTED (2026-10-28, independent review; owner approved).** This comparison did not measure
+> any signed correlation, and its conclusions (a "systematic FFT sign-convention difference",
+> "approximately correct peak positions") are withdrawn. The defects are:
+> 1. the 3/6 sign score is forced by construction: "+dir" = argmax ≥ 0 and "−dir" = argmin ≤ 0;
+> 2. the sampled lines pass 77.6 Å / 155.2 Å off the origin;
+> 3. the hkl window (d*max 0.17 / 0.087 Å⁻¹) cannot resolve 2.5 Å, and the exact windowed
+>    transform there is 93–98 % of the origin value with no anisotropy;
+> 4. `corr_diffuse.h5` is identically zero because the structure was read as one unit cell;
+> 5. the checkerboard's ±1/7 is an open-boundary artefact (periodic value 0);
+> 6. the short-range 2.5 Å correlations are within 1.6σ of zero, and that run has no
+>    `set aver,100` volume at all.
+>
+> Evidence: `REVIEW_2026-10-28.md` and `review_2026-10-28/audit_pr8_gate2.py`. The replacement,
+> pre-registered experiment is `gate2_prereg/PREREGISTRATION.md`. The original text below is kept
+> unchanged as a historical record; do not cite it as a result.
+
 ## Date: 2026-10-28
 
 ## Summary

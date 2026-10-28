@@ -2,15 +2,17 @@
 
 **2026-10-28.** Baseline: merged PR #7 at dc67a722bf55b3f6aa8b2f8d5132a4175324bb91. **This report documents Gate 0 (evidence reproduction), Gate 1 (set aver,100 diagnosis), and Gate 2 (correlated-disorder 3D-ΔPDF). Absolute normalization (Gate 3) remains OPEN.**
 
-## Final Gate Status (2026-10-28)
+## Gate Status (updated 2026-10-28 after independent review)
+
+The independent review is `benchmarks/discus_6_23_01/REVIEW_2026-10-28.md`; every number in it is reproduced by `benchmarks/discus_6_23_01/review_2026-10-28/audit_pr8_gate2.py`. The review **supersedes** the Gate 1 form-factor note and the Gate 2 section below. Those sections are kept as a historical record.
 
 | Gate | Status | Notes |
 |---|---|---|
-| 0 — evidence/oracle | **PARTIAL** | Archived v4.2 evidence reproduced exactly (total 0.03888%, diffuse 1.77156%, diff-of-intensities 604.38%). Two reference-code defects corrected. Still need verified prescribed C1 ensemble model and factor-table matching. |
-| 1 — DISCUS set aver | **DIAGNOSED** | Algorithm identified (amplitude-subtracted: \|F−F_avg\|²). Median ratio 1.0011, mean 1.0661, rel L2 1.77%. Form-factor hypothesis untested (engine does not support custom form factors). |
-| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **UNRESOLVED** | Model corrected (checkerboard pattern, frozen 4×4×4 crystal with 256 sites, correct NN distance 2.5 Å, per-shell normalization, corrected scattering contrast). 26 regression tests pass. **DISCUS engine available** at `/usr/local/bin/discus_suite`. Engine comparison pending. |
-| 3 — coordinate/FFT and absolute normalization | **OPEN** | Coordinate convention corrected (fractional units, not Å, with range depending on reciprocal sampling). Normalization documented as `dh*dk*dl/V_cell`. Absolute normalization unresolved. |
-| 4 — PR/CI/reproduction | **PARTIAL** | Code, tests and report complete. Full CI verified (146 passed, 2 skipped in WSL venv). Live WSL2 engine evidence pending. |
+| 0 — evidence/oracle | **PARTIAL; forward model VERIFIED for total intensity** | DISCUS total intensity = Σ f_W–K(s rounded to 0.001 Å⁻¹) e^{−Bs²} e^{2πi h·x} to 6×10⁻¹⁶ / 7×10⁻¹⁵ rel L2 on the PR #8 runs; C1 total to 2.4×10⁻⁶. DISCUS's W–K table matches the authors' DABAX data to ≤ 4.3×10⁻⁸ in f. The C1 ensemble model is still empirical. |
+| 1 — DISCUS set aver | **DIAGNOSED, narrowed** | `four_aver` semantics read from 6.23.01 source. Form-factor hypothesis **refuted** (diffuse residual 1.77 % is unchanged with exact W–K). The residual sits in ⟨F⟩·L where it nearly cancels F; leading hypothesis is non-dyadic integer phase increments. Discriminating experiment pre-registered in `benchmarks/discus_6_23_01/gate1_c1_dyadic/`. |
+| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **UNRESOLVED; previous engine comparison RETRACTED** | See `benchmarks/discus_6_23_01/GATE2_RESULTS.md` (retraction notice). Replacement experiment pre-registered in `benchmarks/discus_6_23_01/gate2_prereg/PREREGISTRATION.md`, awaiting the engine run (`benchmarks/discus_6_23_01/LOCAL_AGENT_HANDOFF.md`). |
+| 3 — coordinate/FFT and absolute normalization | **OPEN** | `delta_pdf_fractional` verified against an independent real-space prediction on a commensurate synthetic grid (1×10⁻¹⁵). The native `value 3DPDF` convention is not identified (fits 5.517×10⁻³ × direct + constant, 4–5 % residual). Absolute normalization unresolved. |
+| 4 — PR/CI/reproduction | **PARTIAL** | Pre-registration tests added (`tests/test_gate2_prereg.py`). No evidence deleted. Engine runs pending. |
 
 **Do not merge PR #8** without explicit user approval and further scientific validation. PR #7 was not reopened or modified.
 
@@ -118,6 +120,12 @@ The independent reference uses **IT92** form factors, while the DISCUS engine us
 **Status:** Gate 1 is **DIAGNOSED** (algorithm identified) but not fully **RESOLVED** (form-factor hypothesis untested, engine does not support custom form factors).
 
 ## Gate 2 — correlated-disorder 3D-ΔPDF
+
+> **Superseded (2026-10-28).** The checkerboard model below is long-range ordered. Its predicted
+> c(±2.5 Å) = ±1/7 is an open-boundary artefact (the periodic value is exactly 0), and the engine
+> comparison built on it is retracted. See `benchmarks/discus_6_23_01/REVIEW_2026-10-28.md` and the
+> pre-registered replacement in `benchmarks/discus_6_23_01/gate2_prereg/`. The text below is
+> historical.
 
 **Status: UNRESOLVED (model corrected; engine comparison pending)**
 
