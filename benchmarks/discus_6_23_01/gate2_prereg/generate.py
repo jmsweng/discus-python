@@ -42,7 +42,7 @@ fourier
   abs h
   ord k
   top l
-  temp use
+  temp ignore
   disp off
   lots off
   set technique:turbo
@@ -117,8 +117,16 @@ def main():
         r = delta_pdf_fractional(vol, imaginary_tolerance=1e-6)
         return r
 
-    pred = {"schema": "gate2-prereg-v2",
+    pred = {"schema": "gate2-prereg-v3",
             "status": "PRE-REGISTERED: written before any engine run of these inputs that produced data",
+            "deviation_from_v2": (
+                "v2 (commit ec703b4, run 20261028T234015Z_LAPTOP-NGU3BT0N) FAILED: DISCUS applied exp(-2*B*s^2) "
+                "with B = 1.000 A^2 under 'temp use' although the files carry Biso = 0 (diagnosis: "
+                "DIAGNOSIS_v2_RESULT.md). v3 changes ONLY the macros ('temp ignore' instead of 'temp use') and "
+                "analyze.py (error-line regex no longer matches the start-up banner of asterisks, which made both "
+                "L criteria fail on correct logs; new T criterion requires the log's 'Temp. factors' line to "
+                "not say 'used'). Registered AFTER seeing v2 results. Seeds, grid, predictions, oracle and all "
+                "numerical thresholds are unchanged, including the 1e-6 engine-precision limits."),
             "deviation_from_v1": (
                 "v1 (commit c3ab156) atom lines had two blanks after the 4-character name, shifting every "
                 "fixed-column field by one; DISCUS 6.23.01 rejected the file at 'read stru' (error -49, "

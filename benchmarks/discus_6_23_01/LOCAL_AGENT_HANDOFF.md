@@ -64,6 +64,16 @@ Expected inputs:
 - **Gate 2:** `gate2_block.stru`, `gate2_random.stru`, `gate2_{block,random}_{total,diffuse}.mac`, `gate2_probe.mac`.
 - **Gate 1:** `C1_frozen.stru`, `c1_dyadic.mac`, `c1_repro.mac`.
 
+## Registration v3 (2026-10-28): READ THIS FIRST. It overrides the steps below where it conflicts.
+
+The v2 Gate 2 run (your report) FAILED because DISCUS applied an unrequested Debye–Waller factor (B = 1 Å²); see `gate2_prereg/DIAGNOSIS_v2_RESULT.md`. The owner approved **gate2-prereg-v3**: macros use `temp ignore`, and `analyze.py` has a corrected error check plus a `T` criterion. Predictions and thresholds are unchanged.
+
+- `git pull --ff-only`; the head must include the commit titled "Gate 2: register v3". Expected: `pytest tests/test_gate2_prereg.py` → `8 passed`; `gate2_prereg/predictions.json` SHA-256 = `40dd2b140e6380713d275e5d1f59d15ec561da4c20803631bf6b308c31cb488d`.
+- **Gate 1 is already done and passed. Do NOT rerun it.** Skip every Gate 1 step. Only Gate 2 is rerun, with a new `RUN_ID`.
+- Run order: Step 1 (self-checks), Step 2 (engine identity; the binary hash must still be `d4274f13…45706f3`), then the probe, then `gate2_block_total.mac` **first**. Stop condition (new): its log must contain a line `Temp. factors      : ...` that does NOT end in `used`, and DISCUS must not reject `temp ignore` (any `***APPL***` line). If it does, stop and report the exact log lines; do not try alternatives.
+- Then the other three macros and `analyze.py`. A FAIL is still not a stop condition. Report as before.
+- Commit as before: the v3 evidence directory, plus the untracked v1 Gate 1 `ENGINE_ENV.txt` directory (`gate1_c1_dyadic/evidence/20261028T232749Z_LAPTOP-NGU3BT0N`). Do not edit the v2 evidence.
+
 ## Registration v2 (2026-10-28): if you already have the fresh clone
 
 The first probe (`evidence/20261028T232749Z_LAPTOP-NGU3BT0N`) correctly stopped the run. DISCUS rejected the v1 structure files at `read stru` with error −49: the atom lines were shifted one column against DISCUS's fixed-column format. The reviewer has re-registered as **gate2-prereg-v2**. Only the two `.stru` files and the scripts that write them changed; every predicted number and threshold is identical. The deviation is recorded in `predictions.json → deviation_from_v1`.

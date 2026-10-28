@@ -59,11 +59,15 @@ def _log_checks(run_dir: Path, model: str, kind: str) -> dict:
     counts = {m.group(1): int(m.group(2)) for m in
               re.finditer(r"Atom typ\s*=\s*(\w+)\s*\(#\s*(\d+)\s*\)", txt)}
     used = re.findall(r"Used\s+([\d.]+)\s*% of the crystal", txt)
-    err = [l.strip() for l in txt.splitlines() if re.search(r"\*\*\*|ERROR|Error", l)]
+    # DISCUS errors look like "***APPL*** ..."; the start-up banner is a row of bare asterisks (v2 bug: matched it)
+    err = [l.strip() for l in txt.splitlines() if re.search(r"\*\*\*[A-Z]+\*\*\*|\bERROR\b|\bError\b", l)]
+    temp = re.search(r"Temp\. factors\s*:\s*(\w+)", txt)
     return {"log": cand[0].name, "sha256": O.sha256_file(cand[0]), "atom_type_counts": counts,
             "atom_counts_ok": counts.get("CU") == 2048 and counts.get("AU") == 2048,
             "used_percent_lines": used, "form_factor_line": "Waasmeier & Kirfel" in txt,
-            "error_lines": err[:20], "errors_found": bool(err)}
+            "error_lines": err[:20], "errors_found": bool(err),
+            "temp_factors": temp.group(1) if temp else None,
+            "temp_ignored": bool(temp) and temp.group(1).lower() != "used"}
 
 
 def _read(path: Path, want_bragg: str):
@@ -179,6 +183,9 @@ def analyze_model(run_dir: Path, model: str, pred: dict) -> dict:
     for k, lg in logs.items():
         crit.append(_crit(f"L {k} log: atom counts CU=2048, AU=2048 and no error lines",
                           float(bool(lg["atom_counts_ok"]) and lg["errors_found"] is False), 1.0, ">="))
+    for k, lg in logs.items():
+        crit.append(_crit(f"T {k} log: 'Temp. factors' line present and not 'used' (B = 0 requested)",
+                          float(bool(lg.get("temp_ignored"))), 1.0, ">="))
     return {"criteria": crit, "tau_table": table, "zone_consistency_max_rel_dev": zone_dev,
             "oracle_bitwise_identical_to_registration": bitwise,
             "hdf5_sha256": {"total": tot.provenance["sha256"], "diffuse": dif.provenance["sha256"]},

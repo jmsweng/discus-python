@@ -17,9 +17,13 @@ sys.path.insert(0, str(HERE))
 import oracle as O  # noqa: E402
 import analyze as AN  # noqa: E402
 
-LOG = """ Fourier technique    : turbo Fourier
+LOG = """          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          ***********************************************************
+ Fourier technique    : turbo Fourier
  Fourier calculated by: atom form factors taken from: Waasmeier & Kirfel
 {used}
+   Temp. factors      : {temp}
  Lot #    1/   1 : complete crystal
                    Atom typ = CU         (#      2048 )
                    Atom typ = AU         (#      2048 )
@@ -65,13 +69,18 @@ def make_run(work: Path, corrupt: str | None = None) -> Path:
         elif corrupt == "y_sign_flip" and model == "block":
             sig2 = (sig * ((-1) ** np.arange(O.N_CELL))[None, :, None]).astype(np.int8)
             It, Id, _ = O.forward(sig2, "engine")
+        elif corrupt == "unrequested_dw_B1":      # exactly what gate2-prereg-v2 saw on the real engine
+            H = O.H_AXIS; q = np.sqrt(H[:, None, None]**2 + H[None, :, None]**2 + H[None, None, :]**2) / (2 * O.A_CELL)
+            dw = np.exp(-2 * (np.rint(q / O.CFINC) * O.CFINC) ** 2)
+            It, Id = It * dw, Id * dw
         elif corrupt == "physics_precision":
             It, Id, _ = O.forward(sig, "physics")
         write_discus_h5(run / f"gate2_{model}_total.h5", It, "bragg_present")
         write_discus_h5(run / f"gate2_{model}_diffuse.h5", Id, "bragg_subtracted")
-        (run / f"gate2_{model}_total.log").write_text(LOG.format(used=""))
+        (run / f"gate2_{model}_total.log").write_text(LOG.format(used="", temp=("used" if corrupt == "temp_used_log" else "ignored")))
         (run / f"gate2_{model}_diffuse.log").write_text(
-            LOG.format(used=" Used 100.0 % of the crystal to calculate <F> ..."))
+            LOG.format(used=" Used 100.0 % of the crystal to calculate <F> ...",
+                       temp=("used" if corrupt == "temp_used_log" else "ignored")))
     if corrupt == "edited_macro":
         p = run / "gate2_block_diffuse.mac"; p.write_text(p.read_text().replace("set aver,100.0", "set aver,50.0"))
     return run
@@ -85,6 +94,8 @@ CASES = {  # corruption -> expected status and a criterion-name fragment that mu
     "scale_1pct": ("FAIL", "C0"),
     "y_sign_flip": ("FAIL", "B2 sign"),
     "physics_precision": ("FAIL", "engine-precision"),
+    "unrequested_dw_B1": ("FAIL", "C0"),
+    "temp_used_log": ("FAIL", "T "),
     "edited_macro": ("INVALID", None),
 }
 

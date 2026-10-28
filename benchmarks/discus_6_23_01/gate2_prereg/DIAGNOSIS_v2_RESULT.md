@@ -51,10 +51,12 @@ about 40× the registered 1×10⁻⁶. The worst voxels are of order 0.3 % at |I
 dyadic Gate 1 run agreed to 7×10⁻¹² with the same machinery, so DISCUS's phase/exp-table arithmetic is not the obvious suspect.
 The fit excludes a different B (best-fit B = 1.0000003). Not diagnosed. It is below the physics tolerance, and no claim is made about its origin.
 
-## Finding 4 — evaluator defect in the L criteria
+## Finding 4 — evaluator defect in the L criteria (corrected 2026-10-28)
 
-Both engine logs contain `Atom typ = CU         (#      2048 )` and `AU … (#      2048 )`. The registered L check
-looks for single-spaced text and therefore fails on a correct log. This is a defect of `analyze.py` (the engine counts are right).
+*The first version of this note blamed the atom-count regex. That was wrong: the regex tolerates the padding.* The cause is
+the error-line check, which matched `***` and so fired on DISCUS's start-up banner (a row of bare asterisks). The engine
+logs are clean: counts are 2048 Cu and 2048 Au, and the only DISCUS error markers look like `***APPL***`, which are absent.
+The v2 selftest did not catch it because its synthetic logs had no banner. v3 adds the banner to the synthetic logs.
 It does not affect any physical criterion.
 
 ## Consequences for the gate status
@@ -69,6 +71,11 @@ It does not affect any physical criterion.
 1. Macros: add `temp ignore` so that B = 0 is what the engine actually uses, as designed. A probe must first confirm the
    keyword is accepted and the log's `Temp. factors` line changes from `used`.
    Fallback if it is not accepted: keep `temp use` and set the oracle to B = 1 explicitly (the engine behaviour is now measured).
-2. Evaluator: whitespace-tolerant L regex; add a log check on the `Temp. factors` line.
+2. Evaluator: error check matches `***WORD***` markers, not the banner; new T criterion on the `Temp. factors` line; selftest gains the banner, an unrequested-DW case and a temp-used-log case.
 3. Everything else unchanged: seeds, grid, predictions, thresholds. In particular the 1×10⁻⁶ engine-precision limits stay, so Finding 3 will show up honestly if it persists.
 4. Registered in the record as a deviation made **after seeing v2 results**; v2 results and this diagnosis are kept alongside.
+
+## Status: v3 built (2026-10-28, owner approved)
+
+`predictions.json` models, design and thresholds are identical to v2 (checked); only the four data macros, `generate.py` and
+`analyze.py` (and their hashes) changed. v3 `predictions.json` SHA-256 `40dd2b14…31cb488d`. See `LOCAL_AGENT_HANDOFF.md` ("Registration v3").

@@ -18,7 +18,7 @@ fourier
   abs h
   ord k
   top l
-  temp use
+  temp ignore
   disp off
   lots off
   set technique:turbo

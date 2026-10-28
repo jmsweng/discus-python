@@ -1,6 +1,8 @@
 # Gate 2 — pre-registered signed off-origin 3D-ΔPDF experiment (DISCUS_SUITE 6.23.01)
 
-**Registered:** 2026-10-28. v1 was commit `c3ab156`; the current version is **v2**. Both predate any engine run that produced data.
+**Registered:** 2026-10-28. v1 was commit `c3ab156` and v2 `ec703b4`; the current version is **v3**. v1 and v2 predate any engine run that produced data, except that v2 *did* produce data and FAILED.
+
+**Deviation v2 → v3 (registered after seeing the v2 results).** The v2 run applied an unrequested B = 1 Å² Debye–Waller factor (`temp use`; files carry B = 0). v3 changes only the macros (`temp ignore`) and `analyze.py` (error-line regex; new T criterion on the log's `Temp. factors` line). Predictions, oracle, grid and all numerical thresholds are unchanged. See `DIAGNOSIS_v2_RESULT.md`; the v2 result files are kept as they were.
 
 **Deviation v1 → v2.** The engine probe rejected the v1 structure files at `read stru` (DISCUS error −49). v1 wrote two blanks after the 4-character element name, which shifted every field of DISCUS's fixed-column `format numbers` atom line by one column. No data macro ran, and the probe log is preserved as evidence (`evidence/20261028T232749Z_LAPTOP-NGU3BT0N`).
 
@@ -93,6 +95,7 @@ These are evaluated for *both* models by `analyze.py`. Values come from `predict
 | B2 | sign agreement wherever \|predicted ratio\| ≥ 0.05 | 100 % |
 | B3 | imag/real of the transform; Friedel relative error of the engine diffuse | ≤ 1×10⁻¹⁰; ≤ 1×10⁻¹² |
 | N | negative control: max \|ρ/ρ₀\| over the six nearest neighbours | ≤ 0.05 |
+| T | each engine log has a `Temp. factors` line that does not say `used` | required |
 | L | each engine log: `Atom typ = CU (# 2048)`, `AU (# 2048)`, and no error lines | required |
 
 Metadata must also match before any criterion is evaluated: shape 128³, corner −4, increments diag(1/16), cell 4 Å / 90°, and `bragg_present` / `bragg_subtracted` as appropriate. Otherwise the run is INVALID.
