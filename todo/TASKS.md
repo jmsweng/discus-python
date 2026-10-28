@@ -44,9 +44,15 @@
 - [ ] **P1 — Validate FFT normalization and real-space scale** against independent analytical and trusted diffuse-scattering/3D-ΔPDF references, not only internal NumPy consistency tests. Follow [the reproducible scientific benchmark plan](../docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md); the current C3/C4 real fixtures are Bragg-present Patterson tests.
 - [ ] **P2 — Keep smoke tests reproducible** in supported WSL and report engine version, executable, fixture checksums, logs, output hashes, numerical tolerances and observed outcomes.
 
-### Native runner integration (review pending)
+### Native runner integration (merged PR #7)
 
-- [ ] **P1 — Integrate the new common/NeXus reader with the 3D runner** so a configured output filename is loaded with verified source metadata and invalid geometry is rejected. [Draft PR #7](https://github.com/jmsweng/discus-python/pull/7) implements this and includes a real-engine smoke test (C1 Bragg-subtracted, 65³, `native_nexus=True` → `complete`); check it off **only after review and merge**.
+- [x] **P1 — Integrate the new common/NeXus reader with the 3D runner** so a configured output filename is loaded with verified source metadata and invalid geometry is rejected. [Merged PR #7](https://github.com/jmsweng/discus-python/pull/7) includes the reviewed real-engine smoke test (C1 Bragg-subtracted, 65³, `native_nexus=True` → `complete`); this is engineering evidence, **not** independent physical 3D-ΔPDF calibration.
+
+### PR #8 independent scientific audit (in progress, not physically calibrated)
+
+- [x] **Gate 0 groundwork — Correct independent 3×3 reciprocal grid and direct-average oracle.** [Draft PR #8](https://github.com/jmsweng/discus-python/pull/8) adds synthetic skew/2×2×2/origin-shift tests, opt-in frozen-C1 oracle test, and true 33³ archived HDF5 observed-versus-predicted metrics. **Only this reference-code and archived-evidence groundwork is complete**, not Gate 0 scientific acceptance.
+- [ ] **Gate 0/1 — Resolve C1 independent ensemble, Waasmaier–Kirfel factors and DISCUS 6.23.01 `set aver` full-grid discrepancy.** Archived empirical IT92 diffuse candidate relative L2 is ≈1.77%; several low-signal voxels differ greatly. Do not mark calibrated.
+- [ ] **Gate 2/3 — Correlated-disorder signed off-origin 3D-ΔPDF validation and absolute-scale audit.** Require independent predicted correlations, new real-engine evidence and coordinate/normalization checks; see [PR #8 report](../docs/SCIENTIFIC_VALIDATION_REPORT.md).
 
 ### Real 3D DISCUS pipeline (critical path)
 
