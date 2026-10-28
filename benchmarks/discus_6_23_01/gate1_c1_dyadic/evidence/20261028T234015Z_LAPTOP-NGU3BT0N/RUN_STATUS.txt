@@ -1,0 +1,3 @@
+c1_dyadic exit=0 seconds=1
+c1_repro exit=0 seconds=0
+analyze exit=0
