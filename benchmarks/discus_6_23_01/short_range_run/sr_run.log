@@ -1,0 +1,233 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\Users\jmswe\Documents\Programming projects\discus-python\benchmarks\discus_6_23_01\short_range_run\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+ suite ># Short-range correlated model: 8x8x8 supercell (2048 sites)
+ suite ># Supercell: 40.0 A x 40.0 A x 40.0 A
+ suite ># Correlation length: 1.0 unit cell
+ suite >#
+ suite ># Total intensity (Bragg + diffuse):
+ suite >discus
+ discus >read
+ discus/read >  stru short_range_model.stru
+ discus >fourier
+ discus/fourier >  xray
+ discus/fourier >  wvle moa1
+ discus/fourier >  ll -2.0,-2.0,-2.0
+ discus/fourier >  lr  2.0,-2.0,-2.0
+ discus/fourier >  ul -2.0, 2.0,-2.0
+ discus/fourier >  tl -2.0,-2.0, 2.0
+ discus/fourier >  na 33
+ discus/fourier >  no 33
+ discus/fourier >  nt 33
+ discus/fourier >  abs h
+ discus/fourier >  ord k
+ discus/fourier >  top l
+ discus/fourier >  temp use
+ discus/fourier >  disp off
+ discus/fourier >  lots off
+ discus/fourier >  set technique:turbo
+ discus/fourier >  set aver,0.0
+ discus/fourier >  show
+ discus/fourier >  run
+ discus/fourier >exit
+ discus >output
+ discus/output >  value int
+ discus/output >  form nexus
+ discus/output >  outf sr_total.h5
+ discus/output >  run
+
+
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+   40.00000   40.00000   40.00000   90.00000   90.00000   90.00000    64000.0    
+
+ Metric Tensor     :
+    1600.00000      0.00000      0.00000
+       0.00000   1600.00000      0.00000
+       0.00000      0.00000   1600.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.02500    0.02500    0.02500   90.00000   90.00000   90.00000   0.156250E-04
+
+ Reciprocal metric tensor     : 
+       0.00063     -0.00000     -0.00000
+      -0.00000      0.00063     -0.00000
+      -0.00000     -0.00000      0.00063
+
+ Fourier technique    : turbo Fourier
+ Fourier calculated by: atom form factors taken from: Waasmeier & Kirfel         
+   Fourier volume     : complete crystal
+   Radiation          : X-ray   , wavelength = MOA1 =  0.7093 A
+   Temp. factors      : used
+   Anomalous scat.    : ignored
+   Symmetry averaging : Friedel pairs merged
+   Exctinction Param. : No extinction correction applied
+   Filter function    : Not applied 
+   Intensity scale    :     1.0000
+
+ Reciprocal layer     : 
+   lower left  corner :     -2.0000    -2.0000    -2.0000
+   lower right corner :      2.0000    -2.0000    -2.0000
+   upper left  corner :     -2.0000     2.0000    -2.0000
+   top   left  corner :     -2.0000    -2.0000     2.0000
+
+   hor. increment     :      0.1250     0.0000     0.0000   ->    0.0031 A**-1
+   vert. increment    :      0.0000     0.1250     0.0000   ->    0.0031 A**-1
+   top   increment    :      0.0000     0.0000     0.1250   ->    0.0031 A**-1
+   # of points        :     33 x   33 x   33  (h,k,l)
+   Angle Ratio Aver v/h     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver h/t     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver t/v     90.0000 degrees        1.0000     1.0000
+ Computing complex exponent table ...
+ Computing sin(theta)/lambda table ...
+ Computing formfactor lookup table ...
+
+ Lot #    1/   1 : complete crystal
+                   Atom typ = GA         (#      1001 )
+                   Atom typ = AS         (#      1047 )
+
+ 
+ Bragg scat.     :   4.13390      ->  0.429723E+10
+ Diffuse scat.   :  0.244581      ->  0.408201E+10
+      Average    :  0.532062E+08  +-  0.274548E+09
+
+ Elapsed time    :  0.459759     sec
+
+      Partial dump of unified data 
+
+   Crystal Meta information
+audit_conform_dict_name    Disorder unified data
+audit_conform_dict_version 0.0.0
+audit_creation_date        2026-10-28
+audit_creation_method      6.23.01
+audit_author_name          DISCUS
+
+ Unit cell params    40.000000   40.000000   40.000000
+ Unit cell angles    90.000000   90.000000   90.000000
+ Symmetry H_M     P 1                             
+ Symmetry Origin      1
+ Symmetry abc     abc
+ Symmetry n MAT       1
+ Symmetry 1 fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry 1 scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry 1 lst      0.000000   0.000000   1.000000   0.000000
+ Symmetry N fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry N scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry N lst      0.000000   0.000000   1.000000   0.000000
+
+ Data experiment  calculated                      
+ Data with  bragg bragg_present                   
+ Data symmetrized none                            
+ Data number                                      
+ Data axes        hkl                             
+ Data radiation   xray                            
+ Data dimensions     33   33   33
+ Data abs,ord,top     1    2    3
+ Data style       single_diffraction              
+ Data content     intensity                       
+ Data symbol      MOA1            
+ Data length         0.709260   0.709260   0.000000
+
+Axes coordinates: basecell_fractional             
+
+ Data corner        -2.000000  -2.000000  -2.000000
+
+ Data abscissa       0.125000   0.000000   0.000000
+ Data ordinate       0.000000   0.125000   0.000000
+ Data top_axis       0.000000   0.000000   0.125000
+
+  DATA_VALUES   2134.9850251375478        1781.9264560350655     
+ discus/output >  value 3DPDF
+ discus/output >  form nexus
+ discus/output >  outf sr_total_3dpdf.h5
+ discus/output >  run
+ discus/output >exit
+ discus >exit
+ suite >exit
+  DATA_MINMAX  0.24458148908984964        4297234377.7185135     
+
+
+      Partial dump of unified data 
+
+   Crystal Meta information
+audit_conform_dict_name    Disorder unified data
+audit_conform_dict_version 0.0.0
+audit_creation_date        2026-10-28
+audit_creation_method      6.23.01
+audit_author_name          DISCUS
+
+ Unit cell params    40.000000   40.000000   40.000000
+ Unit cell angles    90.000000   90.000000   90.000000
+ Symmetry H_M     P 1                             
+ Symmetry Origin      1
+ Symmetry abc     abc
+ Symmetry n MAT       1
+ Symmetry 1 fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry 1 scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry 1 lst      0.000000   0.000000   1.000000   0.000000
+ Symmetry N fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry N scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry N lst      0.000000   0.000000   1.000000   0.000000
+
+ Data experiment  calculated                      
+ Data with  bragg bragg_present                   
+ Data symmetrized none                            
+ Data number                                      
+ Data axes        uvw                             
+ Data radiation   xray                            
+ Data dimensions     33   33   33
+ Data abs,ord,top     1    2    3
+ Data style       single_pdf                      
+ Data content     3dpdf                           
+ Data symbol      MOA1            
+ Data length         0.709260   0.709260   0.000000
+
+Axes coordinates: basecell_fractional             
+
+ Data corner        -4.000000  -4.000000  -4.000000
+
+ Data abscissa       0.250000   0.000000   0.000000
+ Data ordinate       0.000000   0.250000   0.000000
+ Data top_axis       0.000000   0.000000   0.250000
+
+  DATA_VALUES   11583568799.808681        11583271716.807964     
+  DATA_MINMAX   11529976737.856499        21658381215.227745     
+ Sample conversion   discus_single 6.23.01
+ Sample composition  Ga  : 0.48As  : 0.5112
+ Sample data_file    discus_calculation
+ Sample Background   
+ Sample sigma file   
+ Source dimension      33  33  33
+ Source abs is HKL      1
+ Source ord is HKL      2
+ Source top is HKL      3
+ Source coordinate   basecell_fractional             
+ Source left lower bottom   -2.00000  -2.00000  -2.00000
+ Source vector abscissa      0.12500   0.00000   0.00000
+ Source vector ordinate      0.00000   0.12500   0.00000
+ Source vector top axis      0.00000   0.00000   0.12500
+

@@ -1,0 +1,41 @@
+# Short-range correlated model: 8x8x8 supercell (2048 sites)
+# Supercell: 40.0 A x 40.0 A x 40.0 A
+# Correlation length: 1.0 unit cell
+#
+# Total intensity (Bragg + diffuse):
+discus
+read
+  stru short_range_model.stru
+fourier
+  xray
+  wvle moa1
+  ll -2.0,-2.0,-2.0
+  lr  2.0,-2.0,-2.0
+  ul -2.0, 2.0,-2.0
+  tl -2.0,-2.0, 2.0
+  na 33
+  no 33
+  nt 33
+  abs h
+  ord k
+  top l
+  temp use
+  disp off
+  lots off
+  set technique:turbo
+  set aver,0.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf sr_total.h5
+  run
+  value 3DPDF
+  form nexus
+  outf sr_total_3dpdf.h5
+  run
+exit
+exit
+exit

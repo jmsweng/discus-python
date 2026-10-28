@@ -282,12 +282,10 @@ def write_stru(path: Path, struct: dict) -> None:
     supercell_a = n * a
 
     lines = [
-        "# Frozen short-range correlated-disorder model for 3D-dPDF validation",
-        f"# Supercell: n={n}, a={a} Å (supercell = {supercell_a} Å)",
-        f"# Correlation length: {struct['correlation_length']} unit cells",
-        f"# Total sites: {len(species)}",
-        f"spcgr 1",
-        f"cell {supercell_a} {supercell_a} {supercell_a} 90 90 90",
+        f"title short_range_model_n{n}_a{a}",
+        f"spcgr P1",
+        f"cell {supercell_a} {supercell_a} {supercell_a} 90.0 90.0 90.0",
+        "atoms",
     ]
 
     for (x, y, z), sp in zip(positions, species):
