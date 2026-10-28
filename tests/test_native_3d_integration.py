@@ -343,3 +343,153 @@ def test_probe_overwrite_flag_clobbers(tmp_path):
     # Prior evidence was removed by the explicit overwrite.
     assert not (out / "prior_evidence.txt").exists()
     assert (out / "C0.mac").exists()
+
+
+# --- Gate 2b: run_cases.sh final engineering fixes --------------------------
+#
+# These tests cover the three defects found during independent review:
+#   1. Multi-case macro hashing (bash array expansion)
+#   2. Archive creation (outside the archived tree, no self-inclusion)
+#   3. --overwrite guard (protected paths, symlink aliases)
+
+def test_probe_hash_manifest_contains_all_selected_macros(tmp_path):
+    """The SHA-256 manifest must contain every selected macro exactly once."""
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "hash_multi"
+    r = _run_probe(copied, env, str(out), "C3", "C4")
+    assert r.returncode == 0, r.stderr
+    hashes = (out / "hashes.txt").read_text()
+    # Both selected macros must appear.
+    assert "C3.mac" in hashes
+    assert "C4.mac" in hashes
+    # Unselected macros must NOT appear.
+    assert "C0.mac" not in hashes
+    assert "C1.mac" not in hashes
+    assert "C2.mac" not in hashes
+    assert "C5.mac" not in hashes
+    # Shared inputs must appear.
+    assert "gaas.cll" in hashes
+    assert "mono2.cll" in hashes
+
+
+def test_probe_hash_manifest_single_case(tmp_path):
+    """A single-case selection produces a manifest with exactly that macro."""
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "hash_single"
+    r = _run_probe(copied, env, str(out), "C0")
+    assert r.returncode == 0, r.stderr
+    hashes = (out / "hashes.txt").read_text()
+    assert "C0.mac" in hashes
+    assert "C1.mac" not in hashes
+    assert "C3.mac" not in hashes
+
+
+def test_probe_hash_manifest_default_selection(tmp_path):
+    """The default 5-case selection produces a manifest with all five macros."""
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "hash_default"
+    r = _run_probe(copied, env, str(out))
+    assert r.returncode == 0, r.stderr
+    hashes = (out / "hashes.txt").read_text()
+    for c in ("C0", "C1", "C2", "C3", "C4"):
+        assert f"{c}.mac" in hashes
+    assert "C5.mac" not in hashes
+
+
+def test_probe_archive_created_outside_tree(tmp_path):
+    """The archive must be created in the parent directory, not inside the run dir."""
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "arch_out"
+    r = _run_probe(copied, env, str(out), "C3")
+    assert r.returncode == 0, r.stderr
+    # Find the archive in the run directory (moved there after creation).
+    archives = list(out.glob("probe_3d_*.tgz"))
+    assert len(archives) == 1, f"Expected exactly one archive, found {len(archives)}"
+    archive = archives[0]
+    # The archive must be readable.
+    import tarfile
+    with tarfile.open(archive, "r:gz") as tf:
+        names = tf.getnames()
+    # It must contain the run directory contents.
+    assert any("C3.mac" in n for n in names)
+    assert any("hashes.txt" in n for n in names)
+    # It must NOT contain itself (no self-reference).
+    assert not any(archive.name in n for n in names)
+    # It must NOT contain .h5 files (excluded).
+    assert not any(n.endswith(".h5") for n in names)
+
+
+def test_probe_archive_relative_path(tmp_path):
+    """Archive creation must work with a relative output directory path."""
+    copied, env = _probe_env(tmp_path, None)
+    # Use a relative path: the run dir is relative to CWD.
+    rel_out = "rel_arch_test"
+    r = subprocess.run(
+        ["bash", str(copied / "run_cases.sh"), rel_out, "C3"],
+        env=env, capture_output=True, text=True,
+        cwd=str(tmp_path),
+    )
+    assert r.returncode == 0, r.stderr
+    out = tmp_path / rel_out
+    assert (out / "C3.mac").exists()
+    # Archive should exist in the run directory.
+    archives = list(out.glob("probe_3d_*.tgz"))
+    assert len(archives) == 1
+
+
+def test_probe_overwrite_refuses_home_directory(tmp_path):
+    """--overwrite must refuse to delete the home directory."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # Create a fake "home" directory and point HOME at it.
+    fake_home = tmp_path / "fake_home"
+    fake_home.mkdir()
+    (fake_home / "important.txt").write_text("do not delete")
+    env = dict(env, HOME=str(fake_home))
+    r = _run_probe(copied, env, str(fake_home), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "Refusing" in r.stderr
+    # The data must survive.
+    assert (fake_home / "important.txt").exists()
+
+
+def test_probe_overwrite_refuses_repo_root(tmp_path):
+    """--overwrite must refuse to delete the repository root."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # The repo root is the parent of the copied spike dir.
+    repo_root = copied.parent
+    r = _run_probe(copied, env, str(repo_root), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "Refusing" in r.stderr
+
+
+def test_probe_overwrite_refuses_script_dir(tmp_path):
+    """--overwrite must refuse to delete the script/source directory."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    r = _run_probe(copied, env, str(copied), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "Refusing" in r.stderr
+
+
+def test_probe_overwrite_refuses_symlink_to_protected(tmp_path):
+    """--overwrite must refuse a symlink that resolves into a protected dir."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # Create a symlink pointing to the copied spike dir (protected).
+    symlink = tmp_path / "link_to_spike"
+    symlink.symlink_to(copied)
+    r = _run_probe(copied, env, str(symlink), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "Refusing" in r.stderr
+    # The script must still exist.
+    assert (copied / "run_cases.sh").exists()
+
+
+def test_probe_overwrite_allows_normal_directory(tmp_path):
+    """--overwrite must still work for a normal, non-protected directory."""
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "ok_overwrite"
+    out.mkdir()
+    (out / "stale.txt").write_text("old data")
+    r = _run_probe(copied, env, str(out), "--overwrite", "C0")
+    assert r.returncode == 0, r.stderr
+    assert not (out / "stale.txt").exists()
+    assert (out / "C0.mac").exists()

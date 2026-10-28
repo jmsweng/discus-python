@@ -8,6 +8,9 @@
 # Safety model:
 #   * Refuses to write into an occupied output directory (use --overwrite to
 #     force; this is the ONLY way to clobber previous evidence).
+#   * --overwrite is guarded: it refuses to delete protected paths (home,
+#     repo root, script dir, /, ., ..) and symlink aliases that resolve
+#     into protected locations.
 #   * Validates case names BEFORE writing any files.
 #   * Generates and processes ONLY the selected case macros.
 #   * Treats a missing engine, nonzero DISCUS exit, missing/empty/malformed
@@ -15,13 +18,14 @@
 #   * Expected HDF5 names are derived from each generated macro's `outf`
 #     declarations (C0/C1/C2/C5 -> 3 files each; C3 -> 2; C4 -> 1).
 #   * Saves per-case logs, timing, inspector JSON and checksums in the output
-#     directory. The optional archive is uniquely named and never overwrites
-#     files in the source tree. Large HDF5 files are retained in the output
-#     directory and are NOT committed to Git.
+#     directory. The optional archive is uniquely named, created OUTSIDE the
+#     archived tree, and never overwrites files in the source tree. Large HDF5
+#     files are retained in the output directory and are NOT committed to Git.
 set -u
 set -o pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$HERE/.." && pwd)"
 
 # ---- argument parsing ------------------------------------------------------
 OVERWRITE=0
@@ -54,36 +58,99 @@ for c in "${CASES[@]}"; do
   esac
 done
 
+# ---- resolve and validate the output directory -----------------------------
+# Convert to an absolute path early.
+if [ ! -e "$RUN" ]; then
+  # Path does not exist yet: resolve the parent and append the basename.
+  parent="$(dirname "$RUN")"
+  if [ -z "$parent" ] || [ "$parent" = "." ]; then
+    RUN_ABS="$PWD/$(basename "$RUN")"
+  else
+    parent_abs="$(cd "$parent" 2>/dev/null && pwd)" || {
+      echo "Refusing: cannot resolve parent directory of '$RUN'." >&2
+      exit 3
+    }
+    RUN_ABS="$parent_abs/$(basename "$RUN")"
+  fi
+else
+  # Path exists: resolve it.
+  RUN_ABS="$(cd "$RUN" 2>/dev/null && pwd)" || {
+    echo "Refusing: cannot resolve path '$RUN'." >&2
+    exit 3
+  }
+fi
+
+# Guard destructive --overwrite: refuse protected paths.
+if [ "$OVERWRITE" -eq 1 ]; then
+  # Normalize: strip trailing slashes.
+  norm="$RUN_ABS"
+  while [ "${norm%/}" != "$norm" ]; do norm="${norm%/}"; done
+  # Refuse the root.
+  if [ "$norm" = "/" ]; then
+    echo "Refusing --overwrite: cannot target /." >&2
+    exit 3
+  fi
+  # Refuse the home directory.
+  if [ "$norm" = "$HOME" ]; then
+    echo "Refusing --overwrite: cannot target the home directory." >&2
+    exit 3
+  fi
+  # Refuse the repository root.
+  if [ "$norm" = "$REPO_ROOT" ]; then
+    echo "Refusing --overwrite: cannot target the repository root." >&2
+    exit 3
+  fi
+  # Refuse the script/source directory.
+  if [ "$norm" = "$HERE" ]; then
+    echo "Refusing --overwrite: cannot target the script/source directory." >&2
+    exit 3
+  fi
+  # Refuse if the path is an ancestor of the repo root.
+  case "$REPO_ROOT/" in
+    "$norm"/*) echo "Refusing --overwrite: path is an ancestor of the repository." >&2; exit 3 ;;
+  esac
+  # Refuse if the resolved path is a symlink pointing into a protected location.
+  if [ -L "$RUN_ABS" ]; then
+    target="$(readlink -f "$RUN_ABS" 2>/dev/null)" || target=""
+    case "$target" in
+      "$HOME"*) echo "Refusing --overwrite: symlink resolves into protected home directory." >&2; exit 3 ;;
+      "$REPO_ROOT"*) echo "Refusing --overwrite: symlink resolves into the repository." >&2; exit 3 ;;
+      "$HERE"*) echo "Refusing --overwrite: symlink resolves into the script directory." >&2; exit 3 ;;
+    esac
+  fi
+fi
+
 # Refuse an occupied/colliding run directory (never silently delete evidence).
-if [ -e "$RUN" ] && [ ! -d "$RUN" ]; then
-  echo "Refusing: '$RUN' exists and is not a directory." >&2
+if [ -e "$RUN_ABS" ] && [ ! -d "$RUN_ABS" ]; then
+  echo "Refusing: '$RUN_ABS' exists and is not a directory." >&2
   exit 3
 fi
-if [ -d "$RUN" ] && [ -n "$(ls -A "$RUN" 2>/dev/null)" ]; then
+if [ -d "$RUN_ABS" ] && [ -n "$(ls -A "$RUN_ABS" 2>/dev/null)" ]; then
   if [ "$OVERWRITE" -ne 1 ]; then
-    echo "Refusing: output directory '$RUN' is not empty." >&2
+    echo "Refusing: output directory '$RUN_ABS' is not empty." >&2
     echo "Delete it or pass --overwrite to clobber previous evidence." >&2
     exit 3
   fi
   # Explicit overwrite: remove prior contents so stale files cannot be mistaken
   # for fresh results.
-  rm -rf "$RUN"
+  echo "WARNING: --overwrite: deleting contents of '$RUN_ABS'"
+  rm -rf "$RUN_ABS"
 fi
-mkdir -p "$RUN"
+mkdir -p "$RUN_ABS"
 
 PY="${PYTHON:-python3}"
 ENGINE="${DISCUS_ENGINE:-discus_suite}"
 
 # ---- stage shared inputs ---------------------------------------------------
-cp "$HERE/../examples/gaas.cll" "$RUN/gaas.cll"
-cp "$HERE/macros/mono2.cll" "$RUN/mono2.cll"
+cp "$REPO_ROOT/examples/gaas.cll" "$RUN_ABS/gaas.cll"
+cp "$HERE/macros/mono2.cll" "$RUN_ABS/mono2.cll"
 
 # ---- generate ONLY the selected case macros --------------------------------
 # Use literal \n in the disorder text; convert to real newlines after generation.
 gen() { # $1=case  $2=seed  $3=disorder-lines (with literal \n)
   sed -e "s/@CASE@/$1/g" -e "s/@SEED@/$2/g" -e "s|@DISORDER@|$3|" \
-      "$HERE/macros/case.mac.in" > "$RUN/$1.mac"
-  sed -i 's/\\n/\n/g' "$RUN/$1.mac"
+      "$HERE/macros/case.mac.in" > "$RUN_ABS/$1.mac"
+  sed -i 's/\\n/\n/g' "$RUN_ABS/$1.mac"
 }
 for c in "${CASES[@]}"; do
   case "$c" in
@@ -91,14 +158,20 @@ for c in "${CASES[@]}"; do
     C1) gen C1 1 "seed 1\n  replace GA,AS,all,0.15" ;;
     C2) gen C2 2 "seed 2\n  replace GA,AS,all,0.15" ;;
     C5) gen C5 1 "seed 1\n  replace GA,AS,all,0.15"
-        sed -i 's/^  xray$/  xray table:inter/' "$RUN/C5.mac" ;;
-    C3|C4) cp "$HERE/macros/$c.mac" "$RUN/$c.mac" ;;
+        sed -i 's/^  xray$/  xray table:inter/' "$RUN_ABS/C5.mac" ;;
+    C3|C4) cp "$HERE/macros/$c.mac" "$RUN_ABS/$c.mac" ;;
   esac
 done
 
 # ---- record staged hashes --------------------------------------------------
-cd "$RUN" || exit 1
-sha256sum gaas.cll mono2.cll "${CASES[@]}.mac" | tee hashes.txt
+cd "$RUN_ABS" || exit 1
+# Build a proper array of macro filenames from the validated case names.
+MACROS=()
+for c in "${CASES[@]}"; do MACROS+=("$c.mac"); done
+sha256sum gaas.cll mono2.cll "${MACROS[@]}" > hashes.txt || {
+  echo "ERROR: failed to compute SHA-256 manifest; aborting." >&2
+  exit 1
+}
 
 # ---- run each selected case; fail fast with a clear summary ---------------
 FAILED=()
@@ -154,8 +227,24 @@ echo "=== ALL SELECTED CASES SUCCEEDED: ${CASES[*]}"
 ls -l *.h5 2>/dev/null | tee h5_list.txt
 sha256sum *.h5 2>/dev/null | tee -a hashes.txt
 
-# Optional, uniquely named archive (never overwrites the source tree).
-ARCHIVE="$RUN/probe_3d_$(date -u +%Y%m%dT%H%M%SZ).tgz"
-tar czf "$ARCHIVE" --exclude='*.h5' -C "$(dirname "$RUN")" "$(basename "$RUN")" 2>/dev/null \
-  && echo "Archive (no big .h5): $ARCHIVE" \
-  || echo "Archive creation skipped."
+# Optional, uniquely named archive created OUTSIDE the archived tree.
+ARCHIVE_BASE="$(date -u +%Y%m%dT%H%M%SZ)"
+PARENT_DIR="$(dirname "$RUN_ABS")"
+TMP_ARCHIVE="$(mktemp "$PARENT_DIR/.probe_3d_${ARCHIVE_BASE}_XXXXXX.tgz")" || {
+  echo "WARNING: could not create temp archive file." >&2
+  exit 1
+}
+if tar czf "$TMP_ARCHIVE" --exclude='*.h5' -C "$PARENT_DIR" "$(basename "$RUN_ABS")" 2>/dev/null; then
+  ARCHIVE="$RUN_ABS/probe_3d_${ARCHIVE_BASE}.tgz"
+  # Do not silently overwrite an existing archive with the same timestamp.
+  if [ -e "$ARCHIVE" ]; then
+    mv "$TMP_ARCHIVE" "${ARCHIVE}.tmp_renamed"
+    echo "WARNING: archive '$ARCHIVE' already exists; saved as '${ARCHIVE}.tmp_renamed'"
+  else
+    mv "$TMP_ARCHIVE" "$ARCHIVE"
+    echo "Archive (no big .h5): $ARCHIVE"
+  fi
+else
+  rm -f "$TMP_ARCHIVE"
+  echo "WARNING: archive creation failed." >&2
+fi
