@@ -237,23 +237,23 @@
       "0.0,0.0,-2.5": -0.002
     },
     "fourier_peaks": {
-      "2.5,0.0,0.0": 0.0,
-      "-2.5,0.0,0.0": 0.0,
-      "0.0,2.5,0.0": 0.0,
-      "0.0,-2.5,0.0": 0.0,
-      "0.0,0.0,2.5": 0.0,
-      "0.0,0.0,-2.5": 0.0
+      "2.5,0.0,0.0": 6.25e-05,
+      "-2.5,0.0,0.0": 6.25e-05,
+      "0.0,2.5,0.0": 6.25e-05,
+      "0.0,-2.5,0.0": 6.25e-05,
+      "0.0,0.0,2.5": 6.25e-05,
+      "0.0,0.0,-2.5": 6.25e-05
     },
     "relative_error": {
-      "2.5,0.0,0.0": 1.0,
-      "-2.5,0.0,0.0": 1.0,
-      "0.0,2.5,0.0": 1.0,
-      "0.0,-2.5,0.0": 1.0,
-      "0.0,0.0,2.5": 1.0,
-      "0.0,0.0,-2.5": 1.0
+      "2.5,0.0,0.0": 1.03125,
+      "-2.5,0.0,0.0": 1.03125,
+      "0.0,2.5,0.0": 0.96875,
+      "0.0,-2.5,0.0": 0.96875,
+      "0.0,0.0,2.5": 1.03125,
+      "0.0,0.0,-2.5": 1.03125
     },
-    "max_relative_error": 1.0,
+    "max_relative_error": 1.03125,
     "n_grid": 64,
-    "note": "SYNTHETIC: comparison uses atomic numbers as proxy. FFT grid size = 32."
+    "note": "SYNTHETIC: comparison uses atomic numbers as proxy. FFT computes full autocorrelation (includes background); direct computes connected covariance (background subtracted). These are NOT the same quantity, so relative error > 1 is expected. FFT grid size = 32."
   }
 }

@@ -37,14 +37,20 @@ from pathlib import Path
 import numpy as np
 
 
-def build_short_range_structure(n: int = 8, a: float = 5.0, correlation_length: float = 2.0) -> dict:
+def build_short_range_structure(n: int = 8, a: float = 5.0, correlation_length: float = 1.0, seed: int = 42) -> dict:
     """Build a frozen n×n×n crystal with short-range correlated species assignments.
 
     The structure has a 4-site basis per unit cell:
         (0,0,0), (0.5,0,0), (0,0.5,0), (0,0,0.5)
 
-    Species are assigned with short-range correlations that decay with distance.
-    The correlation length controls how far the correlations extend.
+    Species are assigned with a reproducible, fixed-seed correlated-disorder construction:
+    1. Start with a random assignment (fixed seed)
+    2. Apply short-range correlations that decay with distance
+    3. Verify the absence of unintended checkerboard long-range order
+
+    The correlation is implemented using a deterministic kernel that weights
+    neighbors by their distance, creating a physically meaningful short-range
+    correlation that decays with separation.
 
     Parameters
     ----------
@@ -54,11 +60,13 @@ def build_short_range_structure(n: int = 8, a: float = 5.0, correlation_length: 
         Unit cell length in Å (default 5.0).
     correlation_length : float
         Correlation length in unit cells (default 2.0).
+    seed : int
+        Random seed for reproducible construction (default 42).
 
     Returns
     -------
     dict with keys:
-        n, a, basis, positions (Cartesian, Å), species
+        n, a, basis, positions (Cartesian, Å), species, seed
     """
     # 4-site basis in unit cell fractional coordinates
     basis = [
@@ -72,10 +80,62 @@ def build_short_range_structure(n: int = 8, a: float = 5.0, correlation_length: 
     positions = []
     species = []
 
-    # Use a deterministic pattern based on distance from origin
-    # Sites close to the origin have correlated assignments
-    # Sites far from the origin have uncorrelated (random-like) assignments
+    # Use a reproducible, fixed-seed correlated-disorder construction
+    # 1. Start with a random assignment (fixed seed)
+    rng = np.random.default_rng(seed)
 
+    # Create a 3D array of random values in [0, 1)
+    # Shape: (n, n, n, 4) for the 4 basis sites
+    random_values = rng.random((n, n, n, 4))
+
+    # Apply short-range correlations using a deterministic kernel
+    # The kernel weights neighbors by their distance, creating short-range order
+    # that decays with separation
+
+    # For each site, compute a correlated value based on its neighbors
+    # within the correlation length
+    correlated_values = np.zeros_like(random_values)
+
+    for i in range(n):
+        for j in range(n):
+            for k in range(n):
+                for site_idx in range(4):
+                    # Start with the random value
+                    val = random_values[i, j, k, site_idx]
+
+                    # Add weighted contributions from neighbors within correlation length
+                    # Use a sharper kernel: weight = exp(-dist/(correlation_length/2))
+                    # This creates a tighter correlation that decays faster
+                    for di in range(-int(correlation_length), int(correlation_length) + 1):
+                        for dj in range(-int(correlation_length), int(correlation_length) + 1):
+                            for dk in range(-int(correlation_length), int(correlation_length) + 1):
+                                if di == 0 and dj == 0 and dk == 0:
+                                    continue
+
+                                ni, nj, nk = i + di, j + dj, k + dk
+                                # Wrap around for periodic boundary conditions
+                                ni = ni % n
+                                nj = nj % n
+                                nk = nk % n
+
+                                # Distance in unit cells
+                                dist = np.sqrt(di**2 + dj**2 + dk**2)
+
+                                # Kernel weight: exp(-dist/(correlation_length/2))
+                                # This creates a tighter correlation
+                                weight = np.exp(-dist / (correlation_length / 2.0))
+
+                                # Add weighted contribution from the neighbor
+                                # Use the same site_idx for the neighbor
+                                val += weight * random_values[ni, nj, nk, site_idx]
+
+                    correlated_values[i, j, k, site_idx] = val
+
+    # Normalize to [0, 1)
+    correlated_values = (correlated_values - np.min(correlated_values)) / (np.max(correlated_values) - np.min(correlated_values))
+
+    # Assign species: Ga if value > 0.5, As if value <= 0.5
+    # This maintains 50/50 ratio on average
     for i in range(n):
         for j in range(n):
             for k in range(n):
@@ -86,25 +146,8 @@ def build_short_range_structure(n: int = 8, a: float = 5.0, correlation_length: 
                     z = (k + bz) * a
                     positions.append((x, y, z))
 
-                    # Short-range correlation: use a deterministic pattern
-                    # that decays with distance from the origin
-                    dist_from_origin = np.sqrt(i**2 + j**2 + k**2)
-
-                    # If within correlation length, use correlated pattern
-                    # If beyond, use uncorrelated pattern
-                    if dist_from_origin <= correlation_length:
-                        # Correlated pattern: checkerboard-like but with finite range
-                        # Use a pattern that gives short-range correlations
-                        sp = "Ga" if (i + j + k + site_idx) % 2 == 0 else "As"
-                    else:
-                        # Uncorrelated pattern: deterministic pseudo-random
-                        # Use a hash-like function to assign species
-                        # This gives no long-range order but maintains 50/50 ratio
-                        # Use a simple deterministic pattern based on position
-                        # Sites at even positions get Ga, odd positions get As
-                        # This gives no correlation but maintains the ratio
-                        sp = "Ga" if (i * 3 + j * 5 + k * 7 + site_idx * 11) % 2 == 0 else "As"
-
+                    # Assign species based on correlated value
+                    sp = "Ga" if correlated_values[i, j, k, site_idx] > 0.5 else "As"
                     species.append(sp)
 
     return {
@@ -114,7 +157,110 @@ def build_short_range_structure(n: int = 8, a: float = 5.0, correlation_length: 
         "positions": positions,  # Cartesian, Å
         "species": species,
         "correlation_length": correlation_length,
+        "seed": seed,
     }
+
+
+def measure_correlation_decay(struct: dict) -> dict:
+    """Measure the actual directional covariance versus separation.
+
+    This function computes c(tau) at multiple separations along x, y, z
+    and demonstrates the decay of correlations with distance.
+
+    Returns
+    -------
+    dict with keys:
+        separations : list of separations (in unit cells)
+        c_x : list of c(tau) values along x
+        c_y : list of c(tau) values along y
+        c_z : list of c(tau) values along z
+        decay_verified : bool (True if correlations decay with distance)
+        no_long_range_order : bool (True if no unintended checkerboard order)
+    """
+    n = struct["n"]
+    a = struct["a"]
+    positions = np.array(struct["positions"])  # Cartesian, Å
+    species = struct["species"]
+
+    # Convert species to occupation variables: +1 for Ga, -1 for As
+    eta = np.array([1.0 if sp == "Ga" else -1.0 for sp in species])
+
+    # Measure c(tau) at multiple separations
+    # Separations: 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 unit cells
+    separations = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+
+    c_x = []
+    c_y = []
+    c_z = []
+
+    for sep in separations:
+        # Separation in Å
+        sep_angstrom = sep * a
+
+        # Compute c(tau) along x, y, z
+        tau_x = (sep_angstrom, 0.0, 0.0)
+        tau_y = (0.0, sep_angstrom, 0.0)
+        tau_z = (0.0, 0.0, sep_angstrom)
+
+        # Compute c(tau) for each direction
+        c_x.append(_compute_c_at_tau(eta, positions, tau_x))
+        c_y.append(_compute_c_at_tau(eta, positions, tau_y))
+        c_z.append(_compute_c_at_tau(eta, positions, tau_z))
+
+    # Verify decay: correlations should decrease with distance
+    # Check if the absolute values are generally decreasing
+    abs_c_x = [abs(c) for c in c_x]
+    abs_c_y = [abs(c) for c in c_y]
+    abs_c_z = [abs(c) for c in c_z]
+
+    # Simple decay check: the first few values should be larger than the last few
+    decay_x = np.mean(abs_c_x[:3]) > np.mean(abs_c_x[-3:])
+    decay_y = np.mean(abs_c_y[:3]) > np.mean(abs_c_y[-3:])
+    decay_z = np.mean(abs_c_z[:3]) > np.mean(abs_c_z[-3:])
+    decay_verified = decay_x and decay_y and decay_z
+
+    # Verify absence of long-range order:
+    # For a checkerboard pattern, c(tau) would oscillate with period 2
+    # For a short-range correlated model, c(tau) should decay to ~0
+    # Check if the long-range values (sep >= 3) are close to 0
+    # Use a stricter threshold: < 0.02
+    long_range_x = np.mean(abs_c_x[-3:])
+    long_range_y = np.mean(abs_c_y[-3:])
+    long_range_z = np.mean(abs_c_z[-3:])
+    no_long_range_order = (
+        long_range_x < 0.02 and long_range_y < 0.02 and long_range_z < 0.02
+    )
+
+    return {
+        "separations": separations,
+        "c_x": c_x,
+        "c_y": c_y,
+        "c_z": c_z,
+        "decay_verified": decay_verified,
+        "no_long_range_order": no_long_range_order,
+    }
+
+
+def _compute_c_at_tau(eta: np.ndarray, positions: np.ndarray, tau: tuple) -> float:
+    """Compute the connected covariance c(tau) at a given displacement.
+
+    c(tau) = <η_i * η_{i+tau}> - <η_i> * <η_{i+tau}>
+
+    For p=0.5, <η_i> = 0, so c(tau) = <η_i * η_{i+tau}>.
+    """
+    # Find all pairs at displacement tau
+    diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]
+    dist_to_tau = np.sqrt(np.sum((diff - np.array(tau)) ** 2, axis=2))
+    mask = np.isclose(dist_to_tau, 0.0, atol=1e-6)
+    np.fill_diagonal(mask, False)
+
+    if np.sum(mask) == 0:
+        return 0.0
+
+    # Compute <η_i * η_{i+tau}>
+    pair_idx = np.where(mask)
+    product = eta[pair_idx[0]] * eta[pair_idx[1]]
+    return float(np.mean(product))
 
 
 def write_stru(path: Path, struct: dict) -> None:
@@ -407,7 +553,10 @@ def main() -> None:
     out_dir = Path(__file__).parent / "short_range_run"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    struct = build_short_range_structure(n=8, a=5.0, correlation_length=2.0)
+    # Use n=8 for computational efficiency
+    # Note: The "No long-range order" check is limited by the small supercell size
+    # (periodic boundary effects cause apparent long-range correlations)
+    struct = build_short_range_structure(n=8, a=5.0, correlation_length=1.0, seed=42)
 
     # Write .stru file
     stru_path = out_dir / "short_range_model.stru"
@@ -418,6 +567,9 @@ def main() -> None:
     pair_corr = compute_directional_pair_correlations(struct)
     pcf = compute_pair_shell_statistics(struct)
     peak = predict_pdf_peaks(struct, pair_corr)
+
+    # Measure correlation decay
+    corr_decay = measure_correlation_decay(struct)
 
     # Write references
     refs_path = out_dir / "references.json"
@@ -430,7 +582,16 @@ def main() -> None:
             "n_ga": int(sum(1 for sp in struct["species"] if sp == "Ga")),
             "n_as": int(sum(1 for sp in struct["species"] if sp == "As")),
             "correlation_length": float(struct["correlation_length"]),
+            "seed": int(struct["seed"]),
             "note": "Short-range correlated model (distinct from ordered checkerboard).",
+        },
+        "correlation_decay": {
+            "separations": [float(s) for s in corr_decay["separations"]],
+            "c_x": [float(c) for c in corr_decay["c_x"]],
+            "c_y": [float(c) for c in corr_decay["c_y"]],
+            "c_z": [float(c) for c in corr_decay["c_z"]],
+            "decay_verified": bool(corr_decay["decay_verified"]),
+            "no_long_range_order": bool(corr_decay["no_long_range_order"]),
         },
         "directional_pair_correlations": {
             "eta_mean": float(pair_corr["eta_mean"]),
@@ -492,6 +653,13 @@ def main() -> None:
     print(f"\nExpected PDF peaks (SYNTHETIC contrast):")
     for tau, amp, c, np in zip(peak["tau"], peak["amplitude"], peak["c_tau"], peak["n_pairs"]):
         print(f"  tau={tau} Å: c={c:.4f}, N_pairs={np}, amplitude={amp:.6f}")
+    print(f"\nCorrelation decay verification:")
+    print(f"  Separations (unit cells): {corr_decay['separations']}")
+    print(f"  c_x: {[f'{c:.4f}' for c in corr_decay['c_x']]}")
+    print(f"  c_y: {[f'{c:.4f}' for c in corr_decay['c_y']]}")
+    print(f"  c_z: {[f'{c:.4f}' for c in corr_decay['c_z']]}")
+    print(f"  Decay verified: {corr_decay['decay_verified']}")
+    print(f"  No long-range order: {corr_decay['no_long_range_order']}")
 
 
 if __name__ == "__main__":

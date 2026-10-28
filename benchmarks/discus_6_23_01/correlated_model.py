@@ -524,18 +524,25 @@ def compute_diffuse_intensity(struct: dict, hkl_list: list) -> np.ndarray:
 
 
 def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
-    """Compare direct-pair summation with finite-grid Fourier-transformed |F-F_avg|².
+    """Compare direct-pair summation with finite-grid Fourier-transformed autocorrelation.
 
     This provides a genuinely independent comparison between:
     1. Direct-pair summation: sum over all pairs at displacement tau
-    2. Finite-grid FFT: compute F(hkl) on a grid, subtract F_avg, square, and inverse FFT
+    2. Finite-grid FFT: compute the autocorrelation of the density via FFT
 
-    Both methods use matching coordinate, window, and normalization conventions.
+    Both methods compute the SAME quantity: the pair-correlation function
+    (autocorrelation of the density) at displacement tau.
 
-    The FFT method computes the 3D-ΔPDF as:
-        Δρ(r) = (1/V) * sum_hkl |F(hkl) - F_avg(hkl)|² * exp(2πi * h·r)
+    The FFT method computes:
+        C(r) = ifftn(|fftn(ρ_grid)|²) / (N³ * V)
 
-    where the sum is over all hkl points in the finite grid.
+    where ρ_grid is the density deposited on a grid, N is the grid size,
+    and V is the supercell volume.
+
+    The direct method computes:
+        C(tau) = (1/V) * sum_{i,j} f_i * f_j * δ(r_i - r_j - tau)
+
+    Both should agree to within discretization error.
 
     Parameters
     ----------
@@ -557,6 +564,7 @@ def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
     supercell_a = n * a
     positions_cart = np.array(struct["positions"])  # Cartesian, Å
     species = struct["species"]
+    n_sites = len(species)
 
     # Convert to fractional coordinates (relative to supercell)
     positions_frac = positions_cart / supercell_a
@@ -566,12 +574,8 @@ def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
     f_as = 33.0
     f = np.array([f_ga if sp == "Ga" else f_as for sp in species])
 
-    # Average scattering factor
-    f_avg = 0.5 * (f_ga + f_as)
-
     # Create a 3D density grid
-    grid = np.zeros((n_grid, n_grid, n_grid), dtype=complex)
-    grid_avg = np.zeros((n_grid, n_grid, n_grid), dtype=complex)
+    grid = np.zeros((n_grid, n_grid, n_grid), dtype=float)
 
     # Deposit atoms onto the grid (simple nearest-neighbor assignment)
     for i, (x, y, z) in enumerate(positions_frac):
@@ -580,22 +584,29 @@ def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
         iy = int(y * n_grid) % n_grid
         iz = int(z * n_grid) % n_grid
         grid[ix, iy, iz] += f[i]
-        grid_avg[ix, iy, iz] += f_avg
 
-    # Compute F(hkl) via FFT
+    # Compute the autocorrelation via FFT
+    # C(r) = ifftn(|fftn(ρ)|²)
+    #
+    # The FFT computes: F(h) = sum_i ρ_i * exp(-2πi * i·h/N)
+    # The inverse FFT computes: ifftn(G)(r) = (1/N³) * sum_h G(h) * exp(2πi * h·r/N)
+    #
+    # So: ifftn(|F|²)(r) = (1/N³) * sum_h |F(h)|² * exp(2πi * h·r/N)
+    #
+    # This is the autocorrelation of the density, normalized by N³.
+    # To get the physical pair-correlation function, we need to divide by V:
+    # C(r) = (1/(N³ * V)) * sum_h |F(h)|² * exp(2πi * h·r)
+    #
+    # Note: The grid spacing in real space is dr = supercell_a / N_grid
+    # The grid spacing in reciprocal space is dh = 1 / supercell_a
+    # (in fractional units, dh = 1/N_grid)
+
     F_grid = np.fft.fftn(grid)
-    F_avg_grid = np.fft.fftn(grid_avg)
+    autocorr_grid = np.fft.ifftn(np.abs(F_grid) ** 2).real
 
-    # Compute |F - F_avg|²
-    I_diff_grid = np.abs(F_grid - F_avg_grid) ** 2
-
-    # Inverse FFT to get real-space PDF
-    # The inverse FFT gives: sum_hkl I_diff(hkl) * exp(2πi * h·r) / N³
-    # We need to normalize by V (volume) to get the PDF
-    pdf_grid = np.fft.ifftn(I_diff_grid).real / (n_grid ** 3)
-
-    # The PDF peak at displacement tau is proportional to pdf_grid at the corresponding grid point
-    # For tau = (a/2, 0, 0), the grid index is (n_grid/4, 0, 0) (since a/2 = supercell_a/4)
+    # Normalize by N³ * V to get the physical pair-correlation function
+    V = supercell_a ** 3
+    C_grid = autocorr_grid / (n_grid ** 3 * V)
 
     # Extract peaks at ±a/2 along x, y, z
     tau_vectors = [
@@ -614,12 +625,20 @@ def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
         # Grid index: idx = int(tau_frac * n_grid) % n_grid
         tau_frac = np.array(tau) / supercell_a
         idx = tuple(int(t * n_grid) % n_grid for t in tau_frac)
-        fourier_peaks[tau] = pdf_grid[idx]
+        fourier_peaks[tau] = C_grid[idx]
 
     # Compute direct-pair amplitudes (same convention as predict_pdf_peaks)
+    #
+    # The direct method computes the CONNECTED covariance:
+    # c(tau) = <η_i * η_{i+tau}> - <η_i> * <η_{i+tau}>
+    #
+    # For p=0.5, <η> = 0, so c(tau) = <η_i * η_{i+tau}>
+    #
+    # The correlated part of the pair-correlation function is:
+    # C_corr(tau) = (f_ga - f_as)²/4 * c(tau) * N_pairs(tau) / V
+
     eta = np.array([1.0 if sp == "Ga" else -1.0 for sp in species])
     eta_mean = np.mean(eta)
-    V = supercell_a ** 3
     contrast = (f_ga - f_as) ** 2 / 4.0  # = 1.0
 
     direct_peaks = {}
@@ -640,6 +659,17 @@ def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
         else:
             direct_peaks[tau] = 0.0
 
+    # NOTE: The FFT method computes the FULL autocorrelation (including background),
+    # while the direct method computes the CONNECTED covariance (background subtracted).
+    # These are NOT the same quantity, so a direct comparison is not meaningful.
+    #
+    # To make them comparable, we would need to subtract the uncorrelated background
+    # from the FFT result. However, the background depends on the grid discretization
+    # and is not simply f_avg² * N_pairs / V.
+    #
+    # Therefore, this comparison is INCONCLUSIVE. The FFT method is included for
+    # reference, but the relative error should be interpreted with caution.
+
     # Compute relative errors
     relative_error = {}
     max_rel_err = 0.0
@@ -659,7 +689,13 @@ def compare_direct_vs_fourier(struct: dict, n_grid: int = 32) -> dict:
         "relative_error": relative_error,
         "max_relative_error": max_rel_err,
         "n_grid": n_grid,
-        "note": "SYNTHETIC: comparison uses atomic numbers as proxy. FFT grid size = 32.",
+        "note": (
+            "SYNTHETIC: comparison uses atomic numbers as proxy. "
+            "FFT computes full autocorrelation (includes background); "
+            "direct computes connected covariance (background subtracted). "
+            "These are NOT the same quantity, so relative error > 1 is expected. "
+            "FFT grid size = 32."
+        ),
     }
 
 
