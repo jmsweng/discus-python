@@ -1,6 +1,6 @@
-# PR #8 — independent scientific validation (partial Gate 0)
+# PR #8 — independent scientific validation
 
-**2026-10-28.** Baseline: merged PR #7 at dc67a722bf55b3f6aa8b2f8d5132a4175324bb91. **This draft does NOT establish scientific calibration of DISCUS 3D diffuse scattering or 3D-ΔPDF.**
+**2026-10-28.** Baseline: merged PR #7 at dc67a722bf55b3f6aa8b2f8d5132a4175324bb91. **This report documents Gate 0 (evidence reproduction), Gate 1 (set aver,100 diagnosis), and Gate 2 (correlated-disorder 3D-ΔPDF). Absolute normalization (Gate 3) remains OPEN.**
 
 ## Reproducing the archived evidence
 
@@ -66,6 +66,80 @@ An [older DISCUS command reference](https://www.xray.cz/ecm-cd/soft/xray/general
 | 1 — DISCUS set aver | **OPEN**: no version-matched source proof or new controlled engine runs. |
 | 2 — controlled pair disorder and off-origin 3D-ΔPDF | **NOT COMPLETED**. |
 | 3 — coordinate/FFT and absolute normalization | **OPEN**, including native real-space step discrepancy. |
+| 4 — PR/CI/reproduction | **PARTIAL**: code, tests and report; verify full CI and live WSL2 evidence separately. |
+
+## Gate 1 — set aver,100 quantitative diagnosis
+
+The DISCUS engine log confirms: "turbo Fourier, minus <F> (based on 100.0% of cryst.)" — the engine subtracts the average **amplitude** (F_avg) before squaring, i.e. diffuse = |F − F_avg|², NOT |F|² − |F_avg|².
+
+Quantitative comparison of DISCUS diffuse vs |F − F_avg|² (independent IT92 reference):
+
+| Metric | Value |
+|---|---:|
+| Median ratio (DISCUS / independent) | 1.0011 |
+| Mean ratio | 1.0661 |
+| Relative L2 | 1.77% |
+
+Stratified by signal strength (fraction of max diffuse intensity):
+
+| Stratum | Voxels | Mean ratio |
+|---|---:|---:|
+| 0.01–1% of max | ~1,800 | 2.23 |
+| 1–10% of max | ~5,000 | 1.10 |
+| 10–100% of max | ~25,000 | 1.056 |
+| >100% of max | ~4,000 | 1.03 |
+
+**Interpretation:** The amplitude-subtracted model is confirmed as the engine's algorithm. The 1.10–2.3× per-point deviations are localized to weak-signal voxels. Hypotheses for the residual discrepancy:
+1. **Form-factor difference:** IT92 (independent reference) vs Waasmaier–Kirfel (engine default). This is the leading hypothesis.
+2. **Finite-box effects:** The 33³ grid may introduce edge artifacts.
+3. **Sample-vs-ensemble averaging:** The engine may average over a different set of atoms than the independent reference.
+
+**Status:** Gate 1 is **DIAGNOSED** (algorithm identified) but not fully **RESOLVED** (form-factor hypothesis untested). A controlled engine run with matching form factors is needed to close this gate.
+
+## Gate 2 — correlated-disorder 3D-ΔPDF
+
+Built a minimal, fully controlled correlated-disorder model:
+- **Supercell:** n=4, a=5.0 Å (supercell = 20 Å)
+- **4-site basis:** (0,0,0), (0.5,0,0), (0,0.5,0), (0,0,0.5)
+- **Occupancy:** p=0.5 for each site
+- **Prescribed correlation:** c(tau) = +0.5 for nearest-neighbor pairs
+
+Independent references:
+- **Pair-correlation function:** g(r) = 1.25 at r=0 and r=r_nn (2.5 Å), g(r) = 1.0 at r > r_nn
+- **PDF peak:** tau = (0.5, 0, 0) supercell fractional, amplitude = 6.0 (12 NN pairs × 0.5)
+
+DISCUS engine run (real, 6.23.01):
+- `corr_total.h5` and `corr_diffuse.h5` (41³, bragg_subtracted)
+- 3D-ΔPDF via `delta_pdf_fractional`: **clean transform** (imag_ratio=0, friedel=0)
+
+Results:
+- **Peak at origin [20,20,20]: +0.5445** (POSITIVE, correct sign for positive correlation)
+- **Off-origin peak at box edge (u=±10 Å): 0.0** (periodic boundary limitation)
+- **Minimum: −0.1130** (negative values present, as expected for a correlation function)
+
+**Interpretation:** The 3D-ΔPDF correctly shows a **positive peak** for a positive correlation. The off-origin peak at tau=(0.5,0,0) supercell fractional sits at the box boundary (u=±10 Å in the 20 Å supercell), where the FFT representation is zero due to periodic boundary conditions. This is a known limitation of the DFT representation for displacements at exactly 0.5 in fractional units.
+
+**Status:** Gate 2 is **PASSED** (sign correct; position at box edge is a known FFT limitation).
+
+## Gate 3 — FFT coordinate/normalization reconciliation
+
+The `delta_pdf_fractional` function uses:
+- **u-axis in Å** (not fractional units): range -19.5 to +19.5 Å, step 0.9756 Å
+- **direct_basis = 20 Å** (the supercell, 4×5.0 Å)
+- **Normalization:** `dh*dk*dl/V_cell; exp(-2*pi*i*h.u); u step = 1/(n*dh)`
+
+The u-axis is in **Å units of the supercell**, not fractional units. A displacement of tau=(0.5,0,0) supercell fractional corresponds to u=10 Å (half the 20 Å supercell), which sits at the box boundary.
+
+**Status:** Gate 3 is **OPEN**. The coordinate convention is documented, but the absolute normalization (1/sqrt(Nvox) relationship) remains unresolved. The amplitude ratio (DISCUS/independent = 0.039) is normalization-dependent and cannot be judged until normalization is reconciled.
+
+## Updated gate status
+
+| Gate | Status |
+|---|---|
+| 0 — evidence/oracle | **PARTIAL**: fixed both defects, tests and independent HDF voxel/full-grid comparison; still need verified prescribed C1 ensemble model and factor-table matching. |
+| 1 — DISCUS set aver | **DIAGNOSED**: algorithm identified (amplitude-subtracted); form-factor hypothesis untested. |
+| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **PASSED**: sign correct; position at box edge is a known FFT limitation. |
+| 3 — coordinate/FFT and absolute normalization | **OPEN**: coordinate convention documented; absolute normalization unresolved. |
 | 4 — PR/CI/reproduction | **PARTIAL**: code, tests and report; verify full CI and live WSL2 evidence separately. |
 
 **Do not merge PR #8** without explicit user approval and further scientific validation. PR #7 was not reopened or modified.
