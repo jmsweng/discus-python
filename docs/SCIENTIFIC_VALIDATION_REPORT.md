@@ -107,28 +107,41 @@ The independent reference uses **IT92** form factors, while the DISCUS engine us
 
 ## Gate 2 — correlated-disorder 3D-ΔPDF
 
-Built a minimal, fully controlled correlated-disorder model:
-- **Supercell:** n=4, a=5.0 Å (supercell = 20 Å)
-- **4-site basis:** (0,0,0), (0.5,0,0), (0,0.5,0), (0,0,0.5)
-- **Occupancy:** p=0.5 for each site
-- **Prescribed correlation:** c(tau) = +0.5 for nearest-neighbor pairs
+**Status: UNRESOLVED (model corrected; engine comparison pending)**
 
-Independent references:
-- **Pair-correlation function:** g(r) = 1.25 at r=0 and r=r_nn (2.5 Å), g(r) = 1.0 at r > r_nn
-- **PDF peak:** tau = (0.5, 0, 0) supercell fractional, amplitude = 6.0 (12 NN pairs × 0.5)
+The correlated-disorder model (`benchmarks/discus_6_23_01/correlated_model.py`) has been corrected:
 
-DISCUS engine run (real, 6.23.01):
-- `corr_total.h5` and `corr_diffuse.h5` (41³, bragg_subtracted)
-- 3D-ΔPDF via `delta_pdf_fractional`: **clean transform** (imag_ratio=0, friedel=0)
+- **Model**: 4×4×4 supercell, a=5.0 Å, 4-site basis, p=0.5
+- **Species assignment**: Checkerboard pattern at the basis-site level
+  - Ga where (i+j+k+site_idx) % 2 == 0
+  - As where (i+j+k+site_idx) % 2 == 1
+- **Frozen structure**: 256 sites (128 Ga, 128 As) with realized species assignments
 
-Results:
-- **Peak at origin [20,20,20]: +0.5445** (POSITIVE, correct sign for positive correlation)
-- **Off-origin peak at box edge (u=±10 Å): 0.0** (periodic boundary limitation)
-- **Minimum: −0.1130** (negative values present, as expected for a correlation function)
+**Computed references (from the frozen atom list):**
+- **Occupational covariance**: c(1,0,0) = -1.0 (negative correlation for checkerboard)
+- **Pair-shell statistics**: g_AB(r=2.5Å) = 5.5 (positive cross-correlation)
+- **PDF peak predictions**: amplitude = -64.0 (negative, indicating anti-correlation)
+- **Structure factor**: F(hkl) computed directly from the frozen atom list
+- **Diffuse intensity**: |F−F_avg|² computed independently
 
-**Interpretation:** The 3D-ΔPDF correctly shows a **positive peak** for a positive correlation. The off-origin peak at tau=(0.5,0,0) supercell fractional sits at the box boundary (u=±10 Å in the 20 Å supercell), where the FFT representation is zero due to periodic boundary conditions. This is a known limitation of the DFT representation for displacements at exactly 0.5 in fractional units.
+**Key corrections from the original (invalid) model:**
+1. Correlation definition: The checkerboard pattern gives c(1,0,0) = -1.0 (not +0.5)
+2. Frozen structure: 256 sites with realized species assignments (not a 32-site idealized model)
+3. NN displacement: 2.5 Å (a/2), not 10 Å
+4. g(r) computed from the frozen atom list, not assumed
+5. PDF peak amplitudes derived from actual covariance values, not assumed
 
-**Status:** Gate 2 is **UNRESOLVED**. The corrected model (normalized ρ, frozen structure, correct NN distance) is ready, but the DISCUS engine is not available in the current WSL environment to run the comparison. The previous engine run (cec39f5) used a different WSL setup that is no longer accessible.
+**Engine comparison: PENDING**
+- DISCUS executable not available in current WSL environment
+- Previous runs used a different WSL setup no longer accessible
+- **Gate 2 remains UNRESOLVED until the engine output is compared against the independent references**
+
+**Next steps:**
+1. Locate or reinstall DISCUS 6.23.01 in the WSL environment
+2. Run the corrected frozen structure through DISCUS with `read stru`
+3. Load HDF5 outputs via `read_discus_volume`, compute `delta_pdf_fractional`
+4. Compare off-origin peaks at ±2.5 Å against predicted positions and amplitudes
+5. If comparison passes, mark Gate 2 PASSED; if it fails, report Gate 2 UNRESOLVED with quantitative evidence
 
 ## Gate 3 — FFT coordinate/normalization reconciliation
 
