@@ -1,8 +1,8 @@
 # Frozen correlated-disorder model for 3D-dPDF validation
-# Supercell: n=4, a=5.0 Å
+# Supercell: n=4, a=5.0 Å (supercell = 20.0 Å)
 # Total sites: 256
 spcgr 1
-cell 5.0 5.0 5.0 90 90 90
+cell 20.0 20.0 20.0 90 90 90
 Ga 0.000000 0.000000 0.000000 1.000000 1.0
 As 0.125000 0.000000 0.000000 1.000000 1.0
 Ga 0.000000 0.125000 0.000000 1.000000 1.0

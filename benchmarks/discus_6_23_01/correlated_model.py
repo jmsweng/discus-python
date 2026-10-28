@@ -1,9 +1,9 @@
 """Correlated-disorder 3D-ΔPDF model for DISCUS 6.23.01 validation.
 
 This module defines a minimal, fully controlled correlated-disorder model with
-a prescribed positive nearest-neighbor correlation, and provides independent
-references (pair-correlation function and PDF peak) for validating the
-DISCUS 3D-ΔPDF output.
+a prescribed nearest-neighbor correlation, and provides independent references
+(pair-correlation function and PDF peak) for validating the DISCUS 3D-ΔPDF
+output.
 
 Model:
     - Cubic supercell: n=4, a=5.0 Å (supercell = 20 Å)
@@ -20,10 +20,20 @@ This gives 50% Ga and 50% As overall, with a specific correlation that can
 be computed exactly from the frozen atom list.
 
 The independent references are:
-    1. Occupational covariance: c(tau) computed from the frozen atom list.
-    2. Pair-shell statistics: g(r) computed from the frozen atom list.
-    3. PDF peak predictions: derived from the covariance and pair multiplicities.
-    4. Structure factor: F(hkl) computed directly from the frozen atom list.
+    1. Directional pair correlations: c(tau) computed at the 2.5 Å NN distance
+       from the frozen atom list.
+    2. Pair-shell statistics: g(r) computed from the frozen atom list with
+       proper per-shell normalization.
+    3. PDF peak predictions: derived from actual directional pair counts,
+       scattering contrast, and boundary conditions.
+    4. Structure factor: F(hkl) computed directly from the frozen atom list
+       with full complex phase factors.
+    5. Diffuse intensity: |F(hkl) - F_avg(hkl)|² where F_avg(hkl) is the
+       full complex average structure factor.
+
+IMPORTANT: The scattering factors used here are SYNTHETIC (atomic numbers as
+proxy). For real X-ray scattering validation, use documented Q-dependent
+form factors (e.g., IT92 or Waasmaier–Kirfel) and Debye–Waller conventions.
 
 This model is designed to be:
     - Fully deterministic (no random sampling)
@@ -51,6 +61,9 @@ def build_frozen_structure(n: int = 4, a: float = 5.0) -> dict:
 
     This gives 50% Ga and 50% As overall.
 
+    The positions are in CARTESIAN coordinates (Å) for the full supercell.
+    The supercell has dimensions n*a in each direction.
+
     Parameters
     ----------
     n : int
@@ -61,7 +74,7 @@ def build_frozen_structure(n: int = 4, a: float = 5.0) -> dict:
     Returns
     -------
     dict with keys:
-        n, a, basis, positions, species
+        n, a, basis, positions (Cartesian, Å), species
     """
     # 4-site basis in unit cell fractional coordinates
     basis = [
@@ -72,16 +85,17 @@ def build_frozen_structure(n: int = 4, a: float = 5.0) -> dict:
     ]
 
     # Generate all site positions in the supercell
-    # Positions are in supercell fractional (0 to 1 spans n*a Å)
+    # Positions are in Cartesian coordinates (Å)
     positions = []
     species = []
     for i in range(n):
         for j in range(n):
             for k in range(n):
                 for site_idx, (bx, by, bz) in enumerate(basis):
-                    x = (i + bx) / n
-                    y = (j + by) / n
-                    z = (k + bz) / n
+                    # Convert to Cartesian: unit cell index + basis offset
+                    x = (i + bx) * a
+                    y = (j + by) * a
+                    z = (k + bz) * a
                     positions.append((x, y, z))
                     # Checkerboard pattern at basis-site level
                     sp = "Ga" if (i + j + k + site_idx) % 2 == 0 else "As"
@@ -91,7 +105,7 @@ def build_frozen_structure(n: int = 4, a: float = 5.0) -> dict:
         "n": n,
         "a": a,
         "basis": basis,
-        "positions": positions,
+        "positions": positions,  # Cartesian, Å
         "species": species,
     }
 
@@ -101,35 +115,51 @@ def write_stru(path: Path, struct: dict) -> None:
 
     The .stru file contains the full frozen crystal with realized species assignments.
     Each line is: atom_type x y z occupancy Biso
+
+    IMPORTANT: DISCUS .stru files use FRACTIONAL coordinates relative to the
+    declared cell. Since we're declaring a 5 Å cell but have a 20 Å supercell,
+    we need to convert Cartesian positions to fractional coordinates of the
+    SUPERCELL (20 Å), not the unit cell.
+
+    The convention is:
+    - Declare the supercell dimensions (20 Å) in the cell line
+    - Use fractional coordinates where 0 to 1 spans the full supercell
     """
     n = struct["n"]
     a = struct["a"]
-    positions = struct["positions"]
+    positions = struct["positions"]  # Cartesian, Å
     species = struct["species"]
+
+    # Supercell dimensions
+    supercell_a = n * a
 
     lines = [
         "# Frozen correlated-disorder model for 3D-dPDF validation",
-        f"# Supercell: n={n}, a={a} Å",
+        f"# Supercell: n={n}, a={a} Å (supercell = {supercell_a} Å)",
         f"# Total sites: {len(species)}",
         f"spcgr 1",
-        f"cell {a} {a} {a} 90 90 90",
+        f"cell {supercell_a} {supercell_a} {supercell_a} 90 90 90",
     ]
 
     for (x, y, z), sp in zip(positions, species):
+        # Convert Cartesian to fractional (relative to supercell)
+        x_frac = x / supercell_a
+        y_frac = y / supercell_a
+        z_frac = z / supercell_a
         # Occupancy: 1.0 for the assigned species
         occ = 1.0
-        lines.append(f"{sp} {x:.6f} {y:.6f} {z:.6f} {occ:.6f} 1.0")
+        lines.append(f"{sp} {x_frac:.6f} {y_frac:.6f} {z_frac:.6f} {occ:.6f} 1.0")
 
     path.write_text("\n".join(lines) + "\n")
 
 
-def compute_occupational_covariance(struct: dict) -> dict:
-    """Compute the actual directional connected occupation covariance from the frozen atom list.
+def compute_directional_pair_correlations(struct: dict) -> dict:
+    """Compute the actual signed connected pair correlations at the NN distance.
 
     For a binary system with species A and B, the occupation variable is:
         η_i = +1 if site i is A, -1 if site i is B
 
-    The connected covariance is:
+    The connected covariance at displacement tau is:
         c(tau) = <η_i * η_{i+tau}> - <η_i> * <η_{i+tau}>
 
     For p=0.5, <η_i> = 0, so c(tau) = <η_i * η_{i+tau}>.
@@ -139,15 +169,19 @@ def compute_occupational_covariance(struct: dict) -> dict:
 
     For p=0.5, <η_i²> = 1, so ρ(tau) = c(tau).
 
+    This function computes c(tau) at the 2.5 Å NN distance (a/2) along x, y, z
+    and their negatives, directly from the frozen atom list.
+
     Returns
     -------
     dict with keys:
-        c_tau : dict mapping displacement tuple to covariance
-        rho_tau : dict mapping displacement tuple to normalized correlation
+        c_tau : dict mapping displacement vector (Å) to covariance
+        rho_tau : dict mapping displacement vector (Å) to normalized correlation
+        n_pairs : dict mapping displacement vector (Å) to pair count
     """
     n = struct["n"]
     a = struct["a"]
-    positions = struct["positions"]
+    positions = np.array(struct["positions"])  # Cartesian, Å
     species = struct["species"]
 
     # Convert species to occupation variables: +1 for Ga, -1 for As
@@ -156,69 +190,49 @@ def compute_occupational_covariance(struct: dict) -> dict:
     # Compute <η_i> (should be 0 for p=0.5)
     eta_mean = np.mean(eta)
 
-    # Create a 4D array: eta_grid[i, j, k, site_idx]
-    # Positions are in supercell fractional (0 to 1 spans n*a Å)
-    # Convert to unit cell fractional: x_unitcell = x_supercell * n
-    n_sites_per_cell = len(struct["basis"])
-    eta_grid = np.zeros((n, n, n, n_sites_per_cell))
-    for idx, (x, y, z) in enumerate(positions):
-        x_uc = x * n
-        y_uc = y * n
-        z_uc = z * n
-        i = int(x_uc)
-        j = int(y_uc)
-        k = int(z_uc)
-        fx = x_uc - i
-        fy = y_uc - j
-        fz = z_uc - k
-        if fx < 0.1 and fy < 0.1 and fz < 0.1:
-            site_idx = 0
-        elif fx > 0.4 and fy < 0.1 and fz < 0.1:
-            site_idx = 1
-        elif fx < 0.1 and fy > 0.4 and fz < 0.1:
-            site_idx = 2
-        elif fx < 0.1 and fy < 0.1 and fz > 0.4:
-            site_idx = 3
-        else:
-            continue
-        eta_grid[i, j, k, site_idx] = eta[idx]
+    # NN displacements: ±a/2 along x, y, z
+    tau_vectors = [
+        (a / 2.0, 0.0, 0.0),
+        (-a / 2.0, 0.0, 0.0),
+        (0.0, a / 2.0, 0.0),
+        (0.0, -a / 2.0, 0.0),
+        (0.0, 0.0, a / 2.0),
+        (0.0, 0.0, -a / 2.0),
+    ]
 
-    # Compute c(tau) for all unique displacements
-    # Displacements are in unit cell space (i, j, k) and basis site space (site_idx)
     c_tau = {}
     rho_tau = {}
+    n_pairs = {}
 
-    # For a 4×4×4 supercell, consider displacements up to n/2
-    max_disp = n // 2
+    for tau in tau_vectors:
+        count = 0
+        product_sum = 0.0
 
-    for dx in range(-max_disp, max_disp + 1):
-        for dy in range(-max_disp, max_disp + 1):
-            for dz in range(-max_disp, max_disp + 1):
-                if dx == 0 and dy == 0 and dz == 0:
-                    continue
+        # Compute all pairwise displacements
+        diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]  # (N, N, 3)
 
-                count = 0
-                product_sum = 0.0
+        for i in range(len(eta)):
+            # Find all sites j such that position_j - position_i ≈ tau
+            dist_to_tau = np.sqrt(np.sum((diff[i, :, :] - np.array(tau)) ** 2, axis=1))
+            mask = np.isclose(dist_to_tau, 0.0, atol=1e-6)
+            mask[i] = False  # Exclude self
 
-                for i in range(n):
-                    for j in range(n):
-                        for k in range(n):
-                            i2 = (i + dx) % n
-                            j2 = (j + dy) % n
-                            k2 = (k + dz) % n
-                            for site_idx in range(n_sites_per_cell):
-                                eta1 = eta_grid[i, j, k, site_idx]
-                                eta2 = eta_grid[i2, j2, k2, site_idx]
-                                if eta1 != 0 and eta2 != 0:
-                                    count += 1
-                                    product_sum += eta1 * eta2
+            if np.any(mask):
+                count += np.sum(mask)
+                product_sum += np.sum(eta[i] * eta[mask])
 
-                if count > 0:
-                    c_val = product_sum / count - eta_mean ** 2
-                    c_tau[(dx, dy, dz)] = c_val
-                    rho_tau[(dx, dy, dz)] = c_val
+        if count > 0:
+            c_val = product_sum / count - eta_mean**2
+            c_tau[tau] = c_val
+            rho_tau[tau] = c_val  # For p=0.5, ρ = c
+            n_pairs[tau] = count
 
-    return {"c_tau": c_tau, "rho_tau": rho_tau, "eta_mean": float(eta_mean)}
+    return {
+        "c_tau": c_tau,
+        "rho_tau": rho_tau,
+        "n_pairs": n_pairs,
+        "eta_mean": float(eta_mean),
+    }
 
 
 def compute_pair_shell_statistics(struct: dict) -> dict:
@@ -231,7 +245,13 @@ def compute_pair_shell_statistics(struct: dict) -> dict:
     the volume.
 
     For a frozen structure, we compute g(r) by counting pairs at each distance
-    and normalizing by the expected number of pairs for a random distribution.
+    and normalizing by the EXPECTED number of pairs in that specific distance
+    shell for a random distribution.
+
+    The expected number of A-B pairs in a shell of volume ΔV at distance r is:
+        E[N_AB] = n_A * n_B * ΔV / V
+
+    where ΔV is the volume of the shell.
 
     Returns
     -------
@@ -240,14 +260,13 @@ def compute_pair_shell_statistics(struct: dict) -> dict:
         g_ab : list of g_AB(r) values (cross-correlation)
         g_aa : list of g_AA(r) values (auto-correlation)
         g_bb : list of g_BB(r) values (auto-correlation)
+        shell_volumes : list of shell volumes (Å³)
     """
     n = struct["n"]
     a = struct["a"]
-    positions = struct["positions"]
+    positions = np.array(struct["positions"])  # Cartesian, Å
     species = struct["species"]
 
-    # Convert to Cartesian coordinates
-    cart_positions = np.array([(x * n * a, y * n * a, z * n * a) for x, y, z in positions])
     n_total = len(positions)
     n_ga = sum(1 for sp in species if sp == "Ga")
     n_as = sum(1 for sp in species if sp == "As")
@@ -263,19 +282,24 @@ def compute_pair_shell_statistics(struct: dict) -> dict:
     g_ab = []
     g_aa = []
     g_bb = []
+    shell_volumes = []
+
+    # Shell width (Å)
+    dr = 0.1
 
     for r in r_values:
         if r == 0:
             g_ab.append(1.0)
             g_aa.append(1.0)
             g_bb.append(1.0)
+            shell_volumes.append(0.0)
         else:
             # Compute all pairwise distances (vectorized)
-            diff = cart_positions[:, np.newaxis, :] - cart_positions[np.newaxis, :, :]
+            diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]
             dist = np.sqrt(np.sum(diff**2, axis=2))
 
-            # Mask: exclude self-pairs and pairs at distance r
-            mask = np.isclose(dist, r, atol=1e-6)
+            # Shell: r - dr/2 < dist < r + dr/2
+            mask = (dist > r - dr / 2.0) & (dist < r + dr / 2.0)
             np.fill_diagonal(mask, False)
 
             # Count A-B, A-A, B-B pairs
@@ -284,10 +308,17 @@ def compute_pair_shell_statistics(struct: dict) -> dict:
             count_aa = np.sum((sp_array[:, np.newaxis] == 1) & (sp_array[np.newaxis, :] == 1) & mask)
             count_bb = np.sum((sp_array[:, np.newaxis] == 0) & (sp_array[np.newaxis, :] == 0) & mask)
 
-            # Normalize by expected number of pairs for random distribution
-            expected_ab = n_ga * n_as / n_total
-            expected_aa = n_ga * (n_ga - 1) / n_total
-            expected_bb = n_as * (n_as - 1) / n_total
+            # Shell volume: 4πr² * dr (for a thin shell)
+            shell_vol = 4.0 * np.pi * r**2 * dr
+            shell_volumes.append(shell_vol)
+
+            # Expected pairs in this shell for random distribution
+            # E[N_AB] = n_A * n_B * shell_vol / V
+            expected_ab = n_ga * n_as * shell_vol / V
+            # E[N_AA] = n_A * (n_A - 1) * shell_vol / V
+            expected_aa = n_ga * (n_ga - 1) * shell_vol / V
+            # E[N_BB] = n_B * (n_B - 1) * shell_vol / V
+            expected_bb = n_as * (n_as - 1) * shell_vol / V
 
             g_ab.append(count_ab / expected_ab if expected_ab > 0 else 0.0)
             g_aa.append(count_aa / expected_aa if expected_aa > 0 else 0.0)
@@ -298,6 +329,7 @@ def compute_pair_shell_statistics(struct: dict) -> dict:
         "g_ab": g_ab,
         "g_aa": g_aa,
         "g_bb": g_bb,
+        "shell_volumes": shell_volumes,
         "n_ga": n_ga,
         "n_as": n_as,
         "n_total": n_total,
@@ -305,61 +337,42 @@ def compute_pair_shell_statistics(struct: dict) -> dict:
     }
 
 
-def predict_pdf_peaks(struct: dict, cov: dict) -> dict:
+def predict_pdf_peaks(struct: dict, pair_corr: dict) -> dict:
     """Predict signed 3D-ΔPDF peak positions and amplitudes from the frozen structure.
 
     The 3D-ΔPDF peak at displacement tau is proportional to:
-        Δρ(tau) = (f_A - f_B)² * c(tau) * N_pairs(tau)
+        Δρ(tau) = (f_A - f_B)² * c(tau) * N_pairs(tau) / V
 
     where:
     - f_A, f_B are the scattering factors for species A and B
     - c(tau) is the connected occupation covariance
     - N_pairs(tau) is the number of pairs at displacement tau
+    - V is the volume of the supercell
 
     For a binary system with p=0.5, the contrast is (f_A - f_B)².
-    The peak amplitude includes the pair multiplicity.
+    The peak amplitude includes the pair multiplicity and is normalized by volume.
 
     Returns
     -------
     dict with keys:
         tau : list of peak positions (Cartesian, Å)
-        amplitude : list of expected peak amplitudes (arbitrary units)
+        amplitude : list of expected peak amplitudes (normalized by volume)
         c_tau : list of covariance values at each peak
         n_pairs : list of pair multiplicities at each peak
+        contrast : (f_A - f_B)²
     """
     a = struct["a"]
     n = struct["n"]
+    V = (n * a) ** 3
 
     # Scattering contrast: (f_Ga - f_As)²
-    # For simplicity, use a contrast of 1.0 (normalized)
-    contrast = 1.0
+    # SYNTHETIC: using atomic numbers as proxy (Ga: Z=31, As: Z=33)
+    f_ga = 31.0
+    f_as = 33.0
+    contrast = (f_ga - f_as) ** 2  # = 4.0
 
-    # NN displacements in the 4-site basis:
-    # (0.5, 0, 0), (0, 0.5, 0), (0, 0, 0.5) in unit cell fractional
-    # In Cartesian: (a/2, 0, 0), (0, a/2, 0), (0, 0, a/2)
-
-    # For the checkerboard pattern at the basis-site level, the NN pairs are:
-    # - Within a unit cell: site 0 ↔ site 1, site 0 ↔ site 2, site 0 ↔ site 3
-    # - Between adjacent unit cells: site 1 in cell (i,j,k) ↔ site 0 in cell (i+1,j,k)
-
-    # The covariance is computed in unit cell space, so we need to map
-    # the NN displacements to unit cell displacements.
-
-    # For a displacement of (0.5, 0, 0) in unit cell fractional:
-    # This is 0.5 unit cells, which is not an integer displacement.
-    # The covariance function only computes integer displacements.
-
-    # To handle this, we need to compute the covariance at the basis-site level,
-    # not the unit cell level. For now, we'll use the unit cell covariance
-    # and note that the NN peaks may not be captured correctly.
-
-    # For the checkerboard pattern, the NN correlation is:
-    # - Within a unit cell: c = +1 (same species) or -1 (different species)
-    # - Between unit cells: c = -1 (checkerboard)
-
-    # For the PDF peaks, we'll use the unit cell covariance and note the limitation.
-
-    tau = [
+    # NN displacements: ±a/2 along x, y, z
+    tau_vectors = [
         (a / 2.0, 0.0, 0.0),
         (-a / 2.0, 0.0, 0.0),
         (0.0, a / 2.0, 0.0),
@@ -368,33 +381,29 @@ def predict_pdf_peaks(struct: dict, cov: dict) -> dict:
         (0.0, 0.0, -a / 2.0),
     ]
 
-    # Get covariance values at these displacements
-    # For the checkerboard pattern, the NN correlation is -1 (anti-correlated)
-    # This is because the checkerboard pattern gives c(1,0,0) = -1
-
     c_tau = []
     n_pairs = []
+    amplitude = []
 
-    for tx, ty, tz in tau:
-        # For the checkerboard pattern, the NN correlation is -1
-        # This is the correlation between adjacent unit cells
-        c_val = -1.0
+    for tau in tau_vectors:
+        # Get covariance and pair count from the computed pair correlations
+        c_val = pair_corr["c_tau"].get(tau, 0.0)
+        n_pairs_val = pair_corr["n_pairs"].get(tau, 0)
+
         c_tau.append(c_val)
+        n_pairs.append(n_pairs_val)
 
-        # Count pairs at this displacement
-        # For a n×n×n supercell with 4 sites per unit cell:
-        # Number of pairs at (±a/2, 0, 0) = n² * 4 (approximate)
-        n_pairs.append(n ** 2 * 4)
-
-    # Amplitude: contrast * c(tau) * N_pairs(tau)
-    amplitude = [contrast * c * np for c, np in zip(c_tau, n_pairs)]
+        # Amplitude: contrast * c(tau) * N_pairs(tau) / V
+        amp = contrast * c_val * n_pairs_val / V
+        amplitude.append(amp)
 
     return {
-        "tau": tau,
+        "tau": tau_vectors,
         "amplitude": amplitude,
         "c_tau": c_tau,
         "n_pairs": n_pairs,
         "contrast": contrast,
+        "V": V,
     }
 
 
@@ -404,12 +413,15 @@ def compute_structure_factor(struct: dict, hkl_list: list) -> np.ndarray:
     F(hkl) = sum_i f_i * exp(2πi * (h*x_i + k*y_i + l*z_i))
 
     where f_i is the scattering factor for atom i, and (x_i, y_i, z_i)
-    are the fractional coordinates.
+    are the FRACTIONAL coordinates (0 to 1 spans the supercell).
+
+    IMPORTANT: The positions in struct are in Cartesian (Å). We need to
+    convert to fractional coordinates relative to the supercell.
 
     Parameters
     ----------
     struct : dict
-        Structure dictionary with positions and species.
+        Structure dictionary with positions (Cartesian, Å) and species.
     hkl_list : list
         List of (h, k, l) tuples to compute F for.
 
@@ -417,10 +429,16 @@ def compute_structure_factor(struct: dict, hkl_list: list) -> np.ndarray:
     -------
     np.ndarray of complex structure factors, shape (len(hkl_list),)
     """
-    positions = np.array(struct["positions"])
+    n = struct["n"]
+    a = struct["a"]
+    supercell_a = n * a
+    positions_cart = np.array(struct["positions"])  # Cartesian, Å
     species = struct["species"]
 
-    # Scattering factors (simplified: use atomic numbers as proxy)
+    # Convert to fractional coordinates (relative to supercell)
+    positions_frac = positions_cart / supercell_a
+
+    # Scattering factors (SYNTHETIC: atomic numbers as proxy)
     # Ga: Z=31, As: Z=33
     f_ga = 31.0
     f_as = 33.0
@@ -430,32 +448,72 @@ def compute_structure_factor(struct: dict, hkl_list: list) -> np.ndarray:
     # Compute F(hkl) for each hkl
     F = np.empty(len(hkl_list), complex)
     for idx, (h, k, l) in enumerate(hkl_list):
-        phase = 2j * np.pi * (h * positions[:, 0] + k * positions[:, 1] + l * positions[:, 2])
+        phase = 2j * np.pi * (
+            h * positions_frac[:, 0]
+            + k * positions_frac[:, 1]
+            + l * positions_frac[:, 2]
+        )
         F[idx] = np.sum(f * np.exp(phase))
 
     return F
 
 
+def compute_average_structure_factor(struct: dict, hkl_list: list) -> np.ndarray:
+    """Compute the average structure factor F_avg(hkl) for the disordered system.
+
+    For a binary system with occupation probabilities p_A and p_B at each site,
+    the average scattering factor at site i is:
+        f_avg_i = p_A * f_A + p_B * f_B
+
+    The average structure factor is:
+        F_avg(hkl) = sum_i f_avg_i * exp(2πi * (h*x_i + k*y_i + l*z_i))
+
+    For p_A = p_B = 0.5, f_avg_i = 0.5 * (f_A + f_B) for all sites.
+
+    Returns
+    -------
+    np.ndarray of complex average structure factors, shape (len(hkl_list),)
+    """
+    n = struct["n"]
+    a = struct["a"]
+    supercell_a = n * a
+    positions_cart = np.array(struct["positions"])  # Cartesian, Å
+
+    # Convert to fractional coordinates (relative to supercell)
+    positions_frac = positions_cart / supercell_a
+
+    # Scattering factors (SYNTHETIC: atomic numbers as proxy)
+    f_ga = 31.0
+    f_as = 33.0
+
+    # Average scattering factor: p_A * f_A + p_B * f_B = 0.5 * (f_A + f_B)
+    f_avg = 0.5 * (f_ga + f_as)
+
+    # Compute F_avg(hkl) for each hkl
+    F_avg = np.empty(len(hkl_list), complex)
+    for idx, (h, k, l) in enumerate(hkl_list):
+        phase = 2j * np.pi * (
+            h * positions_frac[:, 0]
+            + k * positions_frac[:, 1]
+            + l * positions_frac[:, 2]
+        )
+        F_avg[idx] = np.sum(f_avg * np.exp(phase))
+
+    return F_avg
+
+
 def compute_diffuse_intensity(struct: dict, hkl_list: list) -> np.ndarray:
     """Compute the diffuse intensity I_diff(hkl) = |F(hkl) - F_avg(hkl)|².
 
-    F_avg(hkl) is the average structure factor over all possible species
-    assignments (i.e., the structure factor of the average structure).
-
-    For a binary system with p=0.5, F_avg(hkl) = 0.5 * (f_Ga + f_As) * N_sites
-    for all hkl (since the average structure is uniform).
+    F(hkl) is the structure factor of the frozen (realized) structure.
+    F_avg(hkl) is the average structure factor (full complex sum with phase factors).
 
     Returns
     -------
     np.ndarray of diffuse intensities, shape (len(hkl_list),)
     """
     F = compute_structure_factor(struct, hkl_list)
-
-    # Average structure factor: for p=0.5, F_avg = 0.5 * (f_Ga + f_As) * N_sites
-    n_sites = len(struct["positions"])
-    f_ga = 31.0
-    f_as = 33.0
-    F_avg = 0.5 * (f_ga + f_as) * n_sites  # Real, no phase dependence
+    F_avg = compute_average_structure_factor(struct, hkl_list)
 
     # Diffuse intensity: |F - F_avg|²
     I_diff = np.abs(F - F_avg) ** 2
@@ -476,37 +534,69 @@ def main() -> None:
     print(f"Wrote {stru_path}")
 
     # Compute independent references
-    cov = compute_occupational_covariance(struct)
+    pair_corr = compute_directional_pair_correlations(struct)
     pcf = compute_pair_shell_statistics(struct)
-    peak = predict_pdf_peaks(struct, cov)
+    peak = predict_pdf_peaks(struct, pair_corr)
 
     # Compute structure factor and diffuse intensity for validation
     hkl_test = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (0.5, 0, 0)]
     F_test = compute_structure_factor(struct, hkl_test)
+    F_avg_test = compute_average_structure_factor(struct, hkl_test)
     I_diff_test = compute_diffuse_intensity(struct, hkl_test)
 
     # Write references
     refs_path = out_dir / "references.json"
     refs_data = {
         "structure": {
-            "n": struct["n"],
-            "a": struct["a"],
+            "n": int(struct["n"]),
+            "a": float(struct["a"]),
             "basis": struct["basis"],
-            "n_sites": len(struct["positions"]),
-            "n_ga": sum(1 for sp in struct["species"] if sp == "Ga"),
-            "n_as": sum(1 for sp in struct["species"] if sp == "As"),
+            "n_sites": int(len(struct["positions"])),
+            "n_ga": int(sum(1 for sp in struct["species"] if sp == "Ga")),
+            "n_as": int(sum(1 for sp in struct["species"] if sp == "As")),
+            "note": "Positions are in Cartesian (Å). Supercell = 20 Å.",
         },
-        "occupational_covariance": {
-            "eta_mean": cov["eta_mean"],
-            "c_tau": {f"{k[0]},{k[1]},{k[2]}": v for k, v in cov["c_tau"].items()},
-            "rho_tau": {f"{k[0]},{k[1]},{k[2]}": v for k, v in cov["rho_tau"].items()},
+        "directional_pair_correlations": {
+            "eta_mean": float(pair_corr["eta_mean"]),
+            "c_tau": {
+                f"{k[0]:.1f},{k[1]:.1f},{k[2]:.1f}": float(v)
+                for k, v in pair_corr["c_tau"].items()
+            },
+            "rho_tau": {
+                f"{k[0]:.1f},{k[1]:.1f},{k[2]:.1f}": float(v)
+                for k, v in pair_corr["rho_tau"].items()
+            },
+            "n_pairs": {
+                f"{k[0]:.1f},{k[1]:.1f},{k[2]:.1f}": int(v)
+                for k, v in pair_corr["n_pairs"].items()
+            },
         },
-        "pair_shell_statistics": pcf,
-        "pdf_peaks": peak,
+        "pair_shell_statistics": {
+            "r": [float(r) for r in pcf["r"]],
+            "g_ab": [float(g) for g in pcf["g_ab"]],
+            "g_aa": [float(g) for g in pcf["g_aa"]],
+            "g_bb": [float(g) for g in pcf["g_bb"]],
+            "shell_volumes": [float(v) for v in pcf["shell_volumes"]],
+            "n_ga": int(pcf["n_ga"]),
+            "n_as": int(pcf["n_as"]),
+            "n_total": int(pcf["n_total"]),
+            "V": float(pcf["V"]),
+        },
+        "pdf_peaks": {
+            "tau": peak["tau"],
+            "amplitude": [float(a) for a in peak["amplitude"]],
+            "c_tau": [float(c) for c in peak["c_tau"]],
+            "n_pairs": [int(n) for n in peak["n_pairs"]],
+            "contrast": float(peak["contrast"]),
+            "V": float(peak["V"]),
+            "note": "SYNTHETIC: contrast uses atomic numbers as proxy (Ga:31, As:33).",
+        },
         "validation": {
             "hkl_test": hkl_test,
             "F_test": [f"{f.real:.6f}+{f.imag:.6f}j" for f in F_test],
+            "F_avg_test": [f"{f.real:.6f}+{f.imag:.6f}j" for f in F_avg_test],
             "I_diff_test": [f"{v:.6f}" for v in I_diff_test],
+            "note": "SYNTHETIC: structure factors use atomic numbers as proxy.",
         },
     }
     refs_path.write_text(json.dumps(refs_data, indent=2))
@@ -515,28 +605,26 @@ def main() -> None:
     # Print summary
     n_ga = sum(1 for sp in struct["species"] if sp == "Ga")
     n_as = sum(1 for sp in struct["species"] if sp == "As")
-    print(f"\nStructure: n={struct['n']}, a={struct['a']} Å")
+    print(f"\nStructure: n={struct['n']}, a={struct['a']} Å (supercell = {struct['n'] * struct['a']} Å)")
     print(f"Basis: {struct['basis']}")
     print(f"Total sites: {len(struct['positions'])}")
     print(f"Ga sites: {n_ga}, As sites: {n_as}")
-    print(f"eta_mean: {cov['eta_mean']:.6f}")
-    print(f"\nOccupational covariance (selected):")
-    for key_str in ["1,0,0", "-1,0,0", "0,1,0", "0,-1,0", "0,0,1", "0,0,-1"]:
-        parts = key_str.split(",")
-        key_tuple = tuple(int(p) for p in parts)
-        if key_tuple in cov["c_tau"]:
-            c_val = cov["c_tau"][key_tuple]
-            rho_val = cov["rho_tau"][key_tuple]
-            print(f"  tau={key_str}: c={c_val:.6f}, rho={rho_val:.6f}")
+    print(f"eta_mean: {pair_corr['eta_mean']:.6f}")
+    print(f"\nDirectional pair correlations (at ±2.5 Å):")
+    for tau, c in pair_corr["c_tau"].items():
+        n_pairs = pair_corr["n_pairs"][tau]
+        print(f"  tau={tau} Å: c={c:.6f}, N_pairs={n_pairs}")
     print(f"\nPair-shell statistics:")
-    for r, g_ab, g_aa, g_bb in zip(pcf["r"], pcf["g_ab"], pcf["g_aa"], pcf["g_bb"]):
-        print(f"  r={r:.2f} Å: g_AB={g_ab:.4f}, g_AA={g_aa:.4f}, g_BB={g_bb:.4f}")
-    print(f"\nExpected PDF peaks:")
+    for r, g_ab, g_aa, g_bb, shell_vol in zip(
+        pcf["r"], pcf["g_ab"], pcf["g_aa"], pcf["g_bb"], pcf["shell_volumes"]
+    ):
+        print(f"  r={r:.2f} Å: g_AB={g_ab:.4f}, g_AA={g_aa:.4f}, g_BB={g_bb:.4f} (shell_vol={shell_vol:.2f} Å³)")
+    print(f"\nExpected PDF peaks (SYNTHETIC contrast):")
     for tau, amp, c, np in zip(peak["tau"], peak["amplitude"], peak["c_tau"], peak["n_pairs"]):
-        print(f"  tau={tau} Å: c={c:.4f}, N_pairs={np}, amplitude={amp:.4f}")
-    print(f"\nValidation (structure factor and diffuse intensity):")
-    for hkl, F, I in zip(hkl_test, F_test, I_diff_test):
-        print(f"  hkl={hkl}: F={F:.4f}, I_diff={I:.4f}")
+        print(f"  tau={tau} Å: c={c:.4f}, N_pairs={np}, amplitude={amp:.6f}")
+    print(f"\nValidation (SYNTHETIC structure factors):")
+    for hkl, F, F_avg, I in zip(hkl_test, F_test, F_avg_test, I_diff_test):
+        print(f"  hkl={hkl}: F={F:.4f}, F_avg={F_avg:.4f}, I_diff={I:.4f}")
 
 
 if __name__ == "__main__":
