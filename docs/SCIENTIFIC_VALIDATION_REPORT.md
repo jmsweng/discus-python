@@ -87,14 +87,23 @@ Stratified by signal strength (fraction of max diffuse intensity):
 | 0.01–1% of max | ~1,800 | 2.23 |
 | 1–10% of max | ~5,000 | 1.10 |
 | 10–100% of max | ~25,000 | 1.056 |
-| >100% of max | ~4,000 | 1.03 |
+
+Note: The previous report included a `>100% of max` category, which is **impossible** by definition (a voxel cannot exceed 100% of the maximum). This was a bug in the stratification logic and has been removed.
 
 **Interpretation:** The amplitude-subtracted model is confirmed as the engine's algorithm. The 1.10–2.3× per-point deviations are localized to weak-signal voxels. Hypotheses for the residual discrepancy:
 1. **Form-factor difference:** IT92 (independent reference) vs Waasmaier–Kirfel (engine default). This is the leading hypothesis.
 2. **Finite-box effects:** The 33³ grid may introduce edge artifacts.
 3. **Sample-vs-ensemble averaging:** The engine may average over a different set of atoms than the independent reference.
 
-**Status:** Gate 1 is **DIAGNOSED** (algorithm identified) but not fully **RESOLVED** (form-factor hypothesis untested). A controlled engine run with matching form factors is needed to close this gate.
+**Form-factor hypothesis investigation:**
+
+The independent reference uses **IT92** form factors, while the DISCUS engine uses **Waasmaier–Kirfel** by default. To test whether this difference explains the 1.10–2.3× per-point deviations, we would need to:
+1. Re-run the DISCUS engine with IT92 form factors (if supported)
+2. Compare the diffuse output against the IT92-based independent reference
+
+**Current status:** The DISCUS 6.23.01 engine does not appear to support user-specified form factor tables in the macro language. The form-factor hypothesis **remains untested**. The 1.10–2.3× deviations in weak-signal voxels are consistent with a form-factor difference, but this is not confirmed.
+
+**Status:** Gate 1 is **DIAGNOSED** (algorithm identified) but not fully **RESOLVED** (form-factor hypothesis untested, engine does not support custom form factors).
 
 ## Gate 2 — correlated-disorder 3D-ΔPDF
 
@@ -123,23 +132,29 @@ Results:
 
 ## Gate 3 — FFT coordinate/normalization reconciliation
 
-The `delta_pdf_fractional` function uses:
-- **u-axis in Å** (not fractional units): range -19.5 to +19.5 Å, step 0.9756 Å
-- **direct_basis = 20 Å** (the supercell, 4×5.0 Å)
+The `delta_pdf_fractional` function returns:
+- **`u_axes` in fractional units**: range -0.5 to +0.5 (0 to 1 spans the cell), step = 1/(n*dh)
+- **`direct_basis` in Å**: converts fractional u to Cartesian Å (e.g., 20 Å for a 4×5.0 Å supercell)
 - **Normalization:** `dh*dk*dl/V_cell; exp(-2*pi*i*h.u); u step = 1/(n*dh)`
 
-The u-axis is in **Å units of the supercell**, not fractional units. A displacement of tau=(0.5,0,0) supercell fractional corresponds to u=10 Å (half the 20 Å supercell), which sits at the box boundary.
+The `u_axes` are in **fractional units** (not Å). To convert to Cartesian Å, multiply by `direct_basis`. For a 4×5.0 Å supercell, `direct_basis = 20 Å`, so u=0.5 corresponds to 10 Å.
 
-**Status:** Gate 3 is **OPEN**. The coordinate convention is documented, but the absolute normalization (1/sqrt(Nvox) relationship) remains unresolved. The amplitude ratio (DISCUS/independent = 0.039) is normalization-dependent and cannot be judged until normalization is reconciled.
+**Normalization audit:**
+- The FFT normalization is `dh*dk*dl/V_cell`, where `dh` is the hkl step and `V_cell` is the unit cell volume.
+- For a 33³ grid with dh=0.01 and V_cell=5.6537³ Å³, the normalization factor is `0.01³ / 180.3 = 5.55e-8`.
+- This is NOT the same as `1/sqrt(Nvox)` (which would be `1/sqrt(35937) = 0.00527`).
+- The absolute normalization remains **UNRESOLVED** — the relationship between the DISCUS engine's internal normalization and the `dh*dk*dl/V_cell` factor is not established.
+
+**Status:** Gate 3 is **OPEN**. The coordinate convention is now correctly documented (fractional units, not Å). The absolute normalization remains unresolved.
 
 ## Updated gate status
 
 | Gate | Status |
 |---|---|
 | 0 — evidence/oracle | **PARTIAL**: fixed both defects, tests and independent HDF voxel/full-grid comparison; still need verified prescribed C1 ensemble model and factor-table matching. |
-| 1 — DISCUS set aver | **DIAGNOSED**: algorithm identified (amplitude-subtracted); form-factor hypothesis untested. |
-| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **PASSED**: sign correct; position at box edge is a known FFT limitation. |
-| 3 — coordinate/FFT and absolute normalization | **OPEN**: coordinate convention documented; absolute normalization unresolved. |
+| 1 — DISCUS set aver | **DIAGNOSED**: algorithm identified (amplitude-subtracted); form-factor hypothesis untested (engine does not support custom form factors). |
+| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **REOPENED**: model corrected (normalized ρ, frozen structure, correct NN distance); engine comparison pending. |
+| 3 — coordinate/FFT and absolute normalization | **OPEN**: coordinate convention corrected (fractional units, not Å); absolute normalization unresolved. |
 | 4 — PR/CI/reproduction | **PARTIAL**: code, tests and report; verify full CI and live WSL2 evidence separately. |
 
 **Do not merge PR #8** without explicit user approval and further scientific validation. PR #7 was not reopened or modified.
