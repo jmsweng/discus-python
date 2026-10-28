@@ -210,12 +210,19 @@ def _probe_env(tmp_path, engine_body):
     The default engine_body writes a minimal valid HDF5 file for each ``outf``
     name declared in the macro, so the inspector and HDF5 checks pass. Pass a
     custom body to simulate failure modes (nonzero exit, missing output, etc.).
+
+    The "repo" is placed in a subdirectory (``repo/``) so that test output
+    directories (which are direct children of ``tmp_path``) are NOT inside
+    the repo root. This keeps the --overwrite guard from firing on
+    legitimate test output directories.
     """
     source = ROOT / "spike_discus_3d"
-    copied = tmp_path / "spike_discus_3d"
+    repo = tmp_path / "repo"
+    repo.mkdir(exist_ok=True)
+    copied = repo / "spike_discus_3d"
     shutil.copytree(source, copied)
-    (tmp_path / "examples").mkdir(exist_ok=True)
-    shutil.copy2(ROOT / "examples" / "gaas.cll", tmp_path / "examples" / "gaas.cll")
+    (repo / "examples").mkdir(exist_ok=True)
+    shutil.copy2(ROOT / "examples" / "gaas.cll", repo / "examples" / "gaas.cll")
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir(exist_ok=True)
     engine = fake_bin / "discus_suite"
@@ -493,3 +500,62 @@ def test_probe_overwrite_allows_normal_directory(tmp_path):
     assert r.returncode == 0, r.stderr
     assert not (out / "stale.txt").exists()
     assert (out / "C0.mac").exists()
+
+
+def test_probe_overwrite_refuses_repo_subdirectory(tmp_path):
+    """--overwrite must refuse to delete a subdirectory inside the repo."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # Create a subdirectory inside the copied repo (simulating src/, tests/, etc.)
+    sub = copied / "tests"
+    sub.mkdir(exist_ok=True)
+    (sub / "important.py").write_text("do not delete")
+    r = _run_probe(copied, env, str(sub), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "inside the repository" in r.stderr
+    # The data must survive.
+    assert (sub / "important.py").exists()
+
+
+def test_probe_overwrite_refuses_git_dir(tmp_path):
+    """--overwrite must refuse to delete the .git directory."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # Create a .git directory inside the copied repo.
+    gitdir = copied / ".git"
+    gitdir.mkdir(exist_ok=True)
+    (gitdir / "HEAD").write_text("ref: refs/heads/main")
+    r = _run_probe(copied, env, str(gitdir), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "inside the repository" in r.stderr
+    # The .git data must survive.
+    assert (gitdir / "HEAD").exists()
+
+
+def test_probe_overwrite_refuses_nested_repo_subdir(tmp_path):
+    """--overwrite must refuse a nested subdirectory inside the repo."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # Create a nested path: repo/spike_discus_3d/macros
+    nested = copied / "spike_discus_3d" / "macros"
+    nested.mkdir(parents=True, exist_ok=True)
+    (nested / "case.mac.in").write_text("@CASE@")
+    r = _run_probe(copied, env, str(nested), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "inside the repository" in r.stderr
+    # The data must survive.
+    assert (nested / "case.mac.in").exists()
+
+
+def test_probe_overwrite_refuses_symlink_into_repo_subdir(tmp_path):
+    """--overwrite must refuse a symlink that resolves into a repo subdirectory."""
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # Create a real subdirectory and a symlink to it.
+    real_sub = copied / "real_subdir"
+    real_sub.mkdir(exist_ok=True)
+    (real_sub / "data.txt").write_text("protected")
+    # Create a symlink outside the repo that points into the repo.
+    symlink = tmp_path / "link_into_repo"
+    symlink.symlink_to(real_sub)
+    r = _run_probe(copied, env, str(symlink), "--overwrite", "C0")
+    assert r.returncode == 3
+    assert "Refusing" in r.stderr
+    # The target data must survive.
+    assert (real_sub / "data.txt").exists()

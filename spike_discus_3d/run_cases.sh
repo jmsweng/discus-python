@@ -109,6 +109,11 @@ if [ "$OVERWRITE" -eq 1 ]; then
   case "$REPO_ROOT/" in
     "$norm"/*) echo "Refusing --overwrite: path is an ancestor of the repository." >&2; exit 3 ;;
   esac
+  # Refuse if the path is INSIDE the repo root (any subdirectory, including
+  # .git, src, tests, etc.).
+  case "$norm" in
+    "$REPO_ROOT"/*) echo "Refusing --overwrite: path is inside the repository." >&2; exit 3 ;;
+  esac
   # Refuse if the resolved path is a symlink pointing into a protected location.
   if [ -L "$RUN_ABS" ]; then
     target="$(readlink -f "$RUN_ABS" 2>/dev/null)" || target=""
