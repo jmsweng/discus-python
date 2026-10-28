@@ -174,18 +174,12 @@ def test_conflicting_native_validation_modes(tmp_path):
 
 
 def test_probe_case_arguments_with_stub_discus(tmp_path):
-    """Run the real shell entrypoint with a no-op engine, not DISCUS_SUITE."""
-    source = ROOT / "spike_discus_3d"
-    copied = tmp_path / "spike_discus_3d"
-    shutil.copytree(source, copied)
-    (tmp_path / "examples").mkdir()
-    shutil.copy2(ROOT / "examples" / "gaas.cll", tmp_path / "examples" / "gaas.cll")
-    fake_bin = tmp_path / "bin"
-    fake_bin.mkdir()
-    engine = fake_bin / "discus_suite"
-    engine.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    engine.chmod(0o755)
-    env = dict(os.environ, PATH=str(fake_bin) + os.pathsep + os.environ.get("PATH", ""))
+    """Run the real shell entrypoint with an HDF5-producing stub engine.
+
+    This is the original test, updated to use the default stub that writes
+    valid HDF5 files so the strict output-integrity checks pass.
+    """
+    copied, env = _probe_env(tmp_path, None)
     selected = tmp_path / "probe_selected"
     subprocess.run(["bash", str(copied / "run_cases.sh"), str(selected), "C3", "C4"],
                    env=env, check=True, capture_output=True, text=True)
@@ -201,3 +195,151 @@ def test_probe_case_arguments_with_stub_discus(tmp_path):
                              env=env, capture_output=True, text=True)
     assert unknown.returncode == 2
     assert "Unknown case" in unknown.stderr
+
+
+# --- Gate 2: run_cases.sh safety regression tests --------------------------
+#
+# These exercise the real shell entrypoint with stub executables (a no-op
+# engine, a failing engine, and a macro-producing engine) so that the
+# fail-fast, overwrite-safety, and per-macro output-integrity behavior is
+# pinned without requiring a live DISCUS installation.
+
+def _probe_env(tmp_path, engine_body):
+    """Copy the spike dir + examples and install a stub discus_suite on PATH.
+
+    The default engine_body writes a minimal valid HDF5 file for each ``outf``
+    name declared in the macro, so the inspector and HDF5 checks pass. Pass a
+    custom body to simulate failure modes (nonzero exit, missing output, etc.).
+    """
+    source = ROOT / "spike_discus_3d"
+    copied = tmp_path / "spike_discus_3d"
+    shutil.copytree(source, copied)
+    (tmp_path / "examples").mkdir(exist_ok=True)
+    shutil.copy2(ROOT / "examples" / "gaas.cll", tmp_path / "examples" / "gaas.cll")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir(exist_ok=True)
+    engine = fake_bin / "discus_suite"
+    if engine_body is None:
+        # Default: write a minimal valid HDF5 file for each outf in the macro.
+        # Use the test's Python interpreter (sys.executable) which has h5py.
+        engine_body = (
+            "#!/usr/bin/env python3\n"
+            "import re, sys\n"
+            "import h5py\n"
+            "macro = sys.argv[-1]\n"
+            "text = open(macro).read()\n"
+            "for name in re.findall(r'outf\\s+(\\S+)', text):\n"
+            "    with h5py.File(name, 'w') as f:\n"
+            "        f.create_dataset('data', data=[1.0, 2.0, 3.0])\n"
+            "    print('stub engine wrote', name)\n"
+        )
+        # The stub must run with the same Python that has h5py installed.
+        # Replace the shebang with the test's interpreter.
+        engine_body = engine_body.replace("#!/usr/bin/env python3", f"#!{sys.executable}")
+    engine.write_text(engine_body, encoding="utf-8")
+    engine.chmod(0o755)
+    env = dict(os.environ, PATH=str(fake_bin) + os.pathsep + os.environ.get("PATH", ""),
+               PYTHON=sys.executable)
+    return copied, env
+
+
+def _run_probe(copied, env, *args):
+    return subprocess.run(["bash", str(copied / "run_cases.sh"), *args],
+                          env=env, capture_output=True, text=True)
+
+
+def test_probe_explicit_c3_c4_selection(tmp_path):
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "sel_c3c4"
+    r = _run_probe(copied, env, str(out), "C3", "C4")
+    assert r.returncode == 0, r.stderr
+    assert (out / "C3.mac").exists()
+    assert (out / "C4.mac").exists()
+    # Only the selected cases are generated.
+    assert not (out / "C0.mac").exists()
+    assert not (out / "C1.mac").exists()
+
+
+def test_probe_default_case_selection(tmp_path):
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "default"
+    r = _run_probe(copied, env, str(out))
+    assert r.returncode == 0, r.stderr
+    assert sorted(x.stem for x in out.glob("C?.mac")) == ["C0", "C1", "C2", "C3", "C4"]
+    assert not (out / "C5.mac").exists()
+
+
+def test_probe_unknown_case_fails_before_writing(tmp_path):
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    out = tmp_path / "invalid"
+    r = _run_probe(copied, env, str(out), "BAD")
+    assert r.returncode == 2
+    assert "Unknown case" in r.stderr
+    # No files were written for the bad case.
+    assert not (out / "BAD.mac").exists()
+
+
+def test_probe_missing_executable_fails(tmp_path):
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    # Point the engine at a binary that does not exist.
+    env = dict(env, DISCUS_ENGINE="definitely_not_a_binary_xyz")
+    out = tmp_path / "noengine"
+    r = _run_probe(copied, env, str(out), "C0")
+    assert r.returncode != 0
+    assert "engine" in r.stderr.lower()
+
+
+def test_probe_engine_nonzero_exit_fails(tmp_path):
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 7\n")
+    out = tmp_path / "badexit"
+    r = _run_probe(copied, env, str(out), "C0")
+    assert r.returncode != 0
+    assert "C0" in r.stderr
+    assert "7" in r.stderr
+
+
+def test_probe_engine_exit0_missing_output_fails(tmp_path):
+    # Engine exits 0 but writes no HDF5 at all.
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    out = tmp_path / "nooutput"
+    r = _run_probe(copied, env, str(out), "C0")
+    assert r.returncode != 0
+    assert "missing" in r.stderr.lower() or "empty" in r.stderr.lower()
+
+
+def test_probe_malformed_hdf5_fails(tmp_path):
+    # Engine writes a non-HDF5 file with the expected name.
+    body = ("#!/bin/sh\n"
+            "echo 'not-hdf5-bytes' > C0_total.h5\n"
+            "echo 'not-hdf5-bytes' > C0_diffuse.h5\n"
+            "echo 'not-hdf5-bytes' > C0_diffuse_3dpdf.h5\n"
+            "exit 0\n")
+    copied, env = _probe_env(tmp_path, body)
+    out = tmp_path / "malformed"
+    r = _run_probe(copied, env, str(out), "C0")
+    assert r.returncode != 0
+    assert "HDF5" in r.stderr or "hdf5" in r.stderr
+
+
+def test_probe_refuses_occupied_directory(tmp_path):
+    copied, env = _probe_env(tmp_path, "#!/bin/sh\nexit 0\n")
+    out = tmp_path / "occupied"
+    out.mkdir()
+    (out / "prior_evidence.txt").write_text("do not delete")
+    r = _run_probe(copied, env, str(out), "C0")
+    assert r.returncode == 3
+    assert "not empty" in r.stderr
+    # Prior evidence is preserved.
+    assert (out / "prior_evidence.txt").exists()
+
+
+def test_probe_overwrite_flag_clobbers(tmp_path):
+    copied, env = _probe_env(tmp_path, None)
+    out = tmp_path / "overwrite_me"
+    out.mkdir()
+    (out / "prior_evidence.txt").write_text("will be clobbered")
+    r = _run_probe(copied, env, str(out), "--overwrite", "C0")
+    assert r.returncode == 0, r.stderr
+    # Prior evidence was removed by the explicit overwrite.
+    assert not (out / "prior_evidence.txt").exists()
+    assert (out / "C0.mac").exists()

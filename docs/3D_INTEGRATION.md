@@ -46,7 +46,46 @@ print(result.imaginary_ratio, result.friedel_relative_error)
 r_angstrom = result.cartesian_length((0.3, 0.2, 0.1))
 ```
 
-This second snippet is **illustrative**; prepare a new run and set the matching native output filename first. A Bragg-subtracted label in a file must still be verified experimentally/numerically.
+This second snippet is **illustrative**; prepare a new run and set the matching native output filename first. A Bragg-subtracted label in a file must still be verified experimently/numerically.
+
+## Real end-to-end example: Bragg-subtracted diffuse (C1)
+
+The following example was **actually executed** against DISCUS_SUITE 6.23.01 on 2026-10-28 (WSL2 Ubuntu 22.04). The C1 macro writes a Bragg-subtracted diffuse volume (`set aver,100`); the runner validates the native NeXus schema and `delta_pdf_fractional()` produces a finite 3D-ΔPDF.
+
+```python
+from discuspdf import Diffuse3DRunner
+from discuspdf.discus_output import delta_pdf_fractional
+import json
+
+# The C1 macro (verified against DISCUS 6.23.01) writes C1_total.h5,
+# C1_diffuse.h5 (Bragg-subtracted) and C1_diffuse_3dpdf.h5.
+runner = Diffuse3DRunner(
+    output_filename="C1_diffuse.h5",   # must match the macro's 'outf' command
+    runs_directory="runs_3d",
+)
+prepared = runner.prepare(
+    "path/to/C1.mac",
+    assets=("path/to/gaas.cll",),
+)
+# Execute exactly once; the exact staged macro is the exact executed macro.
+job = runner.execute(prepared, native_nexus=True)
+status = json.loads((job.directory / "status.json").read_text())
+assert status["status"] == "complete"
+assert status["output_validation"]["native_nexus"] is True
+assert status["output_validation"]["physical_validation"] is False
+
+vol = job.load_discus_volume()
+assert vol.with_bragg == "bragg_subtracted"
+assert vol.values.shape == (65, 65, 65)
+assert vol.is_axis_aligned()
+
+# Fractional hkl FFT: finite result, no invented Cartesian-Q axes.
+result = delta_pdf_fractional(vol)
+print(result.imaginary_ratio)        # ~1.7e-16 (Friedel-merged by DISCUS)
+print(result.friedel_relative_error) # 0.0
+```
+
+**Observed evidence (2026-10-28):** engine exit 0; `status.json` reports `complete` with `native_nexus: true` and `physical_validation: false`; the native reader reports `(65, 65, 65)`, `bragg_subtracted`, axis-aligned; `delta_pdf_fractional()` produces a finite complex volume with `imaginary_ratio ≈ 1.7e-16` and `friedel_relative_error = 0.0`. This validates the **runner interface and schema**, not the quantitative 3D-ΔPDF physics.
 
 ## Coordinate systems, supported geometry and errors
 

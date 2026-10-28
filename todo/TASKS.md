@@ -46,7 +46,7 @@
 
 ### Native runner integration (review pending)
 
-- [ ] **P1 — Integrate the new common/NeXus reader with the 3D runner** so a configured output filename is loaded with verified source metadata and invalid geometry is rejected. [Draft PR #7](https://github.com/jmsweng/discus-python/pull/7) implements this; check it off **only after review and merge**.
+- [ ] **P1 — Integrate the new common/NeXus reader with the 3D runner** so a configured output filename is loaded with verified source metadata and invalid geometry is rejected. [Draft PR #7](https://github.com/jmsweng/discus-python/pull/7) implements this and includes a real-engine smoke test (C1 Bragg-subtracted, 65³, `native_nexus=True` → `complete`); check it off **only after review and merge**.
 
 ### Real 3D DISCUS pipeline (critical path)
 

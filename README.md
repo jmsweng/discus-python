@@ -6,7 +6,7 @@ A **prototype** Python package around the existing [DiffuseCode](https://github.
 
 - Implemented: prepare reproducible per-run directories, compile a basic 1D atomic PDF macro from a `.cll` unit-cell file, launch DISCUS, validate and plot its ASCII output, sweep parameters.
 - Implemented independently: FFT of an **already Bragg-subtracted 3D diffuse intensity volume** on a uniform *Cartesian* Q grid in Å⁻¹, and a 2D slice viewer.
-- Implemented for **DISCUS_SUITE 6.23.01 native common/NeXus**: a source-metadata-checked `read_discus_volume` adapter, physical cell metric and a fractional hkl Fourier transform; the 3D runner can load the native file from a configurable output name. See [3D integration instructions](docs/3D_INTEGRATION.md).
+- Implemented for **DISCUS_SUITE 6.23.01 native common/NeXus**: a source-metadata-checked `read_discus_volume` adapter, physical cell metric and a fractional hkl Fourier transform; the 3D runner can load the native file from a configurable output name. The runner integration has been evidenced against the real 6.23.01 engine (see [3D integration](docs/3D_INTEGRATION.md)); the quantitative 3D-ΔPDF physics is **not** independently validated.
 - **Not yet complete:** automatic 3D macro generation from arbitrary input structures, independently benchmarked correlated-disorder 3D-ΔPDF and absolute normalization, robust Bragg/background/mask processing, direct `.cif` import, advanced atom-pair selection, or general 3D visualization/export.
 
 ## Installation
