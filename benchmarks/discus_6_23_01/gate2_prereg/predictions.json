@@ -2,8 +2,8 @@
  "code_sha256": {
   "analyze.py": "3c8f69ef39c5ed9fe2fd1bdf04448db2ba76e6b9e67d3caead47be92e0cbbd7b",
   "compare_form_factors.py": "489547351c74d878c683630a7b3b930f5369ae7ea0c47edd72a631f759948332",
-  "generate.py": "83ace19ca8bdd656fb8eed49d174a65739f7c0248e928d5346491b660251f8d9",
-  "oracle.py": "46b9403709667c0b6b47c4558eeec2b9e82c40e9c2b994f330e2500044dd1eb1",
+  "generate.py": "ee3702ed83d9ee3eb0646aad780c56b9d4fd09c6371d6232e9fb375e9f3de87e",
+  "oracle.py": "666a7b1146c0c8a1570d3a721eb228c485e79626277bb8a848014cadbd10e2d3",
   "selftest.py": "139d06841f309e0e3248bccd79e20b458cd5e7ffe6fe674a5a4e79f981bf5af8",
   "wk_coefficients.json": "bc6d701f209fd242d9c93a800192a2a4cac93a5b09df46bad12721e2b30e58e0"
  },
@@ -54,12 +54,13 @@
    "0,0,2"
   ]
  },
+ "deviation_from_v1": "v1 (commit c3ab156) atom lines had two blanks after the 4-character name, shifting every fixed-column field by one; DISCUS 6.23.01 rejected the file at 'read stru' (error -49, 'File format specified as numbers only'), so the probe reported n[1]=0 and no data macro was run (evidence/20261028T232749Z_LAPTOP-NGU3BT0N). v2 writes DISCUS's own FORMAT 4 layout, checked by an emulation of read_atom_line against the DISCUS-written C1 file. Design, seeds, grid, oracle physics, predictions and thresholds are unchanged.",
  "input_sha256": {
-  "gate2_block.stru": "51528924a1e963d50974c8800a0de94f016149e0502e159ae62c80766797d510",
+  "gate2_block.stru": "b8b7a79d9ec9f0e7c3dc8e7e1e003e9ecce25bea5b2adee07c0befee8d202b4c",
   "gate2_block_diffuse.mac": "988d3ba053fa97d0f15b8980ea64f0a1b359cda303304bc96728f91b81a21c29",
   "gate2_block_total.mac": "bae419eb9af74cd2464fd7203bf4aea809afbda241d15203cfa604ddb905325b",
   "gate2_probe.mac": "445143256ce236618244801e7dd810021dd33eca5a010c7a07312c2319e45282",
-  "gate2_random.stru": "7f6397ec0fe5b4ca5118fb062fb0561f02dd1074b2e4c9e355a31fca836071e1",
+  "gate2_random.stru": "1f69c49f53319454ad1f54cb48cf74f17b7c8babdfccdfddff50f91c1883a74c",
   "gate2_random_diffuse.mac": "edd424c58916ea60ec8fb27746855676bb991fcd95e1adc022e388057866c281",
   "gate2_random_total.mac": "5a1504bb0e827bb385d7d422f6142fc1dc7885c30b8a54ec2fbf045c98ebc20b"
  },
@@ -617,8 +618,8 @@
    }
   }
  },
- "schema": "gate2-prereg-v1",
- "status": "PRE-REGISTERED: written before any engine run of these inputs",
+ "schema": "gate2-prereg-v2",
+ "status": "PRE-REGISTERED: written before any engine run of these inputs that produced data",
  "thresholds": {
   "A_corr_recovery_engine_precision_max_abs_err_over_N": 1e-06,
   "A_corr_recovery_physics_max_abs_err_over_N": 0.001,

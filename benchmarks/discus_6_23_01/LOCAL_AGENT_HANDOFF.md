@@ -41,7 +41,7 @@ git -c core.autocrlf=false clone --branch science/discus-3d-dpdf-benchmarks \
     https://github.com/jmsweng/discus-python "$WORK"     # if authentication fails: STOP and report
 cd "$WORK"
 git config core.autocrlf false        # this clone only
-git log -1 --format='%H %s'           # record (REGISTERED_COMMIT); must be c3ab156... or a later commit on this branch
+git log -1 --format='%H %s'           # record (REGISTERED_COMMIT); must include the gate2-prereg-v2 commit (see 'Registration v2' below)
 git status --short                    # must print nothing
 
 # Line-ending check: every registered file must be LF in git AND in the working tree.
@@ -64,6 +64,21 @@ Expected inputs:
 - **Gate 2:** `gate2_block.stru`, `gate2_random.stru`, `gate2_{block,random}_{total,diffuse}.mac`, `gate2_probe.mac`.
 - **Gate 1:** `C1_frozen.stru`, `c1_dyadic.mac`, `c1_repro.mac`.
 
+## Registration v2 (2026-10-28): if you already have the fresh clone
+
+The first probe (`evidence/20261028T232749Z_LAPTOP-NGU3BT0N`) correctly stopped the run. DISCUS rejected the v1 structure files at `read stru` with error −49: the atom lines were shifted one column against DISCUS's fixed-column format. The reviewer has re-registered as **gate2-prereg-v2**. Only the two `.stru` files and the scripts that write them changed; every predicted number and threshold is identical. The deviation is recorded in `predictions.json → deviation_from_v1`.
+
+In the existing fresh clone `~/gate2_prereg_runs/discus-python`:
+
+```bash
+cd ~/gate2_prereg_runs/discus-python
+git status --short     # only the untracked v1 probe directory may appear; anything else: STOP
+git pull --ff-only     # must fast-forward
+git log -1 --format='%H %s'
+```
+
+**Keep the v1 probe directory exactly as it is.** It is the evidence for the deviation, and it is committed together with the v2 evidence in Step 6. It holds v1 inputs, so never run `analyze.py` on it. Then continue from Step 1 with **new** `RUN_ID` directories.
+
 ## Step 1: Python environment and registration self-checks
 
 Use the venv created in Step 0 (same WSL context as DISCUS):
@@ -71,7 +86,7 @@ Use the venv created in Step 0 (same WSL context as DISCUS):
 ```bash
 cd "$WORK" && source .venv/bin/activate
 python -c "import numpy, h5py; print(numpy.__version__, h5py.__version__)"
-python -m pytest -q tests/test_gate2_prereg.py      # expect: 7 passed
+python -m pytest -q tests/test_gate2_prereg.py      # expect: 8 passed
 python benchmarks/discus_6_23_01/gate2_prereg/selftest.py "$(mktemp -d)"   # expect 8 lines starting "ok"
 sha256sum benchmarks/discus_6_23_01/gate2_prereg/predictions.json benchmarks/discus_6_23_01/gate1_c1_dyadic/predictions.json
 ```
@@ -80,7 +95,7 @@ Registered values:
 
 | File | SHA-256 |
 |---|---|
-| `gate2_prereg/predictions.json` | `203fe236c3cb1fefe497974db652d1233388aeeb2b9444e4eb595df0cf794fc1` |
+| `gate2_prereg/predictions.json` | `8c1a66f89ded847bfe2360ce9f757c30e6d329fc975dca968cec115ba6f82760` |
 | `gate1_c1_dyadic/predictions.json` | `77d7972effa5eb04e261e530f411cc3113aae025112e3b6bbc3f0c4148480a73` |
 
 If either test step fails or a hash differs: **STOP and report.** Do not "fix" it. A hash difference on a fresh LF clone is not expected; report `git ls-files --eol` for the affected file.
@@ -165,8 +180,8 @@ python benchmarks/discus_6_23_01/gate1_c1_dyadic/c1_dyadic.py analyze "$E1"; ech
 ( cd "$E2" && sha256sum * > MANIFEST.sha256 )
 ( cd "$E1" && sha256sum * > MANIFEST.sha256 )
 du -sh "$E2" "$E1"; find "$E2" "$E1" -size +90M     # must print nothing (GitHub limit 100 MB/file)
-git status --short   # only the two new evidence directories may appear
-git add "$E2" "$E1"
+git status --short   # only the new evidence directories (and the v1 probe directory) may appear
+git add "$E2" "$E1" benchmarks/discus_6_23_01/gate2_prereg/evidence/20261028T232749Z_LAPTOP-NGU3BT0N
 git commit -m "Gate 2 / Gate 1 pre-registered engine runs ($RUN_ID): evidence only
 
 Gate 2 analyze.py status: <PASS|FAIL|INVALID>; Gate 1 c1_dyadic status: <...>.

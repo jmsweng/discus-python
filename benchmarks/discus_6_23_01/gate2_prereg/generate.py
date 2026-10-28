@@ -117,8 +117,15 @@ def main():
         r = delta_pdf_fractional(vol, imaginary_tolerance=1e-6)
         return r
 
-    pred = {"schema": "gate2-prereg-v1",
-            "status": "PRE-REGISTERED: written before any engine run of these inputs",
+    pred = {"schema": "gate2-prereg-v2",
+            "status": "PRE-REGISTERED: written before any engine run of these inputs that produced data",
+            "deviation_from_v1": (
+                "v1 (commit c3ab156) atom lines had two blanks after the 4-character name, shifting every "
+                "fixed-column field by one; DISCUS 6.23.01 rejected the file at 'read stru' (error -49, "
+                "'File format specified as numbers only'), so the probe reported n[1]=0 and no data macro "
+                "was run (evidence/20261028T232749Z_LAPTOP-NGU3BT0N). v2 writes DISCUS's own FORMAT 4 "
+                "layout, checked by an emulation of read_atom_line against the DISCUS-written C1 file. "
+                "Design, seeds, grid, oracle physics, predictions and thresholds are unchanged."),
             "design": {"lattice": "simple cubic", "a_A": O.A_CELL, "cells": [O.N_CELL] * 3,
                        "atoms_per_cell": 1, "species": {"-1": "CU", "+1": "AU"}, "B_iso": 0.0,
                        "H_axis": {"first": float(O.H_AXIS[0]), "step": O.DH, "n": O.N_H,

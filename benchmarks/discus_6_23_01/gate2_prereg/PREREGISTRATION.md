@@ -1,6 +1,10 @@
 # Gate 2 — pre-registered signed off-origin 3D-ΔPDF experiment (DISCUS_SUITE 6.23.01)
 
-**Registered:** 2026-10-28, in the git commit that adds this directory. That commit predates any engine run of these inputs.
+**Registered:** 2026-10-28. v1 was commit `c3ab156`; the current version is **v2**. Both predate any engine run that produced data.
+
+**Deviation v1 → v2.** The engine probe rejected the v1 structure files at `read stru` (DISCUS error −49). v1 wrote two blanks after the 4-character element name, which shifted every field of DISCUS's fixed-column `format numbers` atom line by one column. No data macro ran, and the probe log is preserved as evidence (`evidence/20261028T232749Z_LAPTOP-NGU3BT0N`).
+
+v2 writes DISCUS's own `FORMAT 4` layout. `tests/test_gate2_prereg.py` now checks every atom line with an emulation of `read_atom_line`, using the DISCUS-written C1 file as a positive control and the v1 line as a negative control. Design, seeds, grid, oracle physics, predictions and thresholds are unchanged, which was verified field by field.
 **Owner approval:** design approved by the project owner on 2026-10-28.
 **Replaces:** the retracted Gate 2 comparison in `../GATE2_RESULTS.md` (see `../REVIEW_2026-10-28.md`).
 

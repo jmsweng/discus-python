@@ -133,9 +133,51 @@ def stru_text(sig: np.ndarray, title: str) -> str:
              "atoms      x,              y,              z,             Biso,    Property,"
              "  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl"]
     for nm, p in zip(names, pos):
-        lines.append(f"{nm:<4s}  {p[0]:14.6f}, {p[1]:14.6f}, {p[2]:14.6f},    {0.0:10.6f},"
-                     f"       1,       0,       0,   1.000000, _,   0,   0,   0")
+        lines.append(discus_atom_line(nm, p, biso=0.0))
     return "\n".join(lines) + "\n"
+
+
+def discus_atom_line(name: str, xyz, biso: float, prop: int = 1, occ: float = 1.0) -> str:
+    """One atom line exactly as DISCUS 6.23.01 writes it (discus_save.f90, FORMAT 4):
+    (a4,3(1x,f14.6,','),4x,f10.6,',',i8,',',I8,',',I8,', ',F10.6,', ',A1,3(', ',I3))
+    gate2-prereg-v1 wrote two blanks after the name, shifting every field one column; DISCUS reads
+    'format numbers' lines with a FIXED-column format and rejected it (error -49, engine probe).
+    """
+    s = f"{name.upper():<4.4s}" + "".join(f" {v:14.6f}," for v in xyz)
+    s += f"    {biso:10.6f},{prop:8d},{0:8d},{0:8d}, {occ:10.6f}, _" + "".join(f", {0:3d}" for _ in range(3))
+    return s
+
+
+def discus_numbers_read(line: str):
+    """Emulate DISCUS 6.23.01 read_atom_line (atom_line.f90) for 'format numbers,XYZBPMMOS':
+    read(line(5:), '(3(1x,f14.6,1x),4x,f10.6,1x,i8,1x,I8,1x,I8,2x,F10.6,2x,A1,3(2x,I3))').
+    Returns (name, x, y, z, B) or raises ValueError where DISCUS would report error -49.
+    Fortran blank fields read as zero; any other non-numeric character in a field is an error.
+    """
+    rest = line[4:]
+    spec = [("x", 1), ("f", 14), ("x", 1)] * 3 + [("x", 4), ("f", 10), ("x", 1), ("i", 8), ("x", 1),
+                                                   ("i", 8), ("x", 1), ("i", 8), ("x", 2), ("f", 10),
+                                                   ("x", 2), ("a", 1)] + [("x", 2), ("i", 3)] * 3
+    vals, pos = [], 0
+    for kind, w in spec:
+        field = rest[pos:pos + w].ljust(w); pos += w
+        if kind == "x":
+            continue
+        txt = field.strip()
+        if kind == "a":
+            vals.append(field); continue
+        if txt == "":
+            vals.append(0); continue
+        if kind == "i":
+            if not txt.lstrip("+-").isdigit():
+                raise ValueError(f"integer field {field!r}")
+            vals.append(int(txt))
+        else:
+            try:
+                vals.append(float(txt))
+            except ValueError:
+                raise ValueError(f"real field {field!r}") from None
+    return line[:4].strip(), vals[0], vals[1], vals[2], vals[3]
 
 
 def parse_stru(path: Path):
