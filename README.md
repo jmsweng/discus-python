@@ -43,7 +43,7 @@ r, gr = result.load()
 result.plot()
 ```
 
-**Important:** The macro syntax follows [documented DISCUS 1D PDF examples](https://www.xray.cz/ecm-cd/soft/xray/general/discus/discus/disman/node57.html), which are older than the latest release; validate with your local version. `result.pdf` is a **plain-text numeric PDF G(r) file**, *not* an Adobe document. This prototype uses the conventional program name/flags `discus_suite -noautorun -macro run.mac`; override the runner `launcher` if needed.
+**Important:** The macro syntax follows [documented DISCUS 1D PDF examples](https://www.xray.cz/ecm-cd/soft/xray/general/discus/discus/disman/node57.html), which are older than the latest release; validate with your local version. `result.csv` is a **plain-text numeric PDF G(r) file**. This prototype uses the conventional program name/flags `discus_suite -noautorun -macro run.mac`; override the runner `launcher` if needed.
 
 ## Notebook working-directory convention
 
