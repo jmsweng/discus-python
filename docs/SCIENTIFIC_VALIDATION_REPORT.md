@@ -2,6 +2,18 @@
 
 **2026-10-28.** Baseline: merged PR #7 at dc67a722bf55b3f6aa8b2f8d5132a4175324bb91. **This report documents Gate 0 (evidence reproduction), Gate 1 (set aver,100 diagnosis), and Gate 2 (correlated-disorder 3D-ΔPDF). Absolute normalization (Gate 3) remains OPEN.**
 
+## Final Gate Status (2026-10-28)
+
+| Gate | Status | Notes |
+|---|---|---|
+| 0 — evidence/oracle | **PARTIAL** | Archived v4.2 evidence reproduced exactly (total 0.03888%, diffuse 1.77156%, diff-of-intensities 604.38%). Two reference-code defects corrected. Still need verified prescribed C1 ensemble model and factor-table matching. |
+| 1 — DISCUS set aver | **DIAGNOSED** | Algorithm identified (amplitude-subtracted: \|F−F_avg\|²). Median ratio 1.0011, mean 1.0661, rel L2 1.77%. Form-factor hypothesis untested (engine does not support custom form factors). |
+| 2 — controlled pair disorder and off-origin 3D-ΔPDF | **UNRESOLVED** | Model corrected (checkerboard pattern, frozen 4×4×4 crystal with 256 sites, correct NN distance 2.5 Å, per-shell normalization). 24 regression tests pass. DISCUS engine not available in current WSL environment. |
+| 3 — coordinate/FFT and absolute normalization | **OPEN** | Coordinate convention corrected (fractional units, not Å). Normalization documented as `dh*dk*dl/V_cell`. Absolute normalization unresolved. |
+| 4 — PR/CI/reproduction | **PARTIAL** | Code, tests and report complete. Full CI verified (122 passed, 2 skipped in WSL venv). Live WSL2 engine evidence pending. |
+
+**Do not merge PR #8** without explicit user approval and further scientific validation. PR #7 was not reopened or modified.
+
 ## Reproducing the archived evidence
 
 Unpack the externally supplied PR8_STARTER_BUNDLE.zip and then its structure_factor_benchmark_v4.2.tar.gz into a fresh directory outside the repository. The archive includes the exact frozen C1 4096-atom GaAs structure, real 33³ DISCUS NeXus total/diffuse volumes, macro/log and historical v4.2 reference.
@@ -111,25 +123,39 @@ The independent reference uses **IT92** form factors, while the DISCUS engine us
 
 The correlated-disorder model (`benchmarks/discus_6_23_01/correlated_model.py`) has been corrected:
 
-- **Model**: 4×4×4 supercell, a=5.0 Å, 4-site basis, p=0.5
+- **Model**: 4×4×4 supercell, a=5.0 Å (supercell = 20 Å), 4-site basis, p=0.5
 - **Species assignment**: Checkerboard pattern at the basis-site level
   - Ga where (i+j+k+site_idx) % 2 == 0
   - As where (i+j+k+site_idx) % 2 == 1
 - **Frozen structure**: 256 sites (128 Ga, 128 As) with realized species assignments
+- **Coordinates**: Cartesian (Å) for the full supercell; .stru file uses supercell fractional coordinates
 
 **Computed references (from the frozen atom list):**
-- **Occupational covariance**: c(1,0,0) = -1.0 (negative correlation for checkerboard)
-- **Pair-shell statistics**: g_AB(r=2.5Å) = 5.5 (positive cross-correlation)
-- **PDF peak predictions**: amplitude = -64.0 (negative, indicating anti-correlation)
-- **Structure factor**: F(hkl) computed directly from the frozen atom list
+- **Directional pair correlations at ±2.5 Å (NN distance)**:
+  - c(2.5, 0, 0) = -0.142857 (negative)
+  - c(0, 2.5, 0) = +0.142857 (positive)
+  - c(0, 0, 2.5) = -0.142857 (negative)
+  - Symmetry partners have the same sign and magnitude
+- **Pair-shell statistics**: g_AB(r=2.5Å) = 21.88 (positive cross-correlation)
+- **PDF peak predictions**: amplitude = ±0.008 (derived from actual pair counts and covariance)
+- **Structure factor**: F(hkl) computed directly from the frozen atom list with full complex phase factors
+- **Average structure factor**: F_avg(hkl) = sum of expected scattering factors with phase factors (NOT a constant)
 - **Diffuse intensity**: |F−F_avg|² computed independently
 
 **Key corrections from the original (invalid) model:**
-1. Correlation definition: The checkerboard pattern gives c(1,0,0) = -1.0 (not +0.5)
-2. Frozen structure: 256 sites with realized species assignments (not a 32-site idealized model)
-3. NN displacement: 2.5 Å (a/2), not 10 Å
-4. g(r) computed from the frozen atom list, not assumed
-5. PDF peak amplitudes derived from actual covariance values, not assumed
+1. **Average structure factor**: Now uses full complex sum with phase factors (was a constant `mean_f * N_sites`)
+2. **Directional pair correlations**: Computed at the 2.5 Å NN distance (was at the 5 Å unit cell displacement)
+3. **PDF peak predictions**: Derived from actual pair counts and covariance (was hardcoded `c=-1`, `n_pairs=n²×4`, amplitude=-64)
+4. **Pair-shell normalization**: Uses per-shell expected pairs (shell volume) (was global species count)
+5. **Structure coordinates**: Positions in Cartesian (Å), .stru uses supercell fractional (was inconsistent)
+6. **Scattering calculations**: Labeled as SYNTHETIC (atomic numbers as proxy)
+
+**Regression tests (24 tests, all passing):**
+- Exact atom count (256), species count (128 Ga, 128 As), positions and interatomic distances
+- Expected directional pair correlations (symmetry, magnitude, pair counts)
+- Correct signed off-origin ΔPDF peaks (positions, signs, magnitudes, symmetry)
+- Correct complex average-structure amplitude at off-integer hkl
+- Explicit rejection of invalid coordinate/metadata assumptions
 
 **Engine comparison: PENDING**
 - DISCUS executable not available in current WSL environment
