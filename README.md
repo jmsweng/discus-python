@@ -6,7 +6,8 @@ A **prototype** Python package around the existing [DiffuseCode](https://github.
 
 - Implemented: prepare reproducible per-run directories, compile a basic 1D atomic PDF macro from a `.cll` unit-cell file, launch DISCUS, validate and plot its ASCII output, sweep parameters.
 - Implemented independently: FFT of an **already Bragg-subtracted 3D diffuse intensity volume** on a uniform *Cartesian* Q grid in Å⁻¹, and a 2D slice viewer.
-- **Not implemented yet:** automatic generation of the 3D diffuse intensity from a structure, Bragg removal, physical normalization, direct `.cif` import, advanced atom-pair selection, or 3D volume exports from native DISCUS formats.
+- Implemented for **DISCUS_SUITE 6.23.01 native common/NeXus**: a source-metadata-checked `read_discus_volume` adapter, physical cell metric and a fractional hkl Fourier transform; the 3D runner can load the native file from a configurable output name. The runner integration has been evidenced against the real 6.23.01 engine (see [3D integration](docs/3D_INTEGRATION.md)); the quantitative 3D-ΔPDF physics is **not** independently validated.
+- **Not yet complete:** automatic 3D macro generation from arbitrary input structures, independently benchmarked correlated-disorder 3D-ΔPDF and absolute normalization, robust Bragg/background/mask processing, direct `.cif` import, advanced atom-pair selection, or general 3D visualization/export.
 
 ## Installation
 
@@ -54,7 +55,7 @@ Each run directory records the copied `.cll` input, a SHA-256 hash, the generate
 
 ## 3D-ΔPDF analysis
 
-See `notebooks/02_3d_delta_pdf.ipynb` for a **synthetic demonstration only**. For real 3D data, start with a measured or simulated volume after Bragg/background removal, on a centered, uniform Cartesian Q grid in Å⁻¹. Inspect HDF5 datasets and use `read_hdf5_volume(...)` with *explicit* dataset paths, or load NumPy arrays yourself. A grid in h,k,l reciprocal-lattice units is not interchangeable with Cartesian Q for real-space axis calibration.
+See `notebooks/02_3d_delta_pdf.ipynb` for a **synthetic demonstration only**. For DISCUS 6.23.01 `form nexus` outputs, use `read_discus_volume()` or `Diffuse3DRun.load_discus_volume()` and `delta_pdf_fractional()`, which preserve hkl axes and the cell metric. For other HDF5 files with independently verified centered uniform Cartesian-Q arrays, use `read_hdf5_volume(...)` or load NumPy arrays. A grid in h,k,l reciprocal-lattice units must never be relabeled as Cartesian Q. See [3D integration](docs/3D_INTEGRATION.md) and the [reproducible-science benchmark plan](docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md).
 
 For quantitative work, add mask/window handling, correct reciprocal-space intensity normalization, and compare one FFT result to a trusted 3D-ΔPDF workflow. **Breaking change:** the 3D FFT no longer returns a tuple — it returns an `FFTResult` containing `complex_volume`, `r_axes`, and `diagnostics`; `real_volume` is available for plotting. Do not unpack the result as a tuple. If the imaginary/real norm ratio exceeds `imaginary_tolerance` (default `1e-4`), the transform raises `FFTValidationError` (a `ValueError` subclass) that carries the computed `FFTResult` on `exc.result`; pass `raise_on_imaginary=False` to get a warning and the same computed values instead. No 3D-ΔPDF calculations are run automatically inside DISCUS by this starter; integration history is recorded in [docs/INTEGRATION_HISTORY.md](docs/INTEGRATION_HISTORY.md).
 
@@ -62,7 +63,7 @@ For quantitative work, add mask/window handling, correct reciprocal-space intens
 
 1. Run the unit tests and validate the 1D PDF output against your local DISCUS version.
 2. Add your frequently changed structure/disorder command blocks and partial PDFs.
-3. Write a 3D reciprocal-volume output adapter for an existing validated DISCUS macro.
+3. Integrate a validated real-DISCUS 3D intensity macro with the native adapter and record full model-level benchmarking.
 4. Standardize Q-grid metadata and mask/Bragg subtraction for 3D-ΔPDF analysis.
 5. Add optimized parameter sweeps and experimental comparison metrics.
 

@@ -1,10 +1,9 @@
 # S1 probe protocol — real DISCUS_SUITE 3D output (for the WSL2 operator)
 
-Status: **nothing here has been run.** It was written on 2026-10-22 against repo
+Historical probe protocol: this text was **written before the experiments**. Parts were subsequently executed on WSL2; see [FINDINGS.md](FINDINGS.md) for what was actually observed and [the reproduction plan](../docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md) for what is still needed. The original baseline was
 `main` = `b5f98d350ca8eb7aeb7775b979cfd2164b2fc2ed` (local working tree was on
 `fix/post-merge-review` = `abd52f0`). Claude's workspace had no `discus_suite`
-(`which discus_suite` returned nothing on the Linux VM), so no 3D command syntax
-is asserted anywhere in this repository. The steps below produce the observations
+(`which discus_suite` returned nothing on the Linux VM), at the time, so this protocol alone makes no 3D execution claim. Later real-engine observations are documented in FINDINGS.md. The steps below produce the observations
 needed to write it correctly.
 
 ## Rules

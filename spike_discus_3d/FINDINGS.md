@@ -2,7 +2,9 @@
 
 Repo: `main` = `ef06490` (PR #4 merge; handoff baseline was `b5f98d3`). Engine: `/usr/local/bin/discus_suite`,
 banner "D I S C U S - S U I T E Version 6.23.01", sha256 `d4274f13…45706f3`, WSL2 Ubuntu 22.04, linked to libhdf5.
-Nothing below has been committed or pushed.
+These are **historical experimental notes** from the original probe session. The macros, native reader and C3/C4 real NeXus fixtures were subsequently committed through PRs #5 and #6. The full C1/C5 saved model and independent-calculation artifacts are **not** included; see [benchmark reproduction plan](../docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md).
+
+**New evidence (PR #7, 2026-10-28):** a fresh real-engine C1 run through `Diffuse3DRunner.execute(native_nexus=True)` produced a Bragg-subtracted 65³ volume that loaded via `load_discus_volume()` and transformed via `delta_pdf_fractional()` (finite, `imaginary_ratio ≈ 1.7e-16`). This validates the runner interface and schema, not the quantitative physics. See [3D integration](../docs/3D_INTEGRATION.md).
 
 ## Observed (real DISCUS runs; macros in `macros/`, inspector JSON/logs in the result tarballs)
 - Command chain that works: `fourier` → `xray`, `wvle moa1`, corners `ll/lr/ul/tl` **in hkl (rlu)**, `na/no/nt`, `abs/ord/top`,
@@ -38,7 +40,5 @@ Nothing below has been committed or pushed.
 - `lots`, `nufft`, larger/odd/even grids, other cells, neutron/electron radiation, anomalous dispersion.
 - 1D (S4): `set delta` is deprecated per manual; the committed 1D reference was made with qmax=30 while README/test use qmax=25 — unresolved.
 
-## Deliverables staged (untracked, in working tree)
-`src/discuspdf/discus_output.py` (reader with source-metadata validation, fractional-coordinate ΔPDF with cell metric, exact evaluator),
-`tests/test_discus_output.py` (15 tests, 2 real-file), `tests/fixtures/discus_6.23.01/` (two 0.5 MB real DISCUS files + macros), `spike_discus_3d/*`.
-Full suite in the Linux VM: 69 passed, 1 skipped.
+## Deliverables recorded from the original work session
+The reader `src/discuspdf/discus_output.py`, native-reader tests, two 0.5 MB real DISCUS C3/C4 NeXus files and `spike_discus_3d/*` have now been merged. At the time of this original investigation the Linux VM test suite reported **69 passed, 1 skipped**; newer suites contain additional tests. Separate disordered-model and independent-reference artifacts are still needed.

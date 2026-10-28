@@ -17,3 +17,7 @@ __all__ = [
 from .reciprocal import ReciprocalVolume
 from .diffuse3d import Diffuse3DRunner, Diffuse3DRun, OutputSpec
 __all__ += ["ReciprocalVolume", "Diffuse3DRunner", "Diffuse3DRun", "OutputSpec"]
+
+# Version-verified DISCUS 6.23.01 common/NeXus 3D output.
+from .discus_output import DiscusVolume, FractionalFFTResult, read_discus_volume, delta_pdf_fractional, evaluate_real_space
+__all__ += ["DiscusVolume", "FractionalFFTResult", "read_discus_volume", "delta_pdf_fractional", "evaluate_real_space"]

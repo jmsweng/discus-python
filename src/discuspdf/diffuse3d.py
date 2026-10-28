@@ -63,16 +63,29 @@ class OutputSpec:
 @dataclass(frozen=True)
 class Diffuse3DRun:
     directory: Path
+    output_filename: str = "diffuse.h5"
+
+    @property
+    def output(self) -> Path:
+        return self.directory / self.output_filename
+
+    def load_discus_volume(self, *, expect_content: str = "intensity"):
+        """Load verified DISCUS 6.23.01 common/NeXus hkl metadata from this job."""
+        from .discus_output import read_discus_volume
+        return read_discus_volume(self.output, expect_content=expect_content)
 
     def load_volume(self, *, intensity_dataset: str, q_datasets: tuple[str, str, str],
                     coordinate_system: str, units: str, preprocessing: tuple[str, ...]):
+        """Legacy reader for HDF5 files with explicit Cartesian-Q axis arrays.
+
+        DISCUS common/NeXus does NOT use this layout; use load_discus_volume.
+        """
         from .volume import read_hdf5_volume
         from .reciprocal import ReciprocalVolume
-        data_path = self.directory / "diffuse.h5"
-        intensity, axes = read_hdf5_volume(data_path, intensity_dataset, q_datasets)
+        intensity, axes = read_hdf5_volume(self.output, intensity_dataset, q_datasets)
         return ReciprocalVolume(intensity, axes, coordinate_system, units,
                                 preprocessing=preprocessing,
-                                metadata={"source": str(data_path)})
+                                metadata={"source": str(self.output)})
 
 
 def _validate_hdf5_output(path: Path, spec: OutputSpec | None) -> dict:
@@ -122,16 +135,23 @@ class Diffuse3DRunner:
     """Run an already-verified 3D macro in an isolated directory.
 
     The caller must supply all required input files and a macro that writes
-    diffuse.h5. No Bragg subtraction or quantitative normalization is assumed.
+    the explicitly configured output filename. No physical correctness is assumed.
     """
     def __init__(self, runs_directory="runs_3d",
                  launcher=("discus_suite", "-noautorun", "-macro"),
-                 timeout_seconds=3600):
+                 timeout_seconds=3600, output_filename="diffuse.h5"):
         self.runs_directory = Path(runs_directory)
         self.launcher = tuple(launcher)
         self.timeout_seconds = timeout_seconds
         if not self.launcher or timeout_seconds <= 0:
             raise ValueError("Invalid launcher or timeout")
+        if (not isinstance(output_filename, str)
+                or output_filename in ("", ".", "..")
+                or Path(output_filename).name != output_filename
+                or chr(92) in output_filename
+                or not output_filename.lower().endswith((".h5", ".hdf5"))):
+            raise ValueError("output_filename must be a simple .h5/.hdf5 filename")
+        self.output_filename = output_filename
 
     def prepare(self, macro: str | Path, assets: tuple[str | Path, ...] = ()) -> Diffuse3DRun:
         macro = Path(macro).expanduser().resolve()
@@ -144,7 +164,7 @@ class Diffuse3DRunner:
         hashes = {"run.mac": hashlib.sha256((directory / "run.mac").read_bytes()).hexdigest()}
         for asset in assets:
             source = Path(asset).expanduser().resolve()
-            if not source.is_file() or source.name in ("run.mac", "diffuse.h5"):
+            if not source.is_file() or source.name in ("run.mac", self.output_filename):
                 raise ValueError(f"Invalid input asset: {source}")
             if source.name in hashes:
                 raise ValueError(f"Duplicate input asset: {source.name}")
@@ -153,7 +173,7 @@ class Diffuse3DRunner:
             hashes[source.name] = hashlib.sha256(dest.read_bytes()).hexdigest()
         (directory / "inputs.json").write_text(json.dumps(hashes, indent=2))
         (directory / "status.json").write_text('{"status": "prepared"}\n')
-        return Diffuse3DRun(directory)
+        return Diffuse3DRun(directory, self.output_filename)
 
     def _status(self, run: Diffuse3DRun, state: str, **details: object) -> None:
         (run.directory / "status.json").write_text(
@@ -186,24 +206,29 @@ class Diffuse3DRunner:
                 fail(ValueError(f"Staged input was modified after preparation: {name}"))
         if not (run.directory / "run.mac").is_file():
             fail(FileNotFoundError("Prepared macro run.mac is missing"))
-        output = run.directory / "diffuse.h5"
+        output = run.output
         if output.exists():
             fail(FileExistsError(f"Refusing to overwrite existing output: {output}; "
                                  "delete it or use a new run directory to rerun"))
 
-    def execute(self, run: Diffuse3DRun, output_spec: OutputSpec | None = None) -> Diffuse3DRun:
+    def execute(self, run: Diffuse3DRun, output_spec: OutputSpec | None = None,
+                *, native_nexus: bool = False) -> Diffuse3DRun:
         """Execute the exact staged macro and validate the produced file.
 
         Status transitions: ``prepared`` → ``running`` → ``complete`` /
         ``produced_unverified`` / ``failed``.
 
-        * ``complete`` — a user-supplied ``output_spec`` was fully validated.
+        * ``complete`` — a user-supplied ``output_spec`` or the verified
+          DISCUS 6.23.01 NeXus schema (``native_nexus=True``) was validated.
+          This is not a quantitative scientific certification.
         * ``produced_unverified`` — the file is structurally valid HDF5 (or no
           spec was given to validate against); physical correctness is NOT
           asserted.
         * ``failed`` — preflight, engine, or validation failure; the reason and
           return code (when an engine process ran) are recorded.
         """
+        if native_nexus and output_spec is not None:
+            raise ValueError("Use native_nexus=True OR output_spec, not both")
         self._preflight(run)
         env = os.environ.copy()
         env.pop("DISPLAY", None)
@@ -219,7 +244,7 @@ class Diffuse3DRunner:
 
         log = proc.stdout + "\n--- STDERR ---\n" + proc.stderr
         (run.directory / "run.log").write_text(log, encoding="utf-8")
-        output = run.directory / "diffuse.h5"
+        output = run.output
         engine_error = _ENGINE_ERROR_PATTERN.search(log)
 
         if proc.returncode != 0 or engine_error:
@@ -230,23 +255,37 @@ class Diffuse3DRunner:
 
         if not output.is_file() or output.stat().st_size == 0:
             self._status(run, "failed", returncode=proc.returncode,
-                        reason="Engine exited 0 but did not produce a nonempty diffuse.h5")
+                        reason=f"Engine exited 0 but did not produce a nonempty {run.output_filename}")
             raise RuntimeError(f"DISCUS produced no output; inspect {run.directory / 'run.log'}")
 
         try:
-            report = _validate_hdf5_output(output, output_spec)
+            if native_nexus:
+                from .discus_output import read_discus_volume
+                volume = read_discus_volume(output)
+                report = {
+                    "valid_hdf5": True,
+                    "native_nexus": True,
+                    "intensity_shape": list(volume.values.shape),
+                    "grid_frame": "hkl",
+                    "with_bragg": volume.with_bragg,
+                    "source_sha256": volume.provenance["sha256"],
+                    "physical_validation": False,
+                }
+            else:
+                report = _validate_hdf5_output(output, output_spec)
         except (ValueError, OSError) as exc:
             self._status(run, "failed", returncode=proc.returncode,
                         reason=f"Output validation failed: {exc}")
             raise RuntimeError(f"Invalid 3D output; inspect {run.directory / 'run.log'}") from exc
 
-        if output_spec is not None:
+        if output_spec is not None or native_nexus:
             self._status(run, "complete", returncode=proc.returncode,
-                        output_validation=report)
+                        output_filename=run.output_filename, output_validation=report)
         else:
             # Structurally valid HDF5, but no user-supplied spec was validated:
             # do not claim scientific completeness.
             self._status(run, "produced_unverified", returncode=proc.returncode,
+                        output_filename=run.output_filename,
                         output_validation=report,
                         reason="No output spec supplied; structural HDF5 check only")
         return run
