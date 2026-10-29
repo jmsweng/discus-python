@@ -34,3 +34,7 @@ HANDOFF.md
 SETUP_WINDOWS10_OPENCODE.md
 SETUP_REPORT.md
 plan.md
+
+# Engine HDF5 volumes of Gate evidence runs are not committed (~17 MB each); recreate them with
+# benchmarks/discus_6_23_01/regenerate_evidence.py and record their content hashes in EVIDENCE_CONTENT_HASHES.json
+benchmarks/discus_6_23_01/gate*/evidence/*/*.h5

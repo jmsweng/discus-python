@@ -64,6 +64,10 @@ Expected inputs:
 - **Gate 2:** `gate2_block.stru`, `gate2_random.stru`, `gate2_{block,random}_{total,diffuse}.mac`, `gate2_probe.mac`.
 - **Gate 1:** `C1_frozen.stru`, `c1_dyadic.mac`, `c1_repro.mac`.
 
+## Evidence volumes (2026-10-28)
+
+Engine `.h5` outputs in `evidence/` directories are git-ignored and are no longer committed. After a run, add `python benchmarks/discus_6_23_01/regenerate_evidence.py hash <evidence_dir>` output to your report so the reviewer can record the content hashes. Everything else in the evidence directory is committed as before. See `EVIDENCE_VOLUMES.md`.
+
 ## Registration v4 (2026-10-28): READ THIS FIRST. It overrides everything below where it conflicts, including the v3 section.
 
 v3 failed one criterion because of rounding ties (`gate2_prereg/RESULT_v3.md`). The owner approved **gate2-prereg-v4**, which makes two changes: tie-aware criteria (new `R` rows) and **fresh structure seeds**. The macros are unchanged, but they now read new `.stru` files.
