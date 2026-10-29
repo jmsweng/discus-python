@@ -1,0 +1,30 @@
+{
+ "status": "PASS",
+ "problems": [],
+ "criteria": [
+  {
+   "criterion": "dyadic total vs oracle relL2",
+   "value": 7.705985436415518e-15,
+   "limit": 1e-09,
+   "pass": true
+  },
+  {
+   "criterion": "dyadic diffuse vs oracle relL2",
+   "value": 6.9363852516738894e-12,
+   "limit": 1e-06,
+   "pass": true
+  },
+  {
+   "criterion": "archived macro rerun, total: max|diff|/max",
+   "value": 0.0,
+   "limit": 1e-12,
+   "pass": true
+  },
+  {
+   "criterion": "archived macro rerun, diffuse: max|diff|/max",
+   "value": 0.0,
+   "limit": 1e-12,
+   "pass": true
+  }
+ ]
+}

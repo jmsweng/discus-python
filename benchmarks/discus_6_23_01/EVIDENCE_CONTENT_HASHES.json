@@ -1,0 +1,196 @@
+{
+ "evidence": {
+  "benchmarks/discus_6_23_01/gate1_c1_dyadic/evidence/20261028T234015Z_LAPTOP-NGU3BT0N": {
+   "analysis": [
+    "benchmarks/discus_6_23_01/gate1_c1_dyadic/c1_dyadic.py",
+    "analyze"
+   ],
+   "binary_sha256": "d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3",
+   "bytes": {
+    "c1_dyadic_diffuse.h5": 576312,
+    "c1_dyadic_total.h5": 576312,
+    "c1_repro_diffuse.h5": 312440,
+    "c1_repro_total.h5": 312440
+   },
+   "inputs": [
+    "C1_frozen.stru",
+    "c1_dyadic.mac",
+    "c1_repro.mac"
+   ],
+   "macros": [
+    "c1_dyadic",
+    "c1_repro"
+   ],
+   "original_file_sha256": {
+    "c1_dyadic_diffuse.h5": "488d4acc9071126293f98622e249fc66660e489fb2de1b29d940ceca7829e928",
+    "c1_dyadic_total.h5": "0f761fe687c81587f860b60aec60e0d0d51e78205a727ca94dfad1009c75a328",
+    "c1_repro_diffuse.h5": "2223ebc5595c0e7e48f15e7dff0292b8753a97f3c0e3a0abb074dc3fac6c10dc",
+    "c1_repro_total.h5": "f6fb06072652a9b54cbcbc4d536423158e058a4f6600d4dd4d21ec64b79191b1"
+   },
+   "registered_commit": "ec703b4fe360416bd2a0ea7e05e4376f896b266a",
+   "volumes": {
+    "c1_dyadic_diffuse.h5": "e4830c3832326a075a39d4a52be4d21a386c703b3262fe43bb74c0b4dc65fed3",
+    "c1_dyadic_total.h5": "8f8a99ca3ff104c5766f41090608c26690bc14490d5024d5d9d274ef9dd05b62",
+    "c1_repro_diffuse.h5": "7842ec17ad5b4bdd0ec0226e947946afe280ce59ab138fb28d964b8de95ec953",
+    "c1_repro_total.h5": "0c87c29d382a1ef545648f6a02bd21b246c0f9b45919282322aca70b2b06c730"
+   }
+  },
+  "benchmarks/discus_6_23_01/gate2_prereg/evidence/20261028T234015Z_LAPTOP-NGU3BT0N": {
+   "analysis": [
+    "benchmarks/discus_6_23_01/gate2_prereg/analyze.py"
+   ],
+   "binary_sha256": "d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3",
+   "bytes": {
+    "gate2_block_diffuse.h5": 16792944,
+    "gate2_block_total.h5": 16792944,
+    "gate2_random_diffuse.h5": 16792944,
+    "gate2_random_total.h5": 16792944
+   },
+   "inputs": [
+    "gate2_block.stru",
+    "gate2_block_diffuse.mac",
+    "gate2_block_total.mac",
+    "gate2_probe.mac",
+    "gate2_random.stru",
+    "gate2_random_diffuse.mac",
+    "gate2_random_total.mac"
+   ],
+   "macros": [
+    "gate2_block_total",
+    "gate2_block_diffuse",
+    "gate2_random_total",
+    "gate2_random_diffuse"
+   ],
+   "original_file_sha256": {
+    "gate2_block_diffuse.h5": "9101cf3e73bebcba419b6d3a138e9ae5d0531312ff31de095875677b5b4873bc",
+    "gate2_block_total.h5": "f2540cd58390e0102c4bcdc0f7c67808a987f875df78c83a2da50d6c3a462fa7",
+    "gate2_random_diffuse.h5": "803a1eda602474e953af918b2d96ccaf3f72dc9dee562546c2852b2674f5892b",
+    "gate2_random_total.h5": "b4e0bbfba9ccd685bc698a9f59727e8200af7b61ea7c70141104a121477e76e6"
+   },
+   "registered_commit": "ec703b4fe360416bd2a0ea7e05e4376f896b266a",
+   "volumes": {
+    "gate2_block_diffuse.h5": "74518d310e2eee984a1e83e80b699ef759d185f386ac456bb43fc39d09a75c4a",
+    "gate2_block_total.h5": "3e92efe507500ccea46afb4be58e15fe278e0f65db6e5aa532e487eeecdc591e",
+    "gate2_random_diffuse.h5": "0dbf3c683b67f0b0e894fd826ff413bbe97c7220fc60d5e3f5680ada00366eb7",
+    "gate2_random_total.h5": "3a84f6dd51f91830d7e5c433365a5520f05bd8f1e46ac36a8fc44a2d39b43bbb"
+   }
+  },
+  "benchmarks/discus_6_23_01/gate2_prereg/evidence/20261028T235829Z_LAPTOP-NGU3BT0N": {
+   "analysis": [
+    "benchmarks/discus_6_23_01/gate2_prereg/analyze.py"
+   ],
+   "binary_sha256": "d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3",
+   "bytes": {
+    "gate2_block_diffuse.h5": 16792944,
+    "gate2_block_total.h5": 16792944,
+    "gate2_random_diffuse.h5": 16792944,
+    "gate2_random_total.h5": 16792944
+   },
+   "inputs": [
+    "gate2_block.stru",
+    "gate2_block_diffuse.mac",
+    "gate2_block_total.mac",
+    "gate2_probe.mac",
+    "gate2_random.stru",
+    "gate2_random_diffuse.mac",
+    "gate2_random_total.mac"
+   ],
+   "macros": [
+    "gate2_block_total",
+    "gate2_block_diffuse",
+    "gate2_random_total",
+    "gate2_random_diffuse"
+   ],
+   "original_file_sha256": {
+    "gate2_block_diffuse.h5": "1fcd32db8a05df87071acc99e44df3a49ed5c46272302e5ca9b21702bd445adf",
+    "gate2_block_total.h5": "eeb6a8366d911ee280a421e14aee51df0daeb1020a45a06c709140923cbe1105",
+    "gate2_random_diffuse.h5": "a4b7e4a8ad6dc0981a1456f1e958594b5507464a7c87edc4a386eca7367d313c",
+    "gate2_random_total.h5": "c453274876bcd3e21ad691fbad28bec2e33a518f9b255c45eecd6670c2eee700"
+   },
+   "registered_commit": "a243b4e0ddbff2a0a9cc7be88d94df402c85cbde",
+   "volumes": {
+    "gate2_block_diffuse.h5": "0fb8b4a5cbe09aaf1779eb4de8e43ee7d4701f54528f4918394277284f1e0208",
+    "gate2_block_total.h5": "f99f6b2e25c6146dd21963b0c7a72c3b2330dff78a4b4dc37049435b285442db",
+    "gate2_random_diffuse.h5": "42606f199ec80131bb18a611db9da5ec1ec326e0329e1ea7fffb4e250a11d89f",
+    "gate2_random_total.h5": "1fb8c6ee2d3216eb0c6ed330e28aaae3fb9ee5b98d0953a03e5c014269b5314f"
+   }
+  },
+  "benchmarks/discus_6_23_01/gate2_prereg/evidence/20261029T010305Z_LAPTOP-NGU3BT0N": {
+   "analysis": [
+    "benchmarks/discus_6_23_01/gate2_prereg/analyze.py"
+   ],
+   "binary_sha256": "d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3",
+   "bytes": {
+    "gate2_block_diffuse.h5": 16792944,
+    "gate2_block_total.h5": 16792944,
+    "gate2_random_diffuse.h5": 16792944,
+    "gate2_random_total.h5": 16792944
+   },
+   "inputs": [
+    "gate2_block.stru",
+    "gate2_block_diffuse.mac",
+    "gate2_block_total.mac",
+    "gate2_probe.mac",
+    "gate2_random.stru",
+    "gate2_random_diffuse.mac",
+    "gate2_random_total.mac"
+   ],
+   "macros": [
+    "gate2_block_total",
+    "gate2_block_diffuse",
+    "gate2_random_total",
+    "gate2_random_diffuse"
+   ],
+   "original_file_sha256": {
+    "gate2_block_diffuse.h5": "43031431744a593bfe337429ea487b3802b399f11866b77c15652f18cae70eb1",
+    "gate2_block_total.h5": "f1ad882f10aed58447321f38e1f5009ef6f5e8c93aee702e29b574baa2cd2479",
+    "gate2_random_diffuse.h5": "d8931c38cb4ab47c4cf96164509ae757b305855a636dc5b91a5d1ed2ae9270f9",
+    "gate2_random_total.h5": "8394854619ec2b88f236393ac6fe6fab18a2c6dd0259aa5cf35d75e95dec1008"
+   },
+   "registered_commit": "87a382d0d5408fd3382a549d1bc7b490f54b9256",
+   "volumes": {
+    "gate2_block_diffuse.h5": "756d781ee47bafe9024efa8f30a54e589548fbd6dc221f3ddd8636fe97033fa1",
+    "gate2_block_total.h5": "e76cea5fa13e857b96f0f27ca118c51d35347391007c360a26d7bc5e60eea964",
+    "gate2_random_diffuse.h5": "5274384e8f4417c2a360a34a263482eab6c2b21c36c11c89d62313e7e636b6f0",
+    "gate2_random_total.h5": "ea611426e3e43fdba8ac4093bd0ac249f944f6d096c7535f2e4c1c93ddcb47fe"
+   }
+  },
+  "benchmarks/discus_6_23_01/gate3/evidence/20261029T105111Z_LAPTOP-NGU3BT0N": {
+   "analysis": [
+    "benchmarks/discus_6_23_01/gate3/gate3_analyze.py"
+   ],
+   "binary_sha256": "d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3",
+   "bytes": {
+    "gate3_block_diffuse_3dpdf.h5": 16797728,
+    "gate3_block_diffuse_int.h5": 16792944,
+    "gate3_block_total_3dpdf.h5": 16797728,
+    "gate3_block_total_int.h5": 16792944
+   },
+   "content_hashes_source": "reported by the operator (regenerate_evidence.py hash) from the original files, which were never committed",
+   "inputs": [
+    "gate2_block.stru",
+    "gate3_block_diffuse.mac",
+    "gate3_block_total.mac"
+   ],
+   "macros": [
+    "gate3_block_total",
+    "gate3_block_diffuse"
+   ],
+   "original_file_sha256": {
+    "gate3_block_diffuse_3dpdf.h5": "3477cc17a175c1ddb10041a28730c7012dd244914d6f1955aaad63abae70c468",
+    "gate3_block_diffuse_int.h5": "adbfd596d75eb75adcf71b9d144aef19da83db3c6f3f2876cc0e804c9d99d706",
+    "gate3_block_total_3dpdf.h5": "fadad1477c55a61407eea0d4926714459be5ca9b9a26ecb59799b5eb8f3567bd",
+    "gate3_block_total_int.h5": "40dc7213cf49c81d11368fe85c39465fc3a4f9c21ddae217257578dd0801e3bf"
+   },
+   "registered_commit": "31b1740d11c593df01a8700eaa2941a72312f0d5",
+   "volumes": {
+    "gate3_block_diffuse_3dpdf.h5": "bb426961af4038fe7108da1d5a55108a71dd72a295f4ce20e98d5132e5d7e5aa",
+    "gate3_block_diffuse_int.h5": "756d781ee47bafe9024efa8f30a54e589548fbd6dc221f3ddd8636fe97033fa1",
+    "gate3_block_total_3dpdf.h5": "7561e72b04c9ed8b5259f3376f583eb5904aaa75117277c4e3128a4aaebfebb3",
+    "gate3_block_total_int.h5": "e76cea5fa13e857b96f0f27ca118c51d35347391007c360a26d7bc5e60eea964"
+   }
+  }
+ },
+ "note": "Content hashes of the original engine HDF5 volumes, computed from the committed files before they were removed from the tree (they remain in the git history of the PR #8 branch). See regenerate_evidence.py.",
+ "schema": "discus-h5-content-v1"
+}

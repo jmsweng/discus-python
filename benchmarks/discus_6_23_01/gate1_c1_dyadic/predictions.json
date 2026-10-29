@@ -1,0 +1,36 @@
+{
+ "archived_residual_engine_precision_oracle": {
+  "diffuse_relL2": 0.01768980958701013,
+  "total_relL2": 2.422789185547401e-06
+ },
+ "code_sha256": {
+  "c1_dyadic.py": "5f5d10fab8d60b2b003b2d99c79e8aa93372f2cc69245f29e2792069b8e631de",
+  "wk_coefficients.json": "bc6d701f209fd242d9c93a800192a2a4cac93a5b09df46bad12721e2b30e58e0"
+ },
+ "dyadic_oracle_sha256": {
+  "diffuse": "b0358c7f5f950bf0f968d2fe383a2b8e909a2c22225bdd7fca3ed9c6dba1d603",
+  "total": "fdb2b9497fb3b92c99438a70c835e4bff6ef03cd081c5e71acdc57cd4dba01bb"
+ },
+ "grid_archived": {
+  "corner": -0.16,
+  "n": 33,
+  "step": 0.01
+ },
+ "grid_dyadic": {
+  "corner": -0.15625,
+  "n": 41,
+  "step": 0.0078125
+ },
+ "inputs_sha256": {
+  "C1_frozen.stru": "ceefca57e26ab40e03d2adfd443cff559bd7fc3c837402f418f6e8def35406b9",
+  "c1_dyadic.mac": "eb85ccecf690471e08fe40bf1840bd76f77f6911bb6f0f83a274161070d6c7b2",
+  "c1_repro.mac": "b4c4f81c531e6eace39af81433985b87b059a11470003d078632c48915a43b02"
+ },
+ "schema": "gate1-c1-dyadic-v1",
+ "status": "PRE-REGISTERED before any engine run",
+ "thresholds": {
+  "dyadic_diffuse_relL2_max": 1e-06,
+  "dyadic_total_relL2_max": 1e-09,
+  "repro_max_abs_diff_over_max": 1e-12
+ }
+}

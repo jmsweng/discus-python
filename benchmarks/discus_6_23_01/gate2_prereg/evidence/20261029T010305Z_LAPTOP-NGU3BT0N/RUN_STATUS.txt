@@ -1,0 +1,6 @@
+gate2_probe exit=0 seconds=0
+gate2_block_total exit=0 seconds=7
+gate2_block_diffuse exit=0 seconds=93
+gate2_random_total exit=0 seconds=10
+gate2_random_diffuse exit=0 seconds=23
+analyze exit=0

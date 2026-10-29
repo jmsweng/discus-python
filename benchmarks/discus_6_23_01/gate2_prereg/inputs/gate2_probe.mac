@@ -1,0 +1,9 @@
+# Gate 2 probe: confirm DISCUS reads the structure as 16x16x16 cells x 1 atom (generated; do not edit)
+discus
+read
+  stru gate2_block.stru
+eval n[1]
+eval n[2]
+eval n[3]
+exit
+exit

@@ -1,10 +1,12 @@
 # Reproduce and independently validate the real 3D disorder benchmarks
 
+**2026-10-28 PR #8 checkpoint:** [Draft PR #8](https://github.com/jmsweng/discus-python/pull/8) independently rechecks the archived frozen-C1 off-commensurate 33³ HDF5 inputs and fixes two defects in the historic v4.2 reference (full 3×3 hkl increments and the direct average-structure amplitude). See [partial scientific report](SCIENTIFIC_VALIDATION_REPORT.md) and `benchmarks/discus_6_23_01/`. Archived IT92 total relative L2 is 0.03888%; empirical conditional diffuse candidate relative L2 is 1.77156%, with larger weak-signal residuals. The scientific `set aver` discrepancy, designed correlated-disorder 3D-ΔPDF peaks and absolute normalization remain **open**. No new WSL2 DISCUS run was performed for PR #8 in the current session.
+
 **Status: action required on the local WSL2 DISCUS installation.** These instructions address review item **#3**. The prior [`FINDINGS.md`](../spike_discus_3d/FINDINGS.md) describes C0–C5 experiments and reports ≈0.1% agreement with independent scattering calculations. GitHub does **not** contain the full atom lists, intensity outputs, independent-calculation script or all calculation logs behind those reported comparisons. Do not treat the numbers as reverified by this document.
 
 ## Before running (operator)
 
-- [ ] Pull the reviewed branch containing the probe-case argument fix. Use the existing Ubuntu/WSL2 environment with the already installed **DISCUS_SUITE 6.23.01**; do not install or replace binaries without approval.
+- [x] PR #7 was merged into `main` at `dc67a722bf55b3f6aa8b2f8d5132a4175324bb91` on 2026-10-28; its probe-case argument fix is the engineering baseline. For fresh WSL2 scientific experiments, pull the latest `main` and work on a new branch. Use the already installed **DISCUS_SUITE 6.23.01**; do not install or replace binaries without approval.
 - [ ] Confirm `discus_suite` version, path, SHA-256, operating system, Python and dependency versions. Run `bash spike_discus_3d/probe_environment.sh <output-dir>` or record equivalent facts.
 - [ ] Allocate a dedicated output directory outside the repository. Check available disk and memory: the probe's 65³ datasets are reasonably small but generated records should remain outside Git by default.
 - [ ] Write down the physics assumptions and *predeclare* numerical comparison metrics/tolerances before adjusting any scattering parameters. Distinguish shape-normalized relative comparisons from absolute normalization.

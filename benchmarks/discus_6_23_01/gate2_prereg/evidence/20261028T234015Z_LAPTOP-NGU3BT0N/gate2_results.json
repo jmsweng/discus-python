@@ -1,0 +1,762 @@
+{
+ "predictions_sha256": "8c1a66f89ded847bfe2360ce9f757c30e6d329fc975dca968cec115ba6f82760",
+ "run_dir": "benchmarks/discus_6_23_01/gate2_prereg/evidence/20261028T234015Z_LAPTOP-NGU3BT0N",
+ "models": {
+  "block": {
+   "criteria": [
+    {
+     "criterion": "C0 total vs engine-precision oracle (relL2)",
+     "value": 0.30012556113187944,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "C0 total vs physics oracle (relL2)",
+     "value": 0.3001391754281268,
+     "limit": 0.002411804226810927,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "C1 diffuse at integer H / max diffuse",
+     "value": 0.0,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C1 (diffuse - total) off integer H (relL2)",
+     "value": 4.492351807714851e-15,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "A correlation recovery, physics g (max|dC|/N)",
+     "value": 0.0077606531551641655,
+     "limit": 0.001,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "A correlation recovery, engine g (max|dC|/N)",
+     "value": 0.007755587649948881,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "B1 dPDF vs physics-oracle dPDF (relL2)",
+     "value": 0.3352064215154424,
+     "limit": 0.0015353983581458197,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "B1 dPDF vs engine-precision-oracle dPDF (relL2)",
+     "value": 0.33520948458592564,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "B2 max |ratio - predicted| at predeclared tau",
+     "value": 0.0005775321095423079,
+     "limit": 0.01,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B2 sign agreement where required (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 imag/real of transform",
+     "value": 6.682539376187427e-16,
+     "limit": 1e-10,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 Friedel relative error of engine diffuse",
+     "value": 1.289655125325906e-15,
+     "limit": 1e-12,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "L total log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 0.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": false
+    },
+    {
+     "criterion": "L diffuse log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 0.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": false
+    }
+   ],
+   "tau_table": [
+    {
+     "tau_cells": "0,0,0",
+     "tau_A": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": 6442521.561030524,
+     "engine_ratio": 1.0,
+     "predicted_ratio": 1.0,
+     "realized_C_over_N": 1.0,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,0,0",
+     "tau_A": [
+      4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -3149123.1840044856,
+     "engine_ratio": -0.488802894048951,
+     "predicted_ratio": -0.48857648686442934,
+     "realized_C_over_N": -0.48828125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "-1,0,0",
+     "tau_A": [
+      -4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -3149123.184004486,
+     "engine_ratio": -0.48880289404895105,
+     "predicted_ratio": -0.48857648686442856,
+     "realized_C_over_N": -0.48828125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "0,1,0",
+     "tau_A": [
+      0.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": 3542493.163206889,
+     "engine_ratio": 0.5498612817432688,
+     "predicted_ratio": 0.5502572608963255,
+     "realized_C_over_N": 0.55078125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "0,-1,0",
+     "tau_A": [
+      0.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": 3542493.163206889,
+     "engine_ratio": 0.5498612817432688,
+     "predicted_ratio": 0.5502572608963269,
+     "realized_C_over_N": 0.55078125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "0,0,1",
+     "tau_A": [
+      0.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": -159665.55972366262,
+     "engine_ratio": -0.024783085040715497,
+     "predicted_ratio": -0.02420555293117415,
+     "realized_C_over_N": -0.0234375,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,-1",
+     "tau_A": [
+      0.0,
+      0.0,
+      -4.0
+     ],
+     "engine_rho": -159665.55972366262,
+     "engine_ratio": -0.024783085040715497,
+     "predicted_ratio": -0.02420555293117319,
+     "realized_C_over_N": -0.0234375,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,1,0",
+     "tau_A": [
+      4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": -1697780.7479759387,
+     "engine_ratio": -0.2635273676452186,
+     "predicted_ratio": -0.2635879597968803,
+     "realized_C_over_N": -0.263671875,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,-1,0",
+     "tau_A": [
+      4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": -1716481.6467168105,
+     "engine_ratio": -0.266430097354963,
+     "predicted_ratio": -0.2665019190009345,
+     "realized_C_over_N": -0.2666015625,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "-1,1,0",
+     "tau_A": [
+      -4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": -1716481.6467168105,
+     "engine_ratio": -0.266430097354963,
+     "predicted_ratio": -0.26650191900093356,
+     "realized_C_over_N": -0.2666015625,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "-1,-1,0",
+     "tau_A": [
+      -4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": -1697780.7479759387,
+     "engine_ratio": -0.2635273676452186,
+     "predicted_ratio": -0.2635879597968806,
+     "realized_C_over_N": -0.263671875,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,0,1",
+     "tau_A": [
+      4.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": 54522.912253917886,
+     "engine_ratio": 0.008462977071542246,
+     "predicted_ratio": 0.008184879588192757,
+     "realized_C_over_N": 0.0078125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,1,1",
+     "tau_A": [
+      0.0,
+      4.0,
+      4.0
+     ],
+     "engine_rho": 70900.69771030298,
+     "engine_ratio": 0.011005116092923397,
+     "predicted_ratio": 0.011313338454874495,
+     "realized_C_over_N": 0.01171875,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "2,0,0",
+     "tau_A": [
+      8.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -147982.37985719135,
+     "engine_ratio": -0.02296963672613935,
+     "predicted_ratio": -0.023174202641748246,
+     "realized_C_over_N": -0.0234375,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,2,0",
+     "tau_A": [
+      0.0,
+      8.0,
+      0.0
+     ],
+     "engine_rho": 646202.4340449844,
+     "engine_ratio": 0.10030271966084349,
+     "predicted_ratio": 0.100846150475519,
+     "realized_C_over_N": 0.1015625,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "0,0,2",
+     "tau_A": [
+      0.0,
+      0.0,
+      8.0
+     ],
+     "engine_rho": -203268.54836744943,
+     "engine_ratio": -0.03155108546271365,
+     "predicted_ratio": -0.03142165018613195,
+     "realized_C_over_N": -0.03125,
+     "ratio_ok": true
+    }
+   ],
+   "zone_consistency_max_rel_dev": {
+    "physics": 0.36957721070757776,
+    "engine": 0.3695626542958168
+   },
+   "oracle_bitwise_identical_to_registration": {
+    "physics": false,
+    "engine": false
+   },
+   "hdf5_sha256": {
+    "total": "f2540cd58390e0102c4bcdc0f7c67808a987f875df78c83a2da50d6c3a462fa7",
+    "diffuse": "9101cf3e73bebcba419b6d3a138e9ae5d0531312ff31de095875677b5b4873bc"
+   },
+   "max_I_total_engine": 48885695982.54542,
+   "max_I_diffuse_engine": 49086039.55979983,
+   "logs": {
+    "total": {
+     "log": "gate2_block_total.log",
+     "sha256": "602cfc2f7b57b4c7528a1092d08a355d7dc09e8e280ebc4a5b5ea6df61f65f87",
+     "atom_type_counts": {
+      "CU": 2048,
+      "AU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [],
+     "form_factor_line": true,
+     "error_lines": [
+      "***********************************************************",
+      "***********************************************************"
+     ],
+     "errors_found": true
+    },
+    "diffuse": {
+     "log": "gate2_block_diffuse.log",
+     "sha256": "9aab85a724df62ec7b43dbb5c1975389b2eb1cb62a66e565ddc01128be23c271",
+     "atom_type_counts": {
+      "CU": 2048,
+      "AU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [
+      "100.0"
+     ],
+     "form_factor_line": true,
+     "error_lines": [
+      "***********************************************************",
+      "***********************************************************"
+     ],
+     "errors_found": true
+    }
+   }
+  },
+  "random": {
+   "criteria": [
+    {
+     "criterion": "C0 total vs engine-precision oracle (relL2)",
+     "value": 0.30012368769172487,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "C0 total vs physics oracle (relL2)",
+     "value": 0.3001373040126752,
+     "limit": 0.0024118401465843867,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "C1 diffuse at integer H / max diffuse",
+     "value": 0.0,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C1 (diffuse - total) off integer H (relL2)",
+     "value": 7.087461416517257e-15,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "A correlation recovery, physics g (max|dC|/N)",
+     "value": 0.0077804195735105,
+     "limit": 0.001,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "A correlation recovery, engine g (max|dC|/N)",
+     "value": 0.0077929838149872754,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "B1 dPDF vs physics-oracle dPDF (relL2)",
+     "value": 0.33513261077286083,
+     "limit": 0.001527371004091043,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "B1 dPDF vs engine-precision-oracle dPDF (relL2)",
+     "value": 0.33513425035209116,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": false
+    },
+    {
+     "criterion": "B2 max |ratio - predicted| at predeclared tau",
+     "value": 0.0006123026480302912,
+     "limit": 0.01,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B2 sign agreement where required (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 imag/real of transform",
+     "value": 1.1539682142549404e-15,
+     "limit": 1e-10,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 Friedel relative error of engine diffuse",
+     "value": 2.274044876528085e-15,
+     "limit": 1e-12,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "N control max |rho(NN)/rho(0)|",
+     "value": 0.014204711642202458,
+     "limit": 0.05,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "L total log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 0.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": false
+    },
+    {
+     "criterion": "L diffuse log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 0.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": false
+    }
+   ],
+   "tau_table": [
+    {
+     "tau_cells": "0,0,0",
+     "tau_A": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": 6442987.060695861,
+     "engine_ratio": 1.0,
+     "predicted_ratio": 1.0,
+     "realized_C_over_N": 1.0,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,0,0",
+     "tau_A": [
+      4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -46758.69825184304,
+     "engine_ratio": -0.007257301281432803,
+     "predicted_ratio": -0.006653047017866701,
+     "realized_C_over_N": -0.005859375,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "-1,0,0",
+     "tau_A": [
+      -4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -46758.698251843045,
+     "engine_ratio": -0.007257301281432804,
+     "predicted_ratio": -0.006653047017865688,
+     "realized_C_over_N": -0.005859375,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,1,0",
+     "tau_A": [
+      0.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": 91520.77331162628,
+     "engine_ratio": 0.014204711642202458,
+     "predicted_ratio": 0.014817014290231736,
+     "realized_C_over_N": 0.015625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,-1,0",
+     "tau_A": [
+      0.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": 91520.77331162627,
+     "engine_ratio": 0.014204711642202456,
+     "predicted_ratio": 0.014817014290232747,
+     "realized_C_over_N": 0.015625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,1",
+     "tau_A": [
+      0.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": 41343.62285133894,
+     "engine_ratio": 0.0064168408941168535,
+     "predicted_ratio": 0.007019857080133419,
+     "realized_C_over_N": 0.0078125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,-1",
+     "tau_A": [
+      0.0,
+      0.0,
+      -4.0
+     ],
+     "engine_rho": 41343.62285133892,
+     "engine_ratio": 0.00641684089411685,
+     "predicted_ratio": 0.007019857080134464,
+     "realized_C_over_N": 0.0078125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,1,0",
+     "tau_A": [
+      4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": -12992.342240825781,
+     "engine_ratio": -0.0020165091313131666,
+     "predicted_ratio": -0.0019886259301976367,
+     "realized_C_over_N": -0.001953125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,-1,0",
+     "tau_A": [
+      4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": 18010.622263827878,
+     "engine_ratio": 0.0027953838947928416,
+     "predicted_ratio": 0.0028530561602902243,
+     "realized_C_over_N": 0.0029296875,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "-1,1,0",
+     "tau_A": [
+      -4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": 18010.622263827878,
+     "engine_ratio": 0.0027953838947928416,
+     "predicted_ratio": 0.002853056160290201,
+     "realized_C_over_N": 0.0029296875,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "-1,-1,0",
+     "tau_A": [
+      -4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": -12992.342240825796,
+     "engine_ratio": -0.0020165091313131688,
+     "predicted_ratio": -0.0019886259301976437,
+     "realized_C_over_N": -0.001953125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,0,1",
+     "tau_A": [
+      4.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": 63279.607518121724,
+     "engine_ratio": 0.009821470526325619,
+     "predicted_ratio": 0.009797685096479429,
+     "realized_C_over_N": 0.009765625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,1,1",
+     "tau_A": [
+      0.0,
+      4.0,
+      4.0
+     ],
+     "engine_rho": 5835.034923066195,
+     "engine_ratio": 0.0009056412605050297,
+     "predicted_ratio": 0.0009382959912249581,
+     "realized_C_over_N": 0.0009765625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "2,0,0",
+     "tau_A": [
+      8.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -27151.26547693423,
+     "engine_ratio": -0.004214080397982643,
+     "predicted_ratio": -0.0040826012565421095,
+     "realized_C_over_N": -0.00390625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,2,0",
+     "tau_A": [
+      0.0,
+      8.0,
+      0.0
+     ],
+     "engine_rho": 129121.17723532704,
+     "engine_ratio": 0.020040576834773526,
+     "predicted_ratio": 0.020240743446299125,
+     "realized_C_over_N": 0.0205078125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,2",
+     "tau_A": [
+      0.0,
+      0.0,
+      8.0
+     ],
+     "engine_rho": 136194.7773725383,
+     "engine_ratio": 0.021138452722242292,
+     "predicted_ratio": 0.021286354357974806,
+     "realized_C_over_N": 0.021484375,
+     "ratio_ok": true
+    }
+   ],
+   "zone_consistency_max_rel_dev": {
+    "physics": 0.3683919619299368,
+    "engine": 0.3686752392707409
+   },
+   "oracle_bitwise_identical_to_registration": {
+    "physics": false,
+    "engine": false
+   },
+   "hdf5_sha256": {
+    "total": "b4e0bbfba9ccd685bc698a9f59727e8200af7b61ea7c70141104a121477e76e6",
+    "diffuse": "803a1eda602474e953af918b2d96ccaf3f72dc9dee562546c2852b2674f5892b"
+   },
+   "max_I_total_engine": 48885695982.54542,
+   "max_I_diffuse_engine": 22281636.822983317,
+   "logs": {
+    "total": {
+     "log": "gate2_random_total.log",
+     "sha256": "36df6f6c41ab1fcb40b22d746f07ba167cbc30fff5d42c63182a7c13fa1a1dfb",
+     "atom_type_counts": {
+      "CU": 2048,
+      "AU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [],
+     "form_factor_line": true,
+     "error_lines": [
+      "***********************************************************",
+      "***********************************************************"
+     ],
+     "errors_found": true
+    },
+    "diffuse": {
+     "log": "gate2_random_diffuse.log",
+     "sha256": "c59cff04cbfa1f0ba2c6c337f23a040ee7cb2adea151e5ce11837be6ba281f1e",
+     "atom_type_counts": {
+      "CU": 2048,
+      "AU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [
+      "100.0"
+     ],
+     "form_factor_line": true,
+     "error_lines": [
+      "***********************************************************",
+      "***********************************************************"
+     ],
+     "errors_found": true
+    }
+   }
+  }
+ },
+ "n_criteria": 29,
+ "n_failed": 16,
+ "status": "FAIL"
+}

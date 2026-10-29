@@ -1,0 +1,130 @@
+# Gate 2 — pre-registered signed off-origin 3D-ΔPDF experiment (DISCUS_SUITE 6.23.01)
+
+**Registered:** 2026-10-28. v1 was commit `c3ab156`, v2 `ec703b4`, v3 `a243b4e`; the current version is **v4**. v1 and v2 predate any engine run that produced data, except that v2 *did* produce data and FAILED.
+
+**Deviation v3 → v4 (registered after seeing the v3 results).** v3 failed only B1 at engine precision. The cause is that 14/44 voxels on exact rounding ties make the engine and the NINT emulation pick neighbouring table entries (`RESULT_v3.md`). v4 handles the tie voxels as described under criterion R, which is declared from the grid alone, and leaves every non-tie voxel and every numerical threshold unchanged. v4 also uses **fresh seeds** (block 20261101, random 20261102), because the v3 realization had been seen; that keeps the v4 predictions blind. Post hoc on v3 data, the tie-completed oracle matches the engine to 2×10⁻¹⁶ (total) and 5×10⁻¹⁵ (diffuse). This is the reason v4 is expected to pass, and it is stated here so that the expectation is on record.
+
+**Deviation v2 → v3 (registered after seeing the v2 results).** The v2 run applied an unrequested B = 1 Å² Debye–Waller factor (`temp use`; files carry B = 0). v3 changes only the macros (`temp ignore`) and `analyze.py` (error-line regex; new T criterion on the log's `Temp. factors` line). Predictions, oracle, grid and all numerical thresholds are unchanged. See `DIAGNOSIS_v2_RESULT.md`; the v2 result files are kept as they were.
+
+**Deviation v1 → v2.** The engine probe rejected the v1 structure files at `read stru` (DISCUS error −49). v1 wrote two blanks after the 4-character element name, which shifted every field of DISCUS's fixed-column `format numbers` atom line by one column. No data macro ran, and the probe log is preserved as evidence (`evidence/20261028T232749Z_LAPTOP-NGU3BT0N`).
+
+v2 writes DISCUS's own `FORMAT 4` layout. `tests/test_gate2_prereg.py` now checks every atom line with an emulation of `read_atom_line`, using the DISCUS-written C1 file as a positive control and the v1 line as a negative control. Design, seeds, grid, oracle physics, predictions and thresholds are unchanged, which was verified field by field.
+**Owner approval:** design approved by the project owner on 2026-10-28.
+**Replaces:** the retracted Gate 2 comparison in `../GATE2_RESULTS.md` (see `../REVIEW_2026-10-28.md`).
+
+Everything that decides PASS/FAIL is fixed here and in `predictions.json` before the engine runs:
+- structures
+- macros
+- oracle
+- predicted numbers
+- tolerances
+- analysis code
+
+`analyze.py` refuses to evaluate (status INVALID) if any registered file, or any input copied into the run directory, differs from its registered SHA-256.
+
+## Question
+
+Does DISCUS 6.23.01, run on a frozen structure with known, anisotropic, signed short-range occupational correlations, produce a Bragg-subtracted diffuse volume whose 3D-ΔPDF shows the predicted off-origin peaks? The test covers the right **positions**, **signs** and **relative amplitudes**, to stated tolerances, and the pipeline being tested is `src/discuspdf.read_discus_volume` followed by `delta_pdf_fractional`.
+
+## Design and why each choice removes a confound
+
+| Choice | Value | Confound it removes |
+|---|---|---|
+| Lattice | simple cubic, a = 4 Å, **one atom per primitive cell** | `set aver` averages per site over unit cells. With one site per cell, ⟨F⟩ is fixed by composition alone. |
+| Crystal | 16 × 16 × 16 cells (N = 4096), `ncell 16,16,16,1` written explicitly | The PR #8 runs had no `ncell` and one 20 Å P1 "cell", so DISCUS used 1 cell and ⟨F⟩ = F, giving exactly zero diffuse. |
+| Atom order | x fastest, then y, then z (DISCUS `celltoindex`) | `four_aver` assigns atoms to cells by index, not by position. |
+| Species | Cu (σ = −1) / Au (σ = +1), exactly 2048 / 2048 | High contrast. Σσ = 0 exactly, so ⟨F⟩ has no composition-fluctuation term. |
+| B | 0 | Removes Debye–Waller conventions from Gate 2. The convention, exp(−B s²) on F, is separately confirmed on the PR #8 total-intensity runs. |
+| hkl grid | H = −4 + k/16, k = 0…127 per axis (`lr = 3.9375`, 128 points, even) | **Commensurate**: the finite-crystal sum equals the periodic sum exactly, so the open-vs-periodic ambiguity is gone. All phases are exact in DISCUS's 2¹⁶ exp table. With an even point count Friedel merging is *not* used, so Friedel symmetry is a real diagnostic. |
+| Q range | \|H\| ≤ 4 rlu per axis, s ≤ 0.87 Å⁻¹ | The real-space kernel's leakage one lattice vector away is K(a)/K(0) = −7.8×10⁻⁴. The PR #8 window (d*max 0.1 / 0.05 Å⁻¹) gave 62 % / 89 % leakage at 2.5 Å. |
+| Real-space step | 1/(128 · 1/16) = 1/8 cell = 0.5 Å | Every lattice vector is an exact grid point. |
+
+### Order model: `block` (seed 20261028)
+
+Each z layer is tiled by independent 2 × 2 (x, y) blocks with σ(x, y) = s_block · (−1)ˣ. Within a block, x-neighbours are unlike and y-neighbours are like, and s_block = ±1 with probability ½. Analytic ensemble values of C(τ)/N:
+- −½ at ±a x̂
+- +½ at ±a ŷ
+- 0 at ±a ẑ
+- −¼ at (±a, ±a, 0)
+- 0 at every other vector in the predeclared list
+
+### Negative control: `random` (seed 20261029)
+
+A random permutation of 2048 Cu and 2048 Au. It has no correlation beyond sampling noise.
+
+## Oracle (`oracle.py`, numpy only; nothing imported from `src/discuspdf`)
+
+- **Total intensity:** I_tot = |Σⱼ fⱼ(s) e^{2πi H·xⱼ}|², with s = |H| / 2a.
+- **`set aver,100`**, as implemented in `four_aver` (discus/prog/fourier_sup.f90, tag v.6.23.01): ⟨F⟩ = (mean cell structure factor, positions reduced into the first cell) × L(H), where L(H) = Σ_cells e^{2πi H·n}. Here this gives I_diff = g(s)² S(H), with g = (f_Au − f_Cu)/2 and S = |Σ σⱼ e^{2πi H·nⱼ}|².
+- **Two precision modes:**
+  - **physics**: DABAX W–K coefficients, exact s. This is the independent reference.
+  - **engine**: DISCUS's own coefficient table, with s rounded to 0.001 Å⁻¹ using Fortran NINT, exactly as `four_formtab`/`istl` do. On the PR #8 runs this emulation reproduces the engine's total intensity to 6×10⁻¹⁶ and 7×10⁻¹⁵ relative L2.
+- **ε_tab:** the physics-vs-engine difference, computed now, before any run. It is 8.0×10⁻⁴ in total, 5.1×10⁻⁴ in diffuse and 5.1×10⁻⁴ in ΔPDF. Every "physics" tolerance is 3 ε_tab.
+- **Pair sums** C(τ) = Σⱼ σⱼ σ_{j+τ} are computed by explicit shifted products and cross-checked against FFT.
+- **Independent real-space prediction:** ρ(τ) = Σ_τ′ C(τ′) K(τ − τ′). K is computed by zone folding plus explicit 16-point DFT matrices, which is a different code path from the 128³ FFT in the pipeline. Applied to oracle data, `delta_pdf_fractional` reproduces this prediction to 1.1×10⁻¹⁵ of ρ(0). That closes the PR #8 "direct vs FFT" discrepancy: boundaries, grid and normalization now match.
+
+## Registered predictions (v4 block model, seed 20261101; physics oracle; ρ(τ)/ρ(0))
+
+| τ (cells) | realized C(τ)/N | **predicted ρ/ρ₀** | sign required | ensemble (MC mean ± sd) |
+|---|---|---|---|---|
+| ±(1,0,0) | -0.5020 | **-0.5022** | negative | -0.500 ± 0.016 |
+| ±(0,1,0) | +0.5176 | **+0.5171** | positive | +0.500 ± 0.015 |
+| ±(0,0,1) | +0.0195 | +0.0187 | – | +0.001 ± 0.032 |
+| (1,1,0), (−1,−1,0) | -0.2607 | **-0.2606** | negative | -0.250 ± 0.013 |
+| (1,−1,0), (−1,1,0) | -0.2627 | **-0.2626** | negative | -0.250 ± 0.013 |
+| (1,0,1) | +0.0000 | +0.0004 | – | -0.000 ± 0.023 |
+| (0,1,1) | +0.0254 | +0.0249 | – | +0.000 ± 0.023 |
+| (2,0,0) | +0.0039 | +0.0041 | – | -0.001 ± 0.032 |
+| (0,2,0) | +0.0352 | +0.0344 | – | +0.000 ± 0.031 |
+| (0,0,2) | -0.0234 | -0.0237 | – | -0.001 ± 0.032 |
+
+The realization is a typical draw: every |z| against the ensemble is ≤ 1.25. The seeds were set before computing the predictions and not changed afterwards.
+The negative control (seed 20261102) has realized nearest-neighbour ratios |ρ/ρ₀| ≤ 0.0187.
+
+*v1–v3 used seeds 20261028/20261029, with predictions −0.4886, +0.5503, −0.0242, −0.2636, −0.2665 (and +0.1008 at (0,2,0)). Those are kept in git history and in `RESULT_v3.md`.*
+
+## Acceptance criteria
+
+These are evaluated for *both* models by `analyze.py`. Values come from `predictions.json → thresholds`.
+
+| ID | Criterion | Limit |
+|---|---|---|
+| C0 | engine total vs engine-precision oracle (tie-completed, see R), rel L2 | ≤ 1×10⁻⁶ |
+| C0 | engine total vs physics oracle, rel L2 | ≤ 3 ε_tab (2.4×10⁻³) |
+| C1 | engine diffuse at integer H (Bragg positions) / max diffuse | ≤ 1×10⁻⁹ |
+| C1 | engine (diffuse − total) at non-integer H, rel L2 | ≤ 1×10⁻⁹ |
+| A | lattice correlations recovered from one Brillouin zone (C = DFT of I_diff/g²) vs oracle pair sums, max\|ΔC\|/N, physics g | ≤ 1×10⁻³ |
+| A | same, engine-precision g | ≤ 1×10⁻⁶ |
+| B1 | pipeline 3D-ΔPDF of engine diffuse vs pipeline 3D-ΔPDF of oracle diffuse, rel L2 (physics / engine precision) | ≤ 3 ε_tab / ≤ 1×10⁻⁶ |
+| B2 | at every predeclared τ: \|engine ρ/ρ₀ − predicted\| | ≤ 0.01 |
+| B2 | sign agreement wherever \|predicted ratio\| ≥ 0.05 | 100 % |
+| B3 | imag/real of the transform; Friedel relative error of the engine diffuse | ≤ 1×10⁻¹⁰; ≤ 1×10⁻¹² |
+| N | negative control: max \|ρ/ρ₀\| over the six nearest neighbours | ≤ 0.05 |
+| R | at every predeclared tie voxel (s/0.001 Å⁻¹ = n + ½ exactly; 216 voxels, from the grid alone), engine total and diffuse equal one of the two candidate table lookups (round up / round down), relative | ≤ 1×10⁻¹², fraction 100 % |
+| T | each engine log has a `Temp. factors` line that does not say `used` | required |
+| L | each engine log: `Atom typ = CU (# 2048)`, `AU (# 2048)`, and no error lines | required |
+
+Metadata must also match before any criterion is evaluated: shape 128³, corner −4, increments diag(1/16), cell 4 Å / 90°, and `bragg_present` / `bragg_subtracted` as appropriate. Otherwise the run is INVALID.
+
+**Gate 2 PASSES only if every criterion passes for both models on real engine output.** Gate 3 (absolute normalization) is explicitly *not* tested here.
+
+## Stop rules and deviations
+
+1. **C0 fails:** stop. The forward model or the inputs are not what was registered, so do not interpret B.
+2. **C0 passes but C1 fails:** the `set aver` semantics differ from `four_aver` as read. Gate 2 is UNRESOLVED. Report the failing voxels; do not reinterpret.
+3. **C0/C1 pass but A/B fail:** Gate 2 FAILS with quantitative evidence. The next step is a written diagnosis, not a parameter change.
+4. **No edits after the run.** Registered files, thresholds and the analysis must not be edited after engine data exist. If a genuine bug is found in `analyze.py`:
+   - preserve the original result;
+   - write a deviation note;
+   - register a new version (`gate2-prereg-v2`) with its own commit;
+   - report both results.
+
+## Files
+
+- `oracle.py`, `generate.py`: oracle and generator.
+- `inputs/`: registered structures and macros.
+- `predictions.json`: numbers, thresholds and hashes.
+- `analyze.py`: the only evaluator.
+- `selftest.py`: proves the evaluator passes clean synthetic data and fails seven kinds of corruption (no averaging, zero diffuse, transposed axes, 1 % scale, sign-flipped y pattern, engine-without-rounding, edited macro).
+- `compare_form_factors.py`, `wk_coefficients.json`: the W–K transcription comparison.
+- `tests/test_gate2_prereg.py`: CI checks of all of the above. These are synthetic only and do not show that DISCUS passes.

@@ -1,0 +1,162 @@
+{
+ "schema": "gate3-prereg-v2",
+ "predictions_sha256": "69b7f4751dd2c0a4f297529194ccefa6f70460cdd2c7f39538e9438fa8ecadfe",
+ "run_dir": "/home/user/gate2_prereg_runs/discus-python/benchmarks/discus_6_23_01/gate3/evidence/20261029T105111Z_LAPTOP-NGU3BT0N",
+ "criteria": [
+  {
+   "criterion": "R0 diffuse: int volume content hash equals Gate 2 v4 (fraction)",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "M1 diffuse: native corner/increment equal source prediction (max abs dev)",
+   "value": 0.0,
+   "limit": 1e-09,
+   "op": "<=",
+   "pass": true
+  },
+  {
+   "criterion": "M1 diffuse: native data_type_style == single_pdf",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "E1 diffuse: native vs emulation of same-run int (relL2)",
+   "value": 3.0410719716512124e-16,
+   "limit": 1e-12,
+   "op": "<=",
+   "pass": true
+  },
+  {
+   "criterion": "E2 diffuse: native matches registered fingerprint (fraction)",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "P1 diffuse: native argmax at predicted index [64, 64, 64] (fraction)",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "C1 diffuse: package delta_pdf_fractional == k * native on true axes (relL2)",
+   "value": 5.083207163004746e-16,
+   "limit": 1e-12,
+   "op": "<=",
+   "pass": true
+  },
+  {
+   "criterion": "L diffuse: log atom counts, no errors, Temp. factors not 'used'",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "R0 total: int volume content hash equals Gate 2 v4 (fraction)",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "M1 total: native corner/increment equal source prediction (max abs dev)",
+   "value": 0.0,
+   "limit": 1e-09,
+   "op": "<=",
+   "pass": true
+  },
+  {
+   "criterion": "M1 total: native data_type_style == single_pdf",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "E1 total: native vs emulation of same-run int (relL2)",
+   "value": 2.9331261219165917e-16,
+   "limit": 1e-12,
+   "op": "<=",
+   "pass": true
+  },
+  {
+   "criterion": "E2 total: native matches registered fingerprint (fraction)",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "P1 total: native argmax at predicted index [64, 64, 64] (fraction)",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  },
+  {
+   "criterion": "L total: log atom counts, no errors, Temp. factors not 'used'",
+   "value": 1.0,
+   "limit": 1.0,
+   "op": ">=",
+   "pass": true
+  }
+ ],
+ "info": {
+  "diffuse": {
+   "int_content_hash": "756d781ee47bafe9024efa8f30a54e589548fbd6dc221f3ddd8636fe97033fa1",
+   "four_weight_scalef_used": null,
+   "native_argmax_index": [
+    64,
+    64,
+    64
+   ],
+   "native_label_at_argmax": [
+    0.1259842519685037,
+    0.1259842519685037,
+    0.1259842519685037
+   ],
+   "log": {
+    "ok": true,
+    "counts": {
+     "AU": 2048,
+     "CU": 2048
+    },
+    "errors": [],
+    "temp": "ignored"
+   }
+  },
+  "total": {
+   "int_content_hash": "e76cea5fa13e857b96f0f27ca118c51d35347391007c360a26d7bc5e60eea964",
+   "four_weight_scalef_used": 1.0,
+   "native_argmax_index": [
+    64,
+    64,
+    64
+   ],
+   "native_label_at_argmax": [
+    0.1259842519685037,
+    0.1259842519685037,
+    0.1259842519685037
+   ],
+   "log": {
+    "ok": true,
+    "counts": {
+     "AU": 2048,
+     "CU": 2048
+    },
+    "errors": [],
+    "temp": "ignored"
+   }
+  }
+ },
+ "n_failed": 0,
+ "status": "PASS"
+}

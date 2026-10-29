@@ -1,0 +1,62 @@
+## 1. Inventory of committed engine output
+correlated_run/corr_total.h5: sha256 5e1b1ad4100347adfffeac48fb0871131c0e645b3d7816cc5dde0c8593d38376 shape (33, 33, 33) min 2.247e-28 max 6.705e+07 bragg=bragg_present axes=hkl corner=[-2.0, -2.0, -2.0] step=[0.125, 0.125, 0.125]
+correlated_run/corr_diffuse.h5: sha256 843c8b0d154dd271aa8590d38b1054364c2d0fa804a2d07b408fb95e60707714 shape (33, 33, 33) min 0 max 0 bragg=bragg_subtracted axes=hkl corner=[-2.0, -2.0, -2.0] step=[0.125, 0.125, 0.125]
+correlated_run/corr_total_3dpdf.h5: sha256 8196dd07dc8d5a60d27d32f3820f41169dbeb4deb9c2601138154e41db53a7cf shape (33, 33, 33) min 1.796e+08 max 3.452e+08 bragg=bragg_present axes=uvw corner=[-4.0, -4.0, -4.0] step=[0.25, 0.25, 0.25]
+short_range_run/sr_total.h5: sha256 0d8945248cc210c71a48e9a6f6e97b183c802062469d924e269c8f403425c88b shape (33, 33, 33) min 0.2446 max 4.297e+09 bragg=bragg_present axes=hkl corner=[-2.0, -2.0, -2.0] step=[0.125, 0.125, 0.125]
+sr: no diffuse (set aver,100) run exists
+short_range_run/sr_total_3dpdf.h5: sha256 047e9b20fb0f7228fe343a9c616e4441c2c0b35cbad26b6d17e023f0ed4514c8 shape (33, 33, 33) min 1.153e+10 max 2.166e+10 bragg=bragg_present axes=uvw corner=[-4.0, -4.0, -4.0] step=[0.25, 0.25, 0.25]
+
+## 2. Independent forward model of TOTAL intensity (finite atom list, B on F)
+corr: it92      s_rounded_to_0.001=False relL2 = 4.025e-04
+corr: wk        s_rounded_to_0.001=False relL2 = 1.259e-04
+corr: wk        s_rounded_to_0.001=True  relL2 = 3.127e-08
+corr: wk-discus s_rounded_to_0.001=True  relL2 = 6.019e-16
+corr: d*_max = 0.1732 1/A (d_min 5.77 A)
+sr: it92      s_rounded_to_0.001=False relL2 = 4.035e-04
+sr: wk        s_rounded_to_0.001=False relL2 = 6.643e-05
+sr: wk        s_rounded_to_0.001=True  relL2 = 3.181e-08
+sr: wk-discus s_rounded_to_0.001=True  relL2 = 7.446e-15
+sr: d*_max = 0.0866 1/A (d_min 11.55 A)
+
+## 3. The committed sign check (compare_with_engine.py) is a tautology on the wrong line
+corr: '+dir' := argmax (always >= 0), '-dir' := argmin (always <= 0) -> match 3/6; any +-symmetric prediction scores exactly 3/6
+corr: raw ifftn index 16 on the other two axes is u = 77.58 A, not 0; real-space spacing 4.848 A; nearest grid points to 2.5 A: 0 and 4.85 A
+corr: 1D window response at  0.0 A / origin = +1.000
+corr: 1D window response at  2.5 A / origin = +0.617
+corr: 1D window response at  5.0 A / origin = -0.030
+corr: 1D window response at 10.0 A / origin = +0.030
+corr: exact windowed transform at tau=(2.5, 0, 0) A: 2.900744e+10
+corr: exact windowed transform at tau=(0, 2.5, 0) A: 2.900790e+10
+corr: exact windowed transform at tau=(0, 0, 2.5) A: 2.900744e+10
+corr: exact windowed transform at tau=(0, 0, 0) A: 3.111486e+10
+corr: Friedel error 0.0e+00 (log: 'Friedel pairs merged' -> imposed by the engine, uninformative)
+sr: '+dir' := argmax (always >= 0), '-dir' := argmin (always <= 0) -> match 3/6; any +-symmetric prediction scores exactly 3/6
+sr: raw ifftn index 16 on the other two axes is u = 155.15 A, not 0; real-space spacing 9.697 A; nearest grid points to 2.5 A: 0 and 9.70 A
+sr: 1D window response at  0.0 A / origin = +1.000
+sr: 1D window response at  2.5 A / origin = +0.894
+sr: 1D window response at  5.0 A / origin = +0.617
+sr: 1D window response at 10.0 A / origin = -0.030
+sr: exact windowed transform at tau=(2.5, 0, 0) A: 1.878234e+12
+sr: exact windowed transform at tau=(0, 2.5, 0) A: 1.878076e+12
+sr: exact windowed transform at tau=(0, 0, 2.5) A: 1.878073e+12
+sr: exact windowed transform at tau=(0, 0, 0) A: 1.909717e+12
+sr: Friedel error 0.0e+00 (log: 'Friedel pairs merged' -> imposed by the engine, uninformative)
+
+## 4. Pair correlations at the predicted displacements: open vs periodic boundaries
+corr: tau=(np.float64(2.5), np.float64(0.0), np.float64(0.0)) A open n=112 <ss>=-0.1429 | periodic n=128 <ss>=+0.0000 (SE ~ 0.088)
+corr: tau=(np.float64(0.0), np.float64(2.5), np.float64(0.0)) A open n=112 <ss>=+0.1429 | periodic n=128 <ss>=+0.0000 (SE ~ 0.088)
+corr: tau=(np.float64(0.0), np.float64(0.0), np.float64(2.5)) A open n=112 <ss>=-0.1429 | periodic n=128 <ss>=+0.0000 (SE ~ 0.088)
+corr: tau=(np.float64(5.0), np.float64(0.0), np.float64(0.0)) A open n=192 <ss>=-1.0000 | periodic n=256 <ss>=-1.0000 (SE ~ 0.062)
+corr: tau=(np.float64(10.0), np.float64(0.0), np.float64(0.0)) A open n=128 <ss>=+1.0000 | periodic n=256 <ss>=+1.0000 (SE ~ 0.062)
+sr: tau=(np.float64(2.5), np.float64(0.0), np.float64(0.0)) A open n=960 <ss>=-0.0479 | periodic n=1024 <ss>=-0.0508 (SE ~ 0.031)
+sr: tau=(np.float64(0.0), np.float64(2.5), np.float64(0.0)) A open n=960 <ss>=+0.0229 | periodic n=1024 <ss>=+0.0195 (SE ~ 0.031)
+sr: tau=(np.float64(0.0), np.float64(0.0), np.float64(2.5)) A open n=960 <ss>=+0.0083 | periodic n=1024 <ss>=+0.0117 (SE ~ 0.031)
+sr: tau=(np.float64(5.0), np.float64(0.0), np.float64(0.0)) A open n=1792 <ss>=+0.1451 | periodic n=2048 <ss>=+0.1484 (SE ~ 0.022)
+sr: tau=(np.float64(10.0), np.float64(0.0), np.float64(0.0)) A open n=1536 <ss>=-0.0130 | periodic n=2048 <ss>=+0.0020 (SE ~ 0.022)
+
+## 5. Why set aver,100 returned exactly zero for corr_model.stru
+no 'ncell' line; DISCUS sets cr_icc = INT(extent + 1) = [1, 1, 1] and cr_ncatoms = 256 (structur.f90 do_readstru_disk) -> one unit cell, <F> = F, diffuse = 0
+
+## 6. DISCUS native 3DPDF vs direct transform of the total volume (Gate 3 note)
+corr: native = 5.517185e-03 * direct + 1.8075e+08; residual 5.48e-02 of variation
+sr: native = 5.517325e-03 * direct + 1.1585e+10; residual 4.40e-02 of variation
