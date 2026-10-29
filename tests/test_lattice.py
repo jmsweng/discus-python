@@ -353,6 +353,23 @@ def test_minimum_image_large_df_memory():
     print(f"  peak memory for 10^5 displacements (|df|<=1000): {peak / 1024 / 1024:.1f} MB")
 
 
+def test_minimum_image_shift_dtype_and_identity():
+    """n_shift is integer (regression: chunking once made it float64) and
+    df - n_shift equals the returned reduced vector exactly, for (3,), (N, 3)
+    and (2, N, 3) inputs."""
+    rng = np.random.default_rng(31337)
+    for lat, tag in ((Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 90.0), "cubic"),
+                     (Lattice.from_parameters(*TRIC), "triclinic"),
+                     (Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 20.0), "skewed")):
+        for df in (rng.uniform(-2.5, 2.5, 3),
+                   rng.uniform(-2.5, 2.5, (500, 3)),
+                   rng.uniform(-2.5, 2.5, (2, 500, 3))):
+            df_min, n_shift = lat.minimum_image(df)
+            assert np.issubdtype(n_shift.dtype, np.integer), (tag, df.shape)
+            assert n_shift.shape == df.shape
+            assert np.array_equal(df - n_shift, df_min), (tag, df.shape)
+
+
 def test_distance_pbc():
     lat = Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 90.0)
     # (0,0,0) to (0.9, 0, 0): PBC distance is 0.1 * 5 = 0.5 Å

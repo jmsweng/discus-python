@@ -281,7 +281,7 @@ class Lattice:
         # Process in chunks so the temporary (chunk, K, 3) stays bounded.
         chunk = max(1, min(flat.shape[0], 65536 // max(k_all.shape[0], 1)))
         out = np.empty_like(flat)
-        n_out = np.empty_like(flat)
+        n_out = np.empty(flat.shape, dtype=np.int64)
         for start in range(0, flat.shape[0], chunk):
             stop = min(start + chunk, flat.shape[0])
             fc = flat[start:stop]

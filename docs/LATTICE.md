@@ -70,3 +70,7 @@ an exact bounded search:
 
 `examples/lattice_basics.py` (run with `python examples/lattice_basics.py`); covered by
 `tests/test_lattice.py::test_example_script_runs`.
+
+Notebook: [`notebooks/03_lattice_basics.ipynb`](../notebooks/03_lattice_basics.ipynb) —
+worked examples of the API (lattice construction, validation, fractional/Cartesian
+round trips, Q and d-spacings, minimum image, immutability).

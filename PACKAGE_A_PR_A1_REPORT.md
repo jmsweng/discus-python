@@ -103,3 +103,48 @@ The 28 failures remain the same pre-existing environment-specific set (no regres
 - **No new dependencies:** core stays NumPy only.
 - **`todo/TASKS.md` A5 ticked** with a link to the PR and `tests/test_lattice.py`, plus the one-line open item for `DiscusVolume` consolidation.
 - **No changes to** `discus_output.py`, `reciprocal.py`, `volume.py`, `pdf.py`, `diffuse3d.py`, `benchmarks/`, `spike_discus_3d/`, `examples/run_sample/`, or evidence files.
+
+## Final fix-ups (overseer review, second pass)
+
+**New head SHA:** (see commit below) · PR remains **draft**.
+
+### Changes
+
+- **Fix 1 — `minimum_image` returns integer shifts:** `n_out` is now allocated as `np.empty(flat.shape, dtype=np.int64)` (previously `np.empty_like(flat)` → float64, so `n_shift` came back as `[1. 0. 0.]`). New test `test_minimum_image_shift_dtype_and_identity` asserts `np.issubdtype(n_shift.dtype, np.integer)` for `(3,)`, `(N, 3)` and `(2, N, 3)` inputs (cubic, triclinic, γ=20° cells) and that `df − n_shift` equals the returned reduced vector **exactly** (`np.array_equal`).
+- **Fix 2 — example notebook:** added `notebooks/03_lattice_basics.ipynb` (written and executed by the overseer against `071661b`), re-executed with `jupyter nbconvert --to notebook --execute --inplace` after Fix 1 — runs cleanly from a fresh kernel, no errors, and the shift column now prints `[1 0 0]` (integer) instead of `[1. 0. 0.]`. No content edited beyond re-execution output changes. Linked from `docs/LATTICE.md`.
+
+### Test counts
+
+| | Before | After |
+|---|---|---|
+| `tests/test_lattice.py` | 15 passed | **16 passed** |
+| Full suite (Windows) | 28 failed, 158 passed, 2 skipped | **28 failed, 159 passed, 2 skipped** |
+
+The 28 failures are the same pre-existing environment-specific set (Windows CRLF/symlink); no regression.
+
+### Untracked `benchmarks/` files (left unstaged, per instructions)
+
+```
+benchmarks/discus_6_23_01/correlated_run/inspect_h5.py
+benchmarks/discus_6_23_01/correlated_run/run_test7.sh
+benchmarks/discus_6_23_01/correlated_run/run_test8.sh
+benchmarks/discus_6_23_01/correlated_run/run_test9.sh
+benchmarks/discus_6_23_01/correlated_run/test.cll
+benchmarks/discus_6_23_01/correlated_run/test.mac
+benchmarks/discus_6_23_01/correlated_run/test.stru
+benchmarks/discus_6_23_01/correlated_run/test2.mac
+benchmarks/discus_6_23_01/correlated_run/test3.mac
+benchmarks/discus_6_23_01/correlated_run/test4.mac
+benchmarks/discus_6_23_01/correlated_run/test5.mac
+benchmarks/discus_6_23_01/correlated_run/test6.mac
+benchmarks/discus_6_23_01/correlated_run/test7.mac
+benchmarks/discus_6_23_01/correlated_run/test7_wsL.log
+benchmarks/discus_6_23_01/correlated_run/test8.log
+benchmarks/discus_6_23_01/correlated_run/test8.mac
+benchmarks/discus_6_23_01/correlated_run/test9.log
+benchmarks/discus_6_23_01/correlated_run/test9.mac
+benchmarks/discus_6_23_01/correlated_run/test_proper.cll
+benchmarks/discus_6_23_01/correlated_run/test_stru.cll
+benchmarks/discus_6_23_01/correlated_run/test_wsL.cll
+benchmarks/discus_6_23_01/run_discus.sh
+```
