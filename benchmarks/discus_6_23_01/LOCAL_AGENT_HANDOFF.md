@@ -68,10 +68,10 @@ Expected inputs:
 
 Gate 2 is finished. Do **not** rerun Gate 1 or Gate 2. Gate 3 is a short pre-registered run: two macros, about 1 minute in total.
 
-1. `git pull --ff-only`. The head must include the commit "Gate 3: pre-register native 3DPDF experiment". Then:
+1. `git pull --ff-only`. The head must include the commit "Gate 3: re-register as v2". Then:
    - `python -m pytest -q tests/test_gate2_prereg.py tests/test_gate3_prereg.py tests/test_regenerate_evidence.py` → `15 passed`.
-   - `python benchmarks/discus_6_23_01/gate3/gate3_selftest.py` → 8 lines starting `ok`.
-   - `sha256sum benchmarks/discus_6_23_01/gate3/predictions.json` → `e6368b229db439b40b2e81829875c4cf1a8fe34c6ba6f9b3d53848bb004493e6`.
+   - `python benchmarks/discus_6_23_01/gate3/gate3_selftest.py` → 9 lines starting `ok`.
+   - `sha256sum benchmarks/discus_6_23_01/gate3/predictions.json` → `69b7f4751dd2c0a4f297529194ccefa6f70460cdd2c7f39538e9438fa8ecadfe`.
 2. Engine identity: same as Step 2 (binary hash `d4274f13…45706f3`). Write ENGINE_ENV.txt into the new evidence directory.
 3. Run:
    ```sh

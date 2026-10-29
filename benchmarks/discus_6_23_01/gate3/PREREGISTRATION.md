@@ -1,7 +1,9 @@
 # Gate 3: absolute normalization and DISCUS's native `value 3DPDF` (pre-registered)
 
-**Registered:** 2026-10-28, before any native 3DPDF engine output on this grid existed. `predictions.json` SHA-256 `e6368b229db439b40b2e81829875c4cf1a8fe34c6ba6f9b3d53848bb004493e6`.
+**Registered:** 2026-10-28; **v2** 2026-10-29 (deviation below), before any native 3DPDF engine output on this grid existed. `predictions.json` SHA-256 `69b7f4751dd2c0a4f297529194ccefa6f70460cdd2c7f39538e9438fa8ecadfe`.
 Source read: DiffuseCode tag `v.6.23.01` (`19a214a`).
+
+**Deviation v1 → v2 (before any engine run).** On the operator machine, the v1 clean selftest failed criterion E2 for the diffuse volume. The fingerprint's sum term was compared with a pure relative tolerance, but the sum of a diffuse 3DPDF is proportional to I(H = 0) = 0, so the registered value (4.8×10⁻⁷ on a volume of max 1.8×10⁹) was FFT round-off. v2 compares that term on the scale of the volume norm and adds a selftest case with 10⁻¹⁵ round-off noise that must PASS (it fails under v1). Predictions, design and all other criteria are unchanged.
 
 ## Part A: absolute normalization of the package pipeline (established; no new run needed)
 
@@ -65,7 +67,7 @@ recovered from git history and checked against their content hashes.
 | C1 | diffuse only: package `delta_pdf_fractional` equals k × native on the true axes | relL2 ≤ 1×10⁻¹² |
 | L | log: 2048 Cu / 2048 Au, no errors, `Temp. factors` not `used` | required |
 
-**Gate 3 PASSES only if every criterion passes.** A selftest (`gate3_selftest.py`) passes clean data and fails each of these: missing 1/√N, origin
+**Gate 3 PASSES only if every criterion passes.** A selftest (`gate3_selftest.py`) passes clean data and data with machine round-off, and fails each of these: missing 1/√N, origin
 shift, corrected metadata, wrong Bragg re-weight, changed intensities, temp used, and an edited macro (INVALID).
 
 **Not covered:** the `sharp` option, `output range` (d*-limited), Lanczos filtering, `lots`, non-cubic or skewed grids, and odd grids beyond the archived 33³ runs.

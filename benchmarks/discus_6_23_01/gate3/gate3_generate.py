@@ -125,7 +125,11 @@ def main():
         files[p.name] = p
     nat_corner, nat_inc = N.native_axes(SHAPE, VI)
     true_corner, true_inc = N.true_axes(SHAPE, VI)
-    pred = {"schema": "gate3-prereg-v1",
+    pred = {"schema": "gate3-prereg-v2",
+            "deviation_from_v1": ("v1 (commit 7d115b8) E2 compared the fingerprint sum with a pure relative tolerance; for the "
+                                  "diffuse volume that sum is FFT round-off (I(H=0) = 0), so the clean selftest failed on the "
+                                  "operator machine before any engine run. v2 compares the sum on the scale of the volume norm "
+                                  "and adds a round-off selftest case. No engine output existed; predictions are unchanged."),
             "status": "PRE-REGISTERED: written before any native 3DPDF engine output on this grid existed",
             "source": "DiffuseCode tag v.6.23.01 (19a214a); see native3dpdf.py docstring",
             "design": {"structure": "Gate 2 v4 block model, seed 20261101", "grid": "128^3, H = -4 + k/16",

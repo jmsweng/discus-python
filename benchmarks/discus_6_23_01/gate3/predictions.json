@@ -1,8 +1,8 @@
 {
  "code_sha256": {
-  "gate3_analyze.py": "9d91a5856763247e81d2a0b7f90c05b335ce16c478375d21d6ec378fe09490ba",
-  "gate3_generate.py": "30ca0eaaea8e865e9ee933a7ae1062a79d5f5f776364b73c9212be5db5f9991c",
-  "gate3_selftest.py": "35acf7c7cf0efc1f3b95835a3cea48dcfdbe8f6ef811a8190cc6116226e852bb",
+  "gate3_analyze.py": "645040eabcbaceabfed25d4d6998148d491007a8f511333d0c1ca8bb571c3c08",
+  "gate3_generate.py": "23de777200dcf0be2b03884653bf61199083aee3e8d60cbe4c1b0ba0ba6d6dcb",
+  "gate3_selftest.py": "8bb537b3a1323893d784951e038cdf81bde2f4929d22fe455a0f8f268b8b2c6d",
   "native3dpdf.py": "e712739bdd6aacdc12d75d1c0a904fa81dc676bde1f2ab7b815c3b10ab5d4a6a"
  },
  "conversion_factor_k": 0.005524271728019903,
@@ -12,6 +12,7 @@
   "structure": "Gate 2 v4 block model, seed 20261101",
   "v4_volumes_from": "8cd59ac:benchmarks/discus_6_23_01/gate2_prereg/evidence/20261029T010305Z_LAPTOP-NGU3BT0N"
  },
+ "deviation_from_v1": "v1 (commit 7d115b8) E2 compared the fingerprint sum with a pure relative tolerance; for the diffuse volume that sum is FFT round-off (I(H=0) = 0), so the clean selftest failed on the operator machine before any engine run. v2 compares the sum on the scale of the volume norm and adds a round-off selftest case. No engine output existed; predictions are unchanged.",
  "input_sha256": {
   "gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede",
   "gate3_block_diffuse.mac": "a74294de9d514c62579de8b20737e108d126fc6245b4e6078124280937500508",
@@ -86,7 +87,7 @@
    0.12598425196850394
   ]
  },
- "schema": "gate3-prereg-v1",
+ "schema": "gate3-prereg-v2",
  "source": "DiffuseCode tag v.6.23.01 (19a214a); see native3dpdf.py docstring",
  "status": "PRE-REGISTERED: written before any native 3DPDF engine output on this grid existed",
  "thresholds": {

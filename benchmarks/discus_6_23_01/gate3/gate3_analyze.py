@@ -29,6 +29,18 @@ class Invalid(Exception):
     pass
 
 
+def fingerprint_matches(a: np.ndarray, ref: dict, rtol: float) -> bool:
+    """Like oracle.fingerprint_matches, but every term is compared on the scale of the whole volume.
+    gate3-prereg-v1 compared the sum with a pure relative tolerance; the sum of a 3DPDF volume is proportional to
+    I(H=0), which is exactly 0 for a diffuse volume, so the registered value was FFT round-off (4.8e-7 on a volume of
+    max 1.8e9) and failed on another machine's numpy/FFT build."""
+    f = O.fingerprint(a)
+    norm = float(np.sqrt(ref["sum_sq"]))                         # L2 norm of the registered volume
+    return (abs(f["sum"] - ref["sum"]) <= rtol * norm * np.sqrt(a.size) and
+            abs(f["sum_sq"] - ref["sum_sq"]) <= rtol * ref["sum_sq"] and
+            np.allclose(f["voxels"], ref["voxels"], rtol=rtol, atol=rtol * max(abs(x) for x in ref["voxels"])))
+
+
 def _crit(name, value, limit, op="<="):
     ok = bool(value <= limit) if op == "<=" else bool(value >= limit)
     return {"criterion": name, "value": float(value), "limit": float(limit), "op": op, "pass": ok}
@@ -97,8 +109,8 @@ def analyze(run_dir: Path) -> dict:
             crit.append(_crit(f"E1 {kind}: native vs emulation of same-run int (relL2)",
                               O.rel_l2(vn["values"], emu), T["E1_native_vs_emulation_of_same_run_int_relL2_max"]))
             crit.append(_crit(f"E2 {kind}: native matches registered fingerprint (fraction)",
-                              float(O.fingerprint_matches(vn["values"], P["native_fingerprint"],
-                                                          rtol=T["E2_native_fingerprint_rtol"])), 1.0, ">="))
+                              float(fingerprint_matches(vn["values"], P["native_fingerprint"],
+                                                        T["E2_native_fingerprint_rtol"])), 1.0, ">="))
             am = [int(v) for v in np.unravel_index(np.argmax(vn["values"]), vn["values"].shape)]
             crit.append(_crit(f"P1 {kind}: native argmax at predicted index {P['native_argmax_index']} (fraction)",
                               float(am == P["native_argmax_index"]), 1.0, ">="))

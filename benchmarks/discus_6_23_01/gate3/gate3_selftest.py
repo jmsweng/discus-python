@@ -56,6 +56,9 @@ def make_run(work: Path, corrupt: str | None) -> Path:
             nat = nat * np.sqrt(np.prod(G.SHAPE))
         elif corrupt == "origin_shift":
             nat = np.roll(nat, 1, axis=0)
+        elif corrupt == "roundoff_noise":          # another machine's FFT: ~1e-15 relative noise must still PASS
+            rng = np.random.default_rng(7)
+            nat = nat + rng.standard_normal(nat.shape) * 1e-15 * np.abs(nat).max()
         elif corrupt == "true_axes_metadata":
             c, d = N.true_axes(G.SHAPE, G.VI)
         write_native(run / f"gate3_block_{kind}_3dpdf.h5", nat, c, d)
@@ -65,7 +68,7 @@ def make_run(work: Path, corrupt: str | None) -> Path:
     return run
 
 
-CASES = {None: ("PASS", None), "unitary_missing": ("FAIL", "E1"), "origin_shift": ("FAIL", "E1"),
+CASES = {None: ("PASS", None), "roundoff_noise": ("PASS", None), "unitary_missing": ("FAIL", "E1"), "origin_shift": ("FAIL", "E1"),
          "true_axes_metadata": ("FAIL", "M1"), "bragg_reweighted": ("FAIL", "E1 total"), "int_changed": ("FAIL", "R0"),
          "temp_used": ("FAIL", "L "), "edited_macro": ("INVALID", None)}
 
