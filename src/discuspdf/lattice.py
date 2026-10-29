@@ -84,10 +84,20 @@ class Lattice:
     def __init__(self, A: np.ndarray) -> None:
         A = np.array(A, dtype=float, copy=True)
         _validate_basis(A)
+        A.flags.writeable = False
+        B = np.linalg.solve(A.T, np.eye(3))
+        B.flags.writeable = False
+        Ainv = np.linalg.inv(A)
+        Ainv.flags.writeable = False
         object.__setattr__(self, "_A", A)
-        # B = inv(A).T (rows a*, b*, c* in Å⁻¹, no 2π); Ainv = inv(A) for cart_to_frac.
-        object.__setattr__(self, "_B", np.linalg.solve(A.T, np.eye(3)))
-        object.__setattr__(self, "_Ainv", np.linalg.inv(A))
+        object.__setattr__(self, "_B", B)
+        object.__setattr__(self, "_Ainv", Ainv)
+
+    def __setattr__(self, name, value) -> None:
+        raise AttributeError(f"Lattice is immutable; cannot set {name!r}")
+
+    def __delattr__(self, name) -> None:
+        raise AttributeError(f"Lattice is immutable; cannot delete {name!r}")
 
     # -- construction -----------------------------------------------------
     @classmethod
@@ -204,7 +214,11 @@ class Lattice:
         return (q / (2.0 * np.pi)) @ self._A.T
 
     def d_spacing(self, hkl) -> float:
-        """d-spacing in Å: ``d = 1 / |hkl @ B|``. ``hkl = (0,0,0)`` raises."""
+        """d-spacing in Å: ``d = 1 / |hkl @ B|``.
+
+        ``hkl = (0,0,0)`` raises. Hkl vectors with ``|hkl| < 1e-8`` are treated
+        as zero and also raise (``np.allclose`` threshold).
+        """
         hkl = np.asarray(hkl, dtype=float)
         if hkl.shape != (3,):
             raise ValueError("d_spacing expects a single hkl triple of shape (3,)")
@@ -221,7 +235,9 @@ class Lattice:
         ``df`` has shape ``(3,)`` or ``(..., 3)`` (fractional). Returns
         ``(df_min, n_shift)`` where ``df_min = df - n_shift`` is the shortest
         periodic image and ``n_shift`` (same leading shape, integers) is the
-        shift applied.
+        shift applied. The result is a function of ``df mod 1`` (translation
+        invariant: ``minimum_image(df + n)[0] == minimum_image(df)[0]`` for
+        integer ``n``).
 
         Algorithm (exact bounded search; naive per-component rounding is **not**
         correct in skewed cells):
@@ -229,12 +245,16 @@ class Lattice:
         1. ``n0 = round(df)``, ``r0 = (df - n0) @ A``, ``R = |r0|``.
         2. Any better image satisfies ``|r| <= R``. Since the fractional
            components of a shift ``n`` are ``f_i = r . b_i`` (rows of ``B``),
-           each component of ``n`` lies in ``[-R |b_i|, R |b_i|]``. Enumerate
-           integer shifts in that range per axis (vectorised over many
-           displacements) and keep the shortest image.
-        3. Ties: among images within ``atol = 1e-12 * R + 1e-15`` Å of the
-           shortest, choose the smallest ``|n|_1``; then the lexicographically
-           smallest ``n``. The result is deterministic.
+           each component of the *offset* ``k = n - n0`` lies in
+           ``[-R |b_i|, R |b_i|]``. Enumerate integer offsets in that range per
+           axis (vectorised, in chunks so peak memory is independent of the
+           number of displacements) and keep the shortest image.
+        3. **Ties:** among images within ``atol = 1e-12·R + 1e-15`` Å of the
+           shortest, return the one whose **reduced fractional vector
+           ``df − n`` is lexicographically smallest** (component 0, then 1,
+           then 2; components equal if they differ by < 1e-12). In a cubic
+           cell this maps half-cell ties to −½, i.e. the half-open interval
+           [−½, ½). The result is deterministic and translation invariant.
         """
         df = np.asarray(df, dtype=float)
         if df.shape[-1:] != (3,):
@@ -250,45 +270,47 @@ class Lattice:
         r0 = (flat - n0) @ A
         R = np.linalg.norm(r0, axis=1)
         Rmax = R.max() if R.size else 0.0
-        # Bounded search window: |n_i| <= max(|df_i|, R |b_i|) (rows of B), padded by one.
-        # The R|b_i| bound comes from the geometric argument; the |df_i| bound ensures
-        # the trivial image n = round(df) and its neighbours are always in range.
+        # Bounded search window for the offset k = n - n0: |k_i| <= R |b_i| (rows of B).
         b_norms = np.linalg.norm(B, axis=1)  # (3,)
-        bounds = np.maximum(np.ceil(np.abs(flat).max(axis=0)), np.ceil(Rmax * b_norms)).astype(int) + 1
+        bounds = np.ceil(Rmax * b_norms).astype(int) + 1
+        # Candidate offsets k in the box [-bounds, +bounds] per axis.
         ranges = [np.arange(-bounds[i], bounds[i] + 1) for i in range(3)]
         grid = np.stack(np.meshgrid(*ranges, indexing="ij"), axis=-1)  # (N1, N2, N3, 3)
-        n_all = grid.reshape(-1, 3).astype(float)
-        # Cartesian displacement for each candidate shift: r = (df - n) @ A
-        # Expand: (m_df, 1, 3) - (1, m_n, 3) -> (m_df, m_n, 3)
-        d = flat[:, None, :] - n_all[None, :, :]
-        dist = np.linalg.norm(d @ A, axis=2)
-        best = dist.argmin(axis=1)
-        n_best = n_all[best]
-        # Deterministic tie rule (per displacement): among candidates within
-        # atol = 1e-12 * R + 1e-15 Å of the shortest, prefer smallest |n|_1,
-        # then lexicographically smallest n.
-        atol = 1e-12 * R + 1e-15
-        dmin = dist.min(axis=1)  # (m,)
-        # Per-row tie: candidate j ties for row i if dist[i,j] <= dmin[i] + atol[i]
-        tie = dist <= dmin[:, None] + atol[:, None]  # (m, m)
-        if tie.any():
-            l1 = np.abs(n_all).sum(axis=1).astype(float)  # (m,)
-            # Composite key: l1 * (max_range+1)^3 + n0*(max_range+1)^2 + n1*(max_range+1) + n2
-            # where max_range = max(bounds). This makes l1 the dominant term and
-            # the lexicographic components the tiebreakers.
-            max_range = int(bounds.max()) + 1
-            key = (l1 * max_range**3
-                   + (n_all[:, 0] + bounds[0]) * max_range**2
-                   + (n_all[:, 1] + bounds[1]) * max_range
-                   + (n_all[:, 2] + bounds[2]))  # (m,)
-            key = np.broadcast_to(key[None, :], (dist.shape[0], dist.shape[1])).copy()
-            key[~tie] = np.inf
-            best = key.argmin(axis=1)
-            n_best = n_all[best]
-        n_best = n_best.astype(int)
-        out = (flat - n_best).reshape(leading + (3,))
-        n_out = n_best.reshape(leading + (3,))
-        return out, n_out
+        k_all = grid.reshape(-1, 3).astype(float)  # (K, 3)
+
+        # Process in chunks so the temporary (chunk, K, 3) stays bounded.
+        chunk = max(1, min(flat.shape[0], 65536 // max(k_all.shape[0], 1)))
+        out = np.empty_like(flat)
+        n_out = np.empty_like(flat)
+        for start in range(0, flat.shape[0], chunk):
+            stop = min(start + chunk, flat.shape[0])
+            fc = flat[start:stop]
+            nc = n0[start:stop]
+            Rc = R[start:stop]
+            # Cartesian displacement for each candidate: r = (df - (n0 + k)) @ A
+            d = fc[:, None, :] - nc[:, None, :] - k_all[None, :, :]
+            dist = np.linalg.norm(d @ A, axis=2)  # (chunk, K)
+            dmin = dist.min(axis=1)
+            best = dist.argmin(axis=1)
+            # Tie rule: among candidates within atol of the shortest, pick the one
+            # whose reduced fractional vector (df - n) is lexicographically smallest.
+            atol = 1e-12 * Rc + 1e-15
+            tie = dist <= dmin[:, None] + atol[:, None]  # (chunk, K)
+            if tie.any():
+                # Reduced fractional vector for each candidate: (df - (n0 + k))
+                red = fc[:, None, :] - nc[:, None, :] - k_all[None, :, :]  # (chunk, K, 3)
+                # Lexicographic key with 1e-12 component equality:
+                # key = (round(red_0 / 1e-12)) * S^2 + (round(red_1 / 1e-12)) * S + round(red_2 / 1e-12)
+                S = 2 * int(bounds.max()) + 3  # > max possible |red_i / 1e-12| in the window
+                key = (np.round(red[:, :, 0] / 1e-12) * S**2
+                       + np.round(red[:, :, 1] / 1e-12) * S
+                       + np.round(red[:, :, 2] / 1e-12))
+                key[~tie] = np.inf
+                best = key.argmin(axis=1)
+            n_best = (nc + k_all[best]).astype(int)
+            out[start:stop] = fc - n_best
+            n_out[start:stop] = n_best
+        return out.reshape(leading + (3,)), n_out.reshape(leading + (3,))
 
     def distance_pbc(self, f1, f2) -> float:
         """Distance in Å between two fractional points under the minimum-image convention."""

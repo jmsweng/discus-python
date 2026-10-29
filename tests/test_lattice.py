@@ -250,6 +250,23 @@ def _brute_force_minimum_image(lat, df, window=4):
     return best_d, best_n
 
 
+def _brute_force_minimum_image_vec(lat, df, window=4):
+    """Vectorised independent brute-force over all shifts in a fixed ±window window.
+
+    ``df`` has shape (m, 3); returns (d_ref, n_ref) each of shape (m, ...) .
+    """
+    df = np.asarray(df, float)
+    A = lat.matrix
+    shifts = np.stack(np.meshgrid(
+        *[range(-window, window + 1) for _ in range(3)], indexing="ij"), axis=-1
+    ).reshape(-1, 3).astype(float)  # (K, 3)
+    # (m, 1, 3) - (1, K, 3) -> (m, K, 3)
+    d = df[:, None, :] - shifts[None, :, :]
+    dist = np.linalg.norm(d @ A, axis=2)  # (m, K)
+    best = dist.argmin(axis=1)
+    return dist.min(axis=1), shifts[best]
+
+
 def test_minimum_image_skewed_cells():
     # strongly skewed cell where naive per-component rounding is demonstrably wrong
     lat = Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 20.0)
@@ -262,44 +279,78 @@ def test_minimum_image_skewed_cells():
     df_min, n_shift = lat.minimum_image(df)
     min_dist = np.linalg.norm((df - n_shift) @ lat.matrix, axis=1)
     assert np.any(min_dist < naive_dist - 1e-10)
-    # check against independent brute force over a ±4 window
-    worst = 0.0
-    for _ in range(200):
-        i = rng.integers(0, n)
-        d_ref, n_ref = _brute_force_minimum_image(lat, df[i], window=4)
-        d_test = float(np.linalg.norm((df[i] - n_shift[i]) @ lat.matrix))
-        # the bounded search must find the global minimum within the window
-        assert d_test <= d_ref + 1e-12
-        # the chosen image must be a true minimum: no shift in the window beats it
-        worst = max(worst, d_ref - d_test)
+    # check ALL 10^4 against independent vectorised brute force over a ±4 window
+    d_ref, _ = _brute_force_minimum_image_vec(lat, df, window=4)
+    worst = float(np.max(d_ref - min_dist))
     assert worst <= 1e-12
 
-    # a cell with all angles ≈ 30°
+    # a cell with all angles ≈ 30°: check all 500
     lat30 = Lattice.from_parameters(4.0, 4.0, 4.0, 30.0, 30.0, 30.0)
     df2 = rng.uniform(-1.5, 1.5, (500, 3))
     df_min2, n2 = lat30.minimum_image(df2)
-    for _ in range(100):
-        i = rng.integers(0, 500)
-        d_ref, _ = _brute_force_minimum_image(lat30, df2[i], window=4)
-        d_test = float(np.linalg.norm((df2[i] - n2[i]) @ lat30.matrix))
-        assert d_test <= d_ref + 1e-12
+    min_dist2 = np.linalg.norm((df2 - n2) @ lat30.matrix, axis=1)
+    d_ref2, _ = _brute_force_minimum_image_vec(lat30, df2, window=4)
+    worst30 = float(np.max(d_ref2 - min_dist2))
+    assert worst30 <= 1e-12
 
 
 def test_minimum_image_cubic_half_cell_tie():
     lat = Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 90.0)
-    # exact half-cell tie: (0.5, 0, 0) — images n=0 and n=1 tie; rule: smallest |n|_1,
-    # then lexicographically smallest n -> n = (0, 0, 0)
-    df_min, n_shift = lat.minimum_image(np.array([0.5, 0.0, 0.0]))
-    assert np.array_equal(n_shift, [0, 0, 0])
-    assert np.allclose(df_min, [0.5, 0.0, 0.0])
-    # (0.5, 0.5, 0.0): all four corner images tie -> n = (0,0,0)
-    df_min, n_shift = lat.minimum_image(np.array([0.5, 0.5, 0.0]))
-    assert np.array_equal(n_shift, [0, 0, 0])
+    # Tie rule: lexicographically smallest reduced vector -> half-cell ties map to -1/2,
+    # i.e. the half-open interval [-1/2, 1/2).
+    # (0.5, 0, 0), (-0.5, 0, 0), (1.5, 0, 0) all give (-0.5, 0, 0)
+    for df in (np.array([0.5, 0.0, 0.0]), np.array([-0.5, 0.0, 0.0]), np.array([1.5, 0.0, 0.0])):
+        df_min, _ = lat.minimum_image(df)
+        assert np.allclose(df_min, [-0.5, 0.0, 0.0], atol=1e-12)
+    # (0.5, 0.5, 0) gives (-0.5, -0.5, 0)
+    df_min, _ = lat.minimum_image(np.array([0.5, 0.5, 0.0]))
+    assert np.allclose(df_min, [-0.5, -0.5, 0.0], atol=1e-12)
     # batched
     df_min, n_shift = lat.minimum_image(np.array([[0.5, 0.0, 0.0], [0.0, 0.5, 0.0]]))
     assert n_shift.shape == (2, 3)
-    assert np.array_equal(n_shift[0], [0, 0, 0])
-    assert np.array_equal(n_shift[1], [0, 0, 0])
+    assert np.allclose(df_min[0], [-0.5, 0.0, 0.0], atol=1e-12)
+    assert np.allclose(df_min[1], [0.0, -0.5, 0.0], atol=1e-12)
+
+
+def test_minimum_image_translation_invariance():
+    """minimum_image(df + n)[0] == minimum_image(df)[0] for integer n (|n_i| <= 50),
+    including constructed exact ties."""
+    rng = np.random.default_rng(2024)
+    for cell in ((5.0, 5.0, 5.0, 90.0, 90.0, 20.0), (4.0, 4.0, 4.0, 30.0, 30.0, 30.0)):
+        lat = Lattice.from_parameters(*cell)
+        for _ in range(200):
+            df = rng.uniform(-3, 3, 3)
+            n = rng.integers(-50, 51, 3)
+            base, _ = lat.minimum_image(df)
+            shifted, _ = lat.minimum_image(df + n.astype(float))
+            assert np.allclose(base, shifted, atol=1e-12)
+        # constructed exact ties: half-cell in a cubic-like axis
+        for df in (np.array([0.5, 0.0, 0.0]), np.array([0.5, 0.5, 0.5]), np.array([2.5, -1.5, 0.5])):
+            base, _ = lat.minimum_image(df)
+            shifted, _ = lat.minimum_image(df + np.array([3, -2, 1], float))
+            assert np.allclose(base, shifted, atol=1e-12)
+
+
+def test_minimum_image_large_df_memory():
+    """10^5 displacements with |df| up to 1000 complete and agree with df - rint(df)
+    reduction; peak memory is recorded via tracemalloc."""
+    import tracemalloc
+    lat = Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 20.0)
+    rng = np.random.default_rng(7)
+    n = 100_000
+    df = rng.uniform(-1000.0, 1000.0, (n, 3))
+    tracemalloc.start()
+    df_min, n_shift = lat.minimum_image(df)
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    # The reduced displacement (df - rint(df)) lies in [-0.5, 0.5]^3; the minimum
+    # image of df must equal the minimum image of that reduced displacement.
+    reduced = df - np.rint(df)
+    ref, _ = lat.minimum_image(reduced)
+    assert np.allclose(df_min, ref, atol=1e-9)
+    # Peak memory should be far below the naive (n * (2*1000)^3) allocation.
+    assert peak < 200 * 1024 * 1024  # < 200 MB
+    print(f"  peak memory for 10^5 displacements (|df|<=1000): {peak / 1024 / 1024:.1f} MB")
 
 
 def test_distance_pbc():
@@ -321,8 +372,18 @@ def test_immutability():
     m = lat.matrix
     m[0, 0] = 999.0  # mutating the returned array must not change the lattice
     assert lat.matrix[0, 0] == 5.0
-    with pytest.raises((AttributeError, ValueError, TypeError)):
-        lat.matrix = np.eye(3)
+    # in-place write to the stored array raises (writeable flag cleared)
+    with pytest.raises(ValueError):
+        lat._A[0, 0] = 9.0
+    # rebinding, deletion, and new attributes all raise AttributeError
+    with pytest.raises(AttributeError):
+        lat._A = np.eye(3)
+    with pytest.raises(AttributeError):
+        del lat._A
+    with pytest.raises(AttributeError):
+        lat.new_attr = 1
+    # hash is unchanged afterwards
+    assert hash(lat) == hash(Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 90.0))
     # from_matrix stores a copy, not the caller's array
     A = np.diag([5.0, 5.0, 5.0])
     lat2 = Lattice.from_matrix(A)

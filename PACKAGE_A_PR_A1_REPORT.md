@@ -64,6 +64,40 @@ Note: the handoff specifies WSL2 Ubuntu; this run used native Windows Python 3.1
 
 ## 7. Caveats and items left undone
 
+## Review fix-ups (overseer review of draft PR #10)
+
+**New head SHA:** *(filled after push)* · PR remains **draft**.
+
+### What changed per fix
+
+- **Fix 1 — Immutability enforced:** `__init__` now sets `flags.writeable = False` on `_A`, `_B`, `_Ainv`; `__setattr__`/`__delattr__` overridden to raise `AttributeError` (only `object.__setattr__` used inside `__init__`). `test_immutability` extended: in-place write to `lat._A` raises `ValueError`; `lat._A = ...`, `del lat._A`, `lat.new_attr = 1` raise `AttributeError`; `hash(lat)` unchanged.
+- **Fix 2 — Bounded search window + chunking:** `minimum_image` now searches around `n0 = rint(df)` with offsets `k_i ∈ [−ceil(R_max|b_i|), +ceil(R_max|b_i|)]` (the `|df|` term dropped), and processes displacements in chunks (≤ 65536/K rows) so peak memory is independent of `m`.
+- **Fix 3 — Translation-invariant tie rule:** ties (within `atol = 1e-12·R + 1e-15` Å) now resolved by the **lexicographically smallest reduced fractional vector `df − n`** (components equal if they differ by < 1e-12). Cubic half-cell ties map to −½ ([−½, ½)). Docstring, `docs/LATTICE.md`, and this report updated. New tests: cubic tie cases and a translation-invariance property test (γ=20° and 30°/30°/30° cells, random `df` + integer `n` with |n_i| ≤ 50, including constructed exact ties).
+- **Fix 4 — Full brute-force coverage:** the brute force is now vectorised (729 shifts × all rows) and **all** 10⁴ displacements (γ=20°) and all 500 (30° cell) are checked.
+
+### Test counts before/after
+
+| | Before fix-ups | After fix-ups |
+|---|---|---|
+| `tests/test_lattice.py` | 13 passed | 15 passed |
+| Full suite (Windows) | 28 failed, 156 passed, 2 skipped | 28 failed, 158 passed, 2 skipped |
+
+The 28 failures remain the same pre-existing environment-specific set (no regression).
+
+### Numerical results
+
+- **Worst brute-force error** (`d_test − d_ref`, all 10⁴ γ=20° + all 500 30° displacements, ±4 window): **0.0 Å** (the bounded search matches the independent brute force exactly).
+- **Large-|df| performance:** 10⁵ displacements with |df| up to 1000 → **6.4 s**, **peak 18.0 MB** (tracemalloc). Previously the window scaled as `m·(2|df|)³` (≈143 MB for 1 000 displacements at |df|≈30); it is now independent of `|df|` and of `m` (chunked).
+- **Translation invariance:** `minimum_image(df + n)[0] == minimum_image(df)[0]` to 1e-12 for random `df` and integer `n` (|n_i| ≤ 50), including constructed exact half-cell ties.
+
+### Notes (not required)
+
+- `d_spacing` treats `|hkl| < 1e-8` as zero via `np.allclose` — now mentioned in the docstring.
+- `__eq__` returning `False` for non-`Lattice` left as-is (acceptable).
+- `todo/TASKS.md` A5 remains ticked (fixes 1–4 are in).
+
+## Caveats (original)
+
 - **Not run on WSL2:** the handoff specifies WSL2 Ubuntu; this agent ran on native Windows. The 28 pre-existing failures are environment-specific and do not reflect code regressions.
 - **`from_parameters` does not reconstruct experimental orientation:** documented in the docstring and `docs/LATTICE.md`. A rotated cell must be supplied via `from_matrix`.
 - **No new dependencies:** core stays NumPy only.

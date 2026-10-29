@@ -49,10 +49,15 @@ an exact bounded search:
 
 1. `n0 = round(df)`, `r0 = (df − n0) @ A`, `R = |r0|`.
 2. Any better image satisfies `|r| ≤ R`. Since `f_i = r · b_i` (rows of `B`), each component
-   of the shifted fractional vector lies in `[−R|b_i|, R|b_i|]`. Enumerate integer shifts in
-   that range per axis (vectorised for many displacements), keep the shortest.
-3. **Ties:** pick the shortest image within `atol = 1e-12·R + 1e-15` Å; among ties choose the
-   smallest `|n|₁`, then the lexicographically smallest `n`. The result is deterministic.
+   of the offset `k = n − n0` lies in `[−R|b_i|, R|b_i|]`. Enumerate integer offsets in that
+   range per axis (vectorised, in chunks so peak memory is independent of the number of
+   displacements), keep the shortest.
+3. **Ties:** among images within `atol = 1e-12·R + 1e-15` Å of the shortest, return the one
+   whose **reduced fractional vector `df − n` is lexicographically smallest** (component 0,
+   then 1, then 2; components equal if they differ by < 1e-12). In a cubic cell this maps
+   half-cell ties to −½, i.e. the half-open interval [−½, ½). The result is deterministic
+   and **translation invariant**: `minimum_image(df + n)[0] == minimum_image(df)[0]` for
+   integer `n` (a function of `df mod 1`).
 
 ## Not yet (later PRs)
 
