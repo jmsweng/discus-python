@@ -1,0 +1,10 @@
+registered_commit: 6ee5c1aefc98990d1aa9267882ef4464acdc5dad
+discus_path: /usr/local/bin/discus_suite
+d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3  /usr/local/bin/discus_suite
+-rwxr-xr-x 1 root root 7661976 Oct 22 14:17 /usr/local/bin/discus_suite
+nproc: 16   OMP_NUM_THREADS=unset
+Linux LAPTOP-NGU3BT0N 6.18.54.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue Oct  6 19:13:07 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+NAME="Ubuntu"
+Python 3.10.12
+numpy 2.2.6 h5py 3.16.0
