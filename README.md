@@ -47,6 +47,10 @@ result.plot()
 
 **Important:** The macro syntax follows [documented DISCUS 1D PDF examples](https://www.xray.cz/ecm-cd/soft/xray/general/discus/discus/disman/node57.html), which are older than the latest release; validate with your local version. `result.csv` is a **plain-text numeric PDF G(r) file**. This prototype uses the conventional program name/flags `discus_suite -noautorun -macro run.mac`; override the runner `launcher` if needed.
 
+## Explicit powder settings
+
+`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`.
+
 ## Notebook working-directory convention
 
 The example notebook sets the working directory to the project root if launched from `notebooks/`. For other launch locations, edit the path near the top.
@@ -61,6 +65,20 @@ See `notebooks/02_3d_delta_pdf.ipynb` for a **synthetic demonstration only**. Fo
 
 For quantitative work, add mask/window handling, correct reciprocal-space intensity normalization, and compare one FFT result to a trusted 3D-ΔPDF workflow. **Breaking change:** the 3D FFT no longer returns a tuple — it returns an `FFTResult` containing `complex_volume`, `r_axes`, and `diagnostics`; `real_volume` is available for plotting. Do not unpack the result as a tuple. If the imaginary/real norm ratio exceeds `imaginary_tolerance` (default `1e-4`), the transform raises `FFTValidationError` (a `ValueError` subclass) that carries the computed `FFTResult` on `exc.result`; pass `raise_on_imaginary=False` to get a warning and the same computed values instead. No 3D-ΔPDF calculations are run automatically inside DISCUS by this starter; integration history is recorded in [docs/INTEGRATION_HISTORY.md](docs/INTEGRATION_HISTORY.md).
 
+For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='cartesian_q'`, `units='1/angstrom'`, and confirmed Bragg-removal metadata. See [3D integration notes](docs/3D_INTEGRATION.md). This does not by itself validate quantitative 3D-ΔPDF interpretation.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/discuspdf/` | The Python package. |
+| `tests/` | Unit tests (`python -m pytest -q`; run by CI on every push). They use stubbed engines, so they do not validate a real DISCUS run; see the separately documented manual DISCUS integration check. |
+| `examples/`, `notebooks/` | Example unit cells, a recorded real 1D run, and the quick-start and synthetic 3D-ΔPDF notebooks. |
+| `docs/` | Verified macro syntax, 3D integration notes, integration history and the [validation report](docs/SCIENTIFIC_VALIDATION_REPORT.md). |
+| `benchmarks/discus_6_23_01/` | The pre-registered validation of DISCUS 6.23.01 (Gates 1–3): inputs, predictions, analysis scripts, results and small evidence files. Large engine volumes are not committed; `regenerate_evidence.py` recreates them. |
+| `spike_discus_3d/` | The original 3D probe kit: verified macros (used by the 3D runner example and its tests), case runner and historical findings. |
+| `todo/` | Open work items. |
+
 ## Next stages
 
 1. Run the unit tests and validate the 1D PDF output against your local DISCUS version.
@@ -72,10 +90,3 @@ For quantitative work, add mask/window handling, correct reciprocal-space intens
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.
-## Explicit powder settings
-
-`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`.
-
-Run `python -m pytest -q` for unit tests; see the separately documented manual DISCUS integration check.
-
-For new work, pass a ReciprocalVolume carrying explicit coordinate_system='cartesian_q', units='1/angstrom', and confirmed Bragg removal metadata. See [3D integration notes](docs/3D_INTEGRATION.md). This does not by itself validate quantitative 3D-ΔPDF interpretation.

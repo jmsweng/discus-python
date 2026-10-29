@@ -18,7 +18,7 @@ The independent review is `benchmarks/discus_6_23_01/REVIEW_2026-10-28.md`; ever
 
 ## Reproducing the archived evidence
 
-Unpack the externally supplied PR8_STARTER_BUNDLE.zip and then its structure_factor_benchmark_v4.2.tar.gz into a fresh directory outside the repository. The archive includes the exact frozen C1 4096-atom GaAs structure, real 33³ DISCUS NeXus total/diffuse volumes, macro/log and historical v4.2 reference.
+Unpack the externally supplied PR8_STARTER_BUNDLE.zip and then its structure_factor_benchmark_v4.2.tar.gz (also restorable from git history; see `benchmarks/discus_6_23_01/gate1_c1_dyadic/README.md`) into a fresh directory outside the repository. The archive includes the exact frozen C1 4096-atom GaAs structure, real 33³ DISCUS NeXus total/diffuse volumes, macro/log and historical v4.2 reference.
 
 Run with numpy, h5py and pytest:
 

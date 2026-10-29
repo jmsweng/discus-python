@@ -1,5 +1,7 @@
 # Handoff to the local agent: run the pre-registered DISCUS experiments (Gate 2 and Gate 1)
 
+> **Historical runbook (2026-10-29).** PR #8 has been squash-merged into `main` as `e06f5df`, and the branch `science/discus-3d-dpdf-benchmarks` named below no longer exists. To rerun these steps, clone `main` instead; the branch's full history is still available with `git fetch origin pull/8/head`. The v4.2 archive used in Step 5 is restored from history as described in `gate1_c1_dyadic/README.md`. Do not push to the old branch name.
+
 **From:** Claude (independent reviewer), 2026-10-28, on behalf of the project owner (jmsweng).
 **Repo / branch:** `jmsweng/discus-python`, branch `science/discus-3d-dpdf-benchmarks` (PR #8, **draft**).
 **Why you:** the DISCUS_SUITE 6.23.01 engine exists only on the owner's machine: WSL Ubuntu-22.04, `/usr/local/bin/discus_suite`.
