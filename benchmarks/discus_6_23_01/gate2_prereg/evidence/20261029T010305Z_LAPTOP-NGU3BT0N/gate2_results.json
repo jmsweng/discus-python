@@ -1,0 +1,824 @@
+{
+ "predictions_sha256": "bebdc86a80817439091834bb1252f5bb63f2f19644930c3bd298c4c87acba311",
+ "run_dir": "benchmarks/discus_6_23_01/gate2_prereg/evidence/20261029T010305Z_LAPTOP-NGU3BT0N",
+ "models": {
+  "block": {
+   "criteria": [
+    {
+     "criterion": "R total: tie voxels equal one candidate lookup (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "R diffuse: tie voxels equal one candidate lookup (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "C0 total vs engine-precision oracle (relL2)",
+     "value": 1.9518437273776583e-16,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C0 total vs physics oracle (relL2)",
+     "value": 0.0008039353808380999,
+     "limit": 0.0024118061425142264,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C1 diffuse at integer H / max diffuse",
+     "value": 0.0,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C1 (diffuse - total) off integer H (relL2)",
+     "value": 4.5198397554289515e-15,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "A correlation recovery, physics g (max|dC|/N)",
+     "value": 0.0001133118827027213,
+     "limit": 0.001,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "A correlation recovery, engine g (max|dC|/N)",
+     "value": 4.440892098500626e-16,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B1 dPDF vs physics-oracle dPDF (relL2)",
+     "value": 0.0005126486395075077,
+     "limit": 0.0015379459153054805,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B1 dPDF vs engine-precision-oracle dPDF (relL2)",
+     "value": 3.7572923941553425e-15,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B2 max |ratio - predicted| at predeclared tau",
+     "value": 4.484502870646945e-06,
+     "limit": 0.01,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B2 sign agreement where required (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 imag/real of transform",
+     "value": 6.93500565502522e-16,
+     "limit": 1e-10,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 Friedel relative error of engine diffuse",
+     "value": 1.3398601818716932e-15,
+     "limit": 1e-12,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "L total log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "L diffuse log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "T total log: 'Temp. factors' line present and not 'used' (B = 0 requested)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "T diffuse log: 'Temp. factors' line present and not 'used' (B = 0 requested)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    }
+   ],
+   "tie_rounding": {
+    "n_tie_voxels": 216,
+    "diffuse_ties_rounded_down": 14,
+    "C0_total_vs_v3_NINT_only_oracle_relL2": 1.570024791789068e-08,
+    "B1_vs_v3_NINT_only_oracle_relL2_informational": 1.7148313993408723e-06
+   },
+   "tau_table": [
+    {
+     "tau_cells": "0,0,0",
+     "tau_A": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": 9691162.744003959,
+     "engine_ratio": 1.0,
+     "predicted_ratio": 1.0,
+     "realized_C_over_N": 1.0,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,0,0",
+     "tau_A": [
+      4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -4867273.496238744,
+     "engine_ratio": -0.5022383407244074,
+     "predicted_ratio": -0.5022386446869392,
+     "realized_C_over_N": -0.501953125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "-1,0,0",
+     "tau_A": [
+      -4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -4867273.496238744,
+     "engine_ratio": -0.5022383407244074,
+     "predicted_ratio": -0.5022386446869386,
+     "realized_C_over_N": -0.501953125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "0,1,0",
+     "tau_A": [
+      0.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": 5010871.148203923,
+     "engine_ratio": 0.5170557218538313,
+     "predicted_ratio": 0.5170528067298836,
+     "realized_C_over_N": 0.517578125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "0,-1,0",
+     "tau_A": [
+      0.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": 5010871.148203923,
+     "engine_ratio": 0.5170557218538313,
+     "predicted_ratio": 0.517052806729885,
+     "realized_C_over_N": 0.517578125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "0,0,1",
+     "tau_A": [
+      0.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": 181450.63710664268,
+     "engine_ratio": 0.018723309256044474,
+     "predicted_ratio": 0.01871931256250797,
+     "realized_C_over_N": 0.01953125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,-1",
+     "tau_A": [
+      0.0,
+      0.0,
+      -4.0
+     ],
+     "engine_rho": 181450.63710664262,
+     "engine_ratio": 0.018723309256044467,
+     "predicted_ratio": 0.018719312562508948,
+     "realized_C_over_N": 0.01953125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,1,0",
+     "tau_A": [
+      4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": -2525691.916052731,
+     "engine_ratio": -0.2606180478823769,
+     "predicted_ratio": -0.2606160354057719,
+     "realized_C_over_N": -0.2607421875,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,-1,0",
+     "tau_A": [
+      4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": -2544763.9518624647,
+     "engine_ratio": -0.2625860300857027,
+     "predicted_ratio": -0.2625845448446605,
+     "realized_C_over_N": -0.2626953125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "-1,1,0",
+     "tau_A": [
+      -4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": -2544763.9518624647,
+     "engine_ratio": -0.2625860300857027,
+     "predicted_ratio": -0.2625845448446597,
+     "realized_C_over_N": -0.2626953125,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "-1,-1,0",
+     "tau_A": [
+      -4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": -2525691.9160527317,
+     "engine_ratio": -0.26061804788237697,
+     "predicted_ratio": -0.26061603540577194,
+     "realized_C_over_N": -0.2607421875,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,0,1",
+     "tau_A": [
+      4.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": 4044.0574441186054,
+     "engine_ratio": 0.000417293316699352,
+     "predicted_ratio": 0.0004200593439859225,
+     "realized_C_over_N": 0.0,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,1,1",
+     "tau_A": [
+      0.0,
+      4.0,
+      4.0
+     ],
+     "engine_rho": 241583.46331441368,
+     "engine_ratio": 0.024928222721663024,
+     "predicted_ratio": 0.024927069142544955,
+     "realized_C_over_N": 0.025390625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "2,0,0",
+     "tau_A": [
+      8.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": 40028.40904800114,
+     "engine_ratio": 0.004130403142055085,
+     "predicted_ratio": 0.004129895300601786,
+     "realized_C_over_N": 0.00390625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,2,0",
+     "tau_A": [
+      0.0,
+      8.0,
+      0.0
+     ],
+     "engine_rho": 333866.18251050345,
+     "engine_ratio": 0.03445058052678669,
+     "predicted_ratio": 0.034446096023916045,
+     "realized_C_over_N": 0.03515625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,2",
+     "tau_A": [
+      0.0,
+      0.0,
+      8.0
+     ],
+     "engine_rho": -229883.22928261047,
+     "engine_ratio": -0.02372091309939481,
+     "predicted_ratio": -0.023722782887199836,
+     "realized_C_over_N": -0.0234375,
+     "ratio_ok": true
+    }
+   ],
+   "zone_consistency_max_rel_dev": {
+    "physics": 0.0010608378673969807,
+    "engine": 9.506206257250567e-15
+   },
+   "oracle_bitwise_identical_to_registration": {
+    "physics": false,
+    "engine": false
+   },
+   "hdf5_sha256": {
+    "total": "f1ad882f10aed58447321f38e1f5009ef6f5e8c93aee702e29b574baa2cd2479",
+    "diffuse": "43031431744a593bfe337429ea487b3802b399f11866b77c15652f18cae70eb1"
+   },
+   "max_I_total_engine": 48885695982.54542,
+   "max_I_diffuse_engine": 57256700.475743815,
+   "logs": {
+    "total": {
+     "log": "gate2_block_total.log",
+     "sha256": "2f37432734ac560603b6cc3342d37e95f591e060a716cd125130e114c56e4a5b",
+     "atom_type_counts": {
+      "AU": 2048,
+      "CU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [],
+     "form_factor_line": true,
+     "error_lines": [],
+     "errors_found": false,
+     "temp_factors": "ignored",
+     "temp_ignored": true
+    },
+    "diffuse": {
+     "log": "gate2_block_diffuse.log",
+     "sha256": "0e5309ed0361aee004334c4e429c62f6179129cad1a09c8e96337aa7412b327a",
+     "atom_type_counts": {
+      "AU": 2048,
+      "CU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [
+      "100.0"
+     ],
+     "form_factor_line": true,
+     "error_lines": [],
+     "errors_found": false,
+     "temp_factors": "ignored",
+     "temp_ignored": true
+    }
+   }
+  },
+  "random": {
+   "criteria": [
+    {
+     "criterion": "R total: tie voxels equal one candidate lookup (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "R diffuse: tie voxels equal one candidate lookup (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "C0 total vs engine-precision oracle (relL2)",
+     "value": 1.9554815111734289e-16,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C0 total vs physics oracle (relL2)",
+     "value": 0.0008039466084236581,
+     "limit": 0.0024118398252512287,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C1 diffuse at integer H / max diffuse",
+     "value": 0.0,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "C1 (diffuse - total) off integer H (relL2)",
+     "value": 6.839844181490123e-15,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "A correlation recovery, physics g (max|dC|/N)",
+     "value": 8.6325642026641e-05,
+     "limit": 0.001,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "A correlation recovery, engine g (max|dC|/N)",
+     "value": 4.996003610813204e-16,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B1 dPDF vs physics-oracle dPDF (relL2)",
+     "value": 0.0005099315244370732,
+     "limit": 0.001529793715237051,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B1 dPDF vs engine-precision-oracle dPDF (relL2)",
+     "value": 5.584217081285986e-15,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B2 max |ratio - predicted| at predeclared tau",
+     "value": 1.9024185660479476e-06,
+     "limit": 0.01,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B2 sign agreement where required (fraction)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 imag/real of transform",
+     "value": 1.1772538832840635e-15,
+     "limit": 1e-10,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "B3 Friedel relative error of engine diffuse",
+     "value": 2.33152440899012e-15,
+     "limit": 1e-12,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "N control max |rho(NN)/rho(0)|",
+     "value": 0.018741847650133744,
+     "limit": 0.05,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "L total log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "L diffuse log: atom counts CU=2048, AU=2048 and no error lines",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "T total log: 'Temp. factors' line present and not 'used' (B = 0 requested)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "T diffuse log: 'Temp. factors' line present and not 'used' (B = 0 requested)",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    }
+   ],
+   "tie_rounding": {
+    "n_tie_voxels": 216,
+    "diffuse_ties_rounded_down": 44,
+    "C0_total_vs_v3_NINT_only_oracle_relL2": 1.6802808846135468e-07,
+    "B1_vs_v3_NINT_only_oracle_relL2_informational": 2.7826280145478092e-05
+   },
+   "tau_table": [
+    {
+     "tau_cells": "0,0,0",
+     "tau_A": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": 9691273.969598293,
+     "engine_ratio": 1.0,
+     "predicted_ratio": 1.0,
+     "realized_C_over_N": 1.0,
+     "ratio_ok": true,
+     "sign_required": true,
+     "sign_ok": true
+    },
+    {
+     "tau_cells": "1,0,0",
+     "tau_A": [
+      4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": 86890.22658234139,
+     "engine_ratio": 0.00896582088742075,
+     "predicted_ratio": 0.008965008260975037,
+     "realized_C_over_N": 0.009765625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "-1,0,0",
+     "tau_A": [
+      -4.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": 86890.22658234138,
+     "engine_ratio": 0.008965820887420749,
+     "predicted_ratio": 0.008965008260976001,
+     "realized_C_over_N": 0.009765625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,1,0",
+     "tau_A": [
+      0.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": -45457.51907604853,
+     "engine_ratio": -0.0046905617588203176,
+     "predicted_ratio": -0.0046924641773863655,
+     "realized_C_over_N": -0.00390625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,-1,0",
+     "tau_A": [
+      0.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": -45457.519076048506,
+     "engine_ratio": -0.004690561758820315,
+     "predicted_ratio": -0.004692464177385346,
+     "realized_C_over_N": -0.00390625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,1",
+     "tau_A": [
+      0.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": 181632.38027391807,
+     "engine_ratio": 0.01874184765013374,
+     "predicted_ratio": 0.018741015538787195,
+     "realized_C_over_N": 0.01953125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,-1",
+     "tau_A": [
+      0.0,
+      0.0,
+      -4.0
+     ],
+     "engine_rho": 181632.3802739181,
+     "engine_ratio": 0.018741847650133744,
+     "predicted_ratio": 0.0187410155387882,
+     "realized_C_over_N": 0.01953125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,1,0",
+     "tau_A": [
+      4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": 151242.4135647521,
+     "engine_ratio": 0.01560604044826329,
+     "predicted_ratio": 0.015606594124581211,
+     "realized_C_over_N": 0.015625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,-1,0",
+     "tau_A": [
+      4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": -85024.58523560972,
+     "engine_ratio": -0.008773313550141439,
+     "predicted_ratio": -0.008772686227833247,
+     "realized_C_over_N": -0.0087890625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "-1,1,0",
+     "tau_A": [
+      -4.0,
+      4.0,
+      0.0
+     ],
+     "engine_rho": -85024.5852356097,
+     "engine_ratio": -0.008773313550141437,
+     "predicted_ratio": -0.00877268622783322,
+     "realized_C_over_N": -0.0087890625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "-1,-1,0",
+     "tau_A": [
+      -4.0,
+      -4.0,
+      0.0
+     ],
+     "engine_rho": 151242.4135647521,
+     "engine_ratio": 0.01560604044826329,
+     "predicted_ratio": 0.015606594124581182,
+     "realized_C_over_N": 0.015625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "1,0,1",
+     "tau_A": [
+      4.0,
+      0.0,
+      4.0
+     ],
+     "engine_rho": 151419.725259522,
+     "engine_ratio": 0.01562433646335131,
+     "predicted_ratio": 0.015625217967379947,
+     "realized_C_over_N": 0.015625,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,1,1",
+     "tau_A": [
+      0.0,
+      4.0,
+      4.0
+     ],
+     "engine_rho": -170119.08533860536,
+     "engine_ratio": -0.017553841308405076,
+     "predicted_ratio": -0.017552043710653553,
+     "realized_C_over_N": -0.017578125,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "2,0,0",
+     "tau_A": [
+      8.0,
+      0.0,
+      0.0
+     ],
+     "engine_rho": -115659.86524503559,
+     "engine_ratio": -0.011934433554129492,
+     "predicted_ratio": -0.011935443332155746,
+     "realized_C_over_N": -0.01171875,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,2,0",
+     "tau_A": [
+      0.0,
+      8.0,
+      0.0
+     ],
+     "engine_rho": 177827.22716731878,
+     "engine_ratio": 0.018349210612058447,
+     "predicted_ratio": 0.018348672624222195,
+     "realized_C_over_N": 0.0185546875,
+     "ratio_ok": true
+    },
+    {
+     "tau_cells": "0,0,2",
+     "tau_A": [
+      0.0,
+      0.0,
+      8.0
+     ],
+     "engine_rho": 121297.69388327049,
+     "engine_ratio": 0.012516176331799474,
+     "predicted_ratio": 0.0125149193808171,
+     "realized_C_over_N": 0.0126953125,
+     "ratio_ok": true
+    }
+   ],
+   "zone_consistency_max_rel_dev": {
+    "physics": 0.0010608037197618778,
+    "engine": 7.291224202969576e-15
+   },
+   "oracle_bitwise_identical_to_registration": {
+    "physics": false,
+    "engine": false
+   },
+   "hdf5_sha256": {
+    "total": "8394854619ec2b88f236393ac6fe6fab18a2c6dd0259aa5cf35d75e95dec1008",
+    "diffuse": "d8931c38cb4ab47c4cf96164509ae757b305855a636dc5b91a5d1ed2ae9270f9"
+   },
+   "max_I_total_engine": 48885695982.54542,
+   "max_I_diffuse_engine": 20473442.392662615,
+   "logs": {
+    "total": {
+     "log": "gate2_random_total.log",
+     "sha256": "8bedb40616d5f13d35cf6533a905d3774cb210cfca91753c479413fcd74de415",
+     "atom_type_counts": {
+      "CU": 2048,
+      "AU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [],
+     "form_factor_line": true,
+     "error_lines": [],
+     "errors_found": false,
+     "temp_factors": "ignored",
+     "temp_ignored": true
+    },
+    "diffuse": {
+     "log": "gate2_random_diffuse.log",
+     "sha256": "293eedb49d41d320eb9a2dd44fe6f3055d09f6d7494f54341723712c2297de7a",
+     "atom_type_counts": {
+      "CU": 2048,
+      "AU": 2048
+     },
+     "atom_counts_ok": true,
+     "used_percent_lines": [
+      "100.0"
+     ],
+     "form_factor_line": true,
+     "error_lines": [],
+     "errors_found": false,
+     "temp_factors": "ignored",
+     "temp_ignored": true
+    }
+   }
+  }
+ },
+ "n_criteria": 37,
+ "n_failed": 0,
+ "status": "PASS"
+}
