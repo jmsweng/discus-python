@@ -66,7 +66,7 @@ Note: the handoff specifies WSL2 Ubuntu; this run used native Windows Python 3.1
 
 ## Review fix-ups (overseer review of draft PR #10)
 
-**New head SHA:** *(filled after push)* · PR remains **draft**.
+**New head SHA:** `af19c5a` · PR remains **draft**.
 
 ### What changed per fix
 
