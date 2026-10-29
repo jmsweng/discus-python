@@ -1,6 +1,6 @@
 """Evaluate a Gate 3 engine run against predictions.json.
 
-Usage: python analyze.py RUN_DIR
+Usage: python gate3_analyze.py RUN_DIR
 RUN_DIR holds the registered inputs (copied unmodified) and the engine outputs
 gate3_block_{total,diffuse}_{int,3dpdf}.h5 and logs. Exit: 0 PASS, 1 FAIL, 2 INVALID.
 Writes RUN_DIR/gate3_results.json and RUN_DIR/GATE3_RESULTS_PREREG.md.

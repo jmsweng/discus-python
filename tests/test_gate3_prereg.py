@@ -44,8 +44,6 @@ def test_emulation_reproduces_archived_discus_native_3dpdf(pair):
 def test_selftest_passes_clean_and_rejects_corruptions(tmp_path):
     if subprocess.run(["git", "-C", str(B), "cat-file", "-e", "8cd59ac"], capture_output=True).returncode != 0:
         pytest.skip("Gate 2 v4 volumes need the git history of the PR #8 branch (commit 8cd59ac)")
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("gate3_selftest", G3 / "selftest.py")
-    st = importlib.util.module_from_spec(spec); spec.loader.exec_module(st)
+    import gate3_selftest as st
     bad = [r for r in st.run_selftest(tmp_path) if not r[3]]
     assert not bad, bad

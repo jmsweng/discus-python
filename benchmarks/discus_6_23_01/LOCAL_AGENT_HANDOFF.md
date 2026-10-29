@@ -70,8 +70,8 @@ Gate 2 is finished. Do **not** rerun Gate 1 or Gate 2. Gate 3 is a short pre-reg
 
 1. `git pull --ff-only`. The head must include the commit "Gate 3: pre-register native 3DPDF experiment". Then:
    - `python -m pytest -q tests/test_gate2_prereg.py tests/test_gate3_prereg.py tests/test_regenerate_evidence.py` → `15 passed`.
-   - `python benchmarks/discus_6_23_01/gate3/selftest.py` → 8 lines starting `ok`.
-   - `sha256sum benchmarks/discus_6_23_01/gate3/predictions.json` → `4b878496c559a190cf5792ab50506ad8e065fd85ca3ac920db9372e7e9644e8b`.
+   - `python benchmarks/discus_6_23_01/gate3/gate3_selftest.py` → 8 lines starting `ok`.
+   - `sha256sum benchmarks/discus_6_23_01/gate3/predictions.json` → `e6368b229db439b40b2e81829875c4cf1a8fe34c6ba6f9b3d53848bb004493e6`.
 2. Engine identity: same as Step 2 (binary hash `d4274f13…45706f3`). Write ENGINE_ENV.txt into the new evidence directory.
 3. Run:
    ```sh
@@ -81,7 +81,7 @@ Gate 2 is finished. Do **not** rerun Gate 1 or Gate 2. Gate 3 is a short pre-reg
      timeout 3600 /usr/local/bin/discus_suite < "$m.mac" > "$m.log" 2>&1; echo "$m exit=$?" | tee -a RUN_STATUS.txt
    done
    cd "<REPO>"
-   python benchmarks/discus_6_23_01/gate3/analyze.py "$E3"; echo "analyze exit=$?" | tee -a "$E3/RUN_STATUS.txt"
+   python benchmarks/discus_6_23_01/gate3/gate3_analyze.py "$E3"; echo "analyze exit=$?" | tee -a "$E3/RUN_STATUS.txt"
    python benchmarks/discus_6_23_01/regenerate_evidence.py hash "$E3"
    ( cd "$E3" && sha256sum * > MANIFEST.sha256 )
    ```

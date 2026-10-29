@@ -1,6 +1,6 @@
 # Gate 3: absolute normalization and DISCUS's native `value 3DPDF` (pre-registered)
 
-**Registered:** 2026-10-28, before any native 3DPDF engine output on this grid existed. `predictions.json` SHA-256 `4b878496c559a190cf5792ab50506ad8e065fd85ca3ac920db9372e7e9644e8b`.
+**Registered:** 2026-10-28, before any native 3DPDF engine output on this grid existed. `predictions.json` SHA-256 `e6368b229db439b40b2e81829875c4cf1a8fe34c6ba6f9b3d53848bb004493e6`.
 Source read: DiffuseCode tag `v.6.23.01` (`19a214a`).
 
 ## Part A: absolute normalization of the package pipeline (established; no new run needed)
@@ -65,7 +65,7 @@ recovered from git history and checked against their content hashes.
 | C1 | diffuse only: package `delta_pdf_fractional` equals k × native on the true axes | relL2 ≤ 1×10⁻¹² |
 | L | log: 2048 Cu / 2048 Au, no errors, `Temp. factors` not `used` | required |
 
-**Gate 3 PASSES only if every criterion passes.** A selftest (`selftest.py`) passes clean data and fails each of these: missing 1/√N, origin
+**Gate 3 PASSES only if every criterion passes.** A selftest (`gate3_selftest.py`) passes clean data and fails each of these: missing 1/√N, origin
 shift, corrected metadata, wrong Bragg re-weight, changed intensities, temp used, and an edited macro (INVALID).
 
 **Not covered:** the `sharp` option, `output range` (d*-limited), Lanczos filtering, `lots`, non-cubic or skewed grids, and odd grids beyond the archived 33³ runs.

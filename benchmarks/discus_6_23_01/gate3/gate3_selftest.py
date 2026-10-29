@@ -11,13 +11,9 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import importlib.util  # noqa: E402
-
-import analyze as AN  # noqa: E402
+import gate3_analyze as AN  # noqa: E402
+import gate3_generate as G  # noqa: E402
 import native3dpdf as N  # noqa: E402
-
-_spec = importlib.util.spec_from_file_location("gate3_generate", HERE / "generate.py")   # avoid gate2's generate.py
-G = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(G)
 
 LOG = """          ***********************************************************
           *         D I S C U S - S U I T E  Version 6.23.01        *

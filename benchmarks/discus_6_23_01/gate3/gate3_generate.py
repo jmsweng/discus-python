@@ -147,8 +147,8 @@ def main():
                                "native_argmax_index": [int(v) for v in np.unravel_index(np.argmax(nat), nat.shape)],
                                "native_max": float(nat.max())}
     pred["input_sha256"] = {n: R.sha256_file(p) for n, p in sorted(files.items())}
-    pred["code_sha256"] = {n: R.sha256_file(HERE / n) for n in ("native3dpdf.py", "generate.py", "analyze.py",
-                                                                 "selftest.py")}
+    pred["code_sha256"] = {n: R.sha256_file(HERE / n) for n in ("native3dpdf.py", "gate3_generate.py", "gate3_analyze.py",
+                                                                 "gate3_selftest.py")}
     (HERE / "predictions.json").write_text(json.dumps(pred, indent=1, sort_keys=True) + "\n")
     print(json.dumps({k: pred[k] for k in ("native_metadata_predicted", "true_axes", "conversion_factor_k")}, indent=1))
     for kind, v in pred["kinds"].items():
