@@ -1,0 +1,3 @@
+gate3_block_total exit=0 seconds=0
+gate3_block_diffuse exit=0 seconds=0
+analyze exit=0
