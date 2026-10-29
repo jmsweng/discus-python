@@ -3,8 +3,8 @@
 ## 1. Base / head / PR
 
 - **Base SHA:** `2e0254e` (`origin/main`, matches the handoff's reviewed baseline)
-- **Head SHA:** *(to be filled after push)*
-- **PR:** *(draft, to be filled after push)*
+- **Head SHA:** `024773d`
+- **PR:** [Draft PR #10](https://github.com/jmsweng/discus-python/pull/10)
 - **Branch:** `feat/structure-lattice-core`
 
 ## 2. Design decisions
