@@ -38,3 +38,8 @@ plan.md
 # Engine HDF5 volumes of Gate evidence runs are not committed (~17 MB each); recreate them with
 # benchmarks/discus_6_23_01/regenerate_evidence.py and record their content hashes in EVIDENCE_CONTENT_HASHES.json
 benchmarks/discus_6_23_01/gate*/evidence/*/*.h5
+
+# Large archives belong outside the repository (see CLEANUP_PLAN.md)
+*.zip
+structure_factor_benchmark*.tar.gz
+!structure_factor_benchmark_v4.2.tar.gz

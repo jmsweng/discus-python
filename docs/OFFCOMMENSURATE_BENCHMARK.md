@@ -1,3 +1,5 @@
+> **Historical document (kept by owner decision, 2026-10-28).** Written during earlier PR work. It is **not** part of PR #8's validated results and may contain claims since superseded or refuted. The current record is `docs/SCIENTIFIC_VALIDATION_REPORT.md` and `benchmarks/discus_6_23_01/REVIEW_2026-10-28.md`.
+
 # Off-Commensurate Structure-Factor Benchmark — DISCUS 6.23.01 (v4.2)
 
 **Date:** 2026-10-28  

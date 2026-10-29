@@ -1,5 +1,12 @@
 # Repository Cleanup Plan for PR #8
 
+> **Executed 2026-10-28 by owner decision** ("remove archives only, keep docs"):
+> - Removed: the five `structure_factor_benchmark*.tar.gz` archives other than v4.2, `structure_factor_benchmark_v4.zip`, `checksums.txt` and `spike_discus_3d/PUSH_INSTRUCTIONS.md`. All remain in the PR #8 branch history; none was ever on `main`.
+> - Kept: `structure_factor_benchmark_v4.2.tar.gz`, because the Gate 1 analysis reads it. The review and benchmark documents in sections 3 and 4 were also kept, each with a "historical document" banner (option B).
+> - Not done: retiring `spike_discus_3d/`, which is a separate decision.
+
+The original plan follows.
+
 ## Summary
 
 Commit `6a390d2` inadvertently included unrelated historical files that should not be part of PR #8. This document proposes a safe cleanup plan.
