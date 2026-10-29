@@ -14,6 +14,11 @@ Usage
   python regenerate_evidence.py regenerate <evidence_dir> <new_empty_out_dir> [--discus /usr/local/bin/discus_suite]
                                 [--analyze]
   python regenerate_evidence.py hash <dir_with_h5>          # print content hashes (used to build the JSON)
+  python regenerate_evidence.py fetch-history               # fetch the PR #8 commits (needed after a squash merge)
+
+The registered commits named in ENGINE_ENV.txt, and the commit 8cd59ac whose original Gate 2 v4 volumes Gate 3 reads, are
+not in main's history: PR #8 was squash-merged. GitHub keeps them under refs/pull/8/head even after the branch is deleted,
+and `fetch-history` (run automatically by --analyze) fetches that ref.
 
 `regenerate` refuses to run unless every input it copies matches MANIFEST.sha256 of the evidence directory, never
 writes into the evidence directory, and warns if the engine binary differs from ENGINE_ENV.txt.
@@ -158,9 +163,34 @@ def cmd_regenerate(args):
     sys.exit(0 if ok else 1)
 
 
+PR_REF = "refs/pull/8/head"
+
+
+def ensure_commit(commit: str):
+    """Make `commit` available locally, fetching the PR #8 history from GitHub if needed."""
+    have = lambda: subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{commit}^{{commit}}"],
+                                  capture_output=True).returncode == 0
+    if have():
+        return
+    shallow = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--is-shallow-repository"],
+                             capture_output=True, text=True).stdout.strip() == "true"
+    cmd = ["git", "-C", str(REPO), "fetch", *(["--unshallow"] if shallow else []), "origin",
+           f"+{PR_REF}:refs/remotes/origin/pr8-history"]
+    print("fetching PR #8 history:", " ".join(cmd[3:]))
+    subprocess.run(cmd, check=True)
+    if not have():
+        sys.exit(f"commit {commit} is not available even after fetching {PR_REF}")
+
+
+def cmd_fetch_history(args):
+    ensure_commit("8cd59ac")
+    print("PR #8 history available (e.g. 8cd59ac, and every registered commit in EVIDENCE_CONTENT_HASHES.json)")
+
+
 def run_registered_analysis(ent: dict, out: Path):
     """Run the evaluator of the registered commit, from a temporary detached worktree, on the regenerated dir."""
     commit = ent["registered_commit"]
+    ensure_commit(commit)
     wt = Path(tempfile.mkdtemp(prefix="evidence_wt_"))
     subprocess.run(["git", "-C", str(REPO), "worktree", "add", "--detach", str(wt), commit], check=True)
     try:
@@ -175,6 +205,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list").set_defaults(fn=cmd_list)
+    sub.add_parser("fetch-history").set_defaults(fn=cmd_fetch_history)
     p = sub.add_parser("hash"); p.add_argument("dir"); p.set_defaults(fn=cmd_hash)
     p = sub.add_parser("regenerate"); p.add_argument("evidence_dir"); p.add_argument("out_dir")
     p.add_argument("--discus", default="/usr/local/bin/discus_suite")

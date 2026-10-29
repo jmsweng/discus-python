@@ -10,8 +10,9 @@ The 20 DISCUS output volumes (~270 MB) of these evidence directories are **not i
 
 What stays committed in each directory: the exact `.stru` and `.mac` that were run, the engine logs, `ENGINE_ENV.txt`
 (engine binary SHA-256, registered commit), `RUN_STATUS.txt`, the evaluator reports and `MANIFEST.sha256`. The manifest
-still lists the original HDF5 file hashes as a record. The originals also remain in the git history of the PR #8 branch,
-up to commit `d78448e`.
+still lists the original HDF5 file hashes as a record. PR #8 was squash-merged, so the original volumes and the registered commits are not in main's history. GitHub keeps them under
+`refs/pull/8/head` (the originals are reachable up to commit `d78448e`). `python benchmarks/discus_6_23_01/regenerate_evidence.py fetch-history`
+fetches that history; `regenerate --analyze` does so automatically. Regenerating `gate3/predictions.json` (`gate3_generate.py`) also needs it.
 
 ## Recreating them
 
