@@ -21,3 +21,7 @@ __all__ += ["ReciprocalVolume", "Diffuse3DRunner", "Diffuse3DRun", "OutputSpec"]
 # Version-verified DISCUS 6.23.01 common/NeXus 3D output.
 from .discus_output import DiscusVolume, FractionalFFTResult, read_discus_volume, delta_pdf_fractional, evaluate_real_space
 __all__ += ["DiscusVolume", "FractionalFFTResult", "read_discus_volume", "delta_pdf_fractional", "evaluate_real_space"]
+
+# General lattice core (Package A, Feature A5).
+from .lattice import Lattice
+__all__ += ["Lattice"]

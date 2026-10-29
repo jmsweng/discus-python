@@ -87,6 +87,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 4. Standardize Q-grid metadata and mask/Bragg subtraction for 3D-ΔPDF analysis.
 5. Add optimized parameter sweeps and experimental comparison metrics.
 
+## Lattice core
+
+`discuspdf.Lattice` is the shared crystal-lattice value type (direct/reciprocal basis, Q, d-spacings, PBC distances). See [docs/LATTICE.md](docs/LATTICE.md) and `examples/lattice_basics.py`.
+
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.
