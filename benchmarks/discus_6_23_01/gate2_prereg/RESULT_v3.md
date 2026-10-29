@@ -1,5 +1,7 @@
 # Gate 2 (gate2-prereg-v3) — result and interpretation
 
+> **Superseded by v4 (PASS): see `RESULT_v4.md`.** The v3 verdict below stands as the v3 record.
+
 Run `20261028T235829Z_LAPTOP-NGU3BT0N`, DISCUS_SUITE 6.23.01 (binary SHA-256 `d4274f13…45706f3`), registered commit `a243b4e`.
 Evidence and the evaluator's own report: `evidence/20261028T235829Z_LAPTOP-NGU3BT0N/GATE2_RESULTS_PREREG.md` (unchanged).
 
