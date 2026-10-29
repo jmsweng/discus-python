@@ -1,0 +1,40 @@
+# Gate 3 pre-registered run: block model, set aver,0.0; value int then value 3DPDF (generated; do not edit)
+discus
+read
+  stru gate2_block.stru
+eval n[1]
+eval n[2]
+eval n[3]
+fourier
+  xray
+  wvle moa1
+  ll -4.0,-4.0,-4.0
+  lr  3.9375,-4.0,-4.0
+  ul -4.0, 3.9375,-4.0
+  tl -4.0,-4.0, 3.9375
+  na 128
+  no 128
+  nt 128
+  abs h
+  ord k
+  top l
+  temp ignore
+  disp off
+  lots off
+  set technique:turbo
+  set aver,0.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf gate3_block_total_int.h5
+  run
+  value 3DPDF
+  form nexus
+  outf gate3_block_total_3dpdf.h5
+  run
+exit
+exit
+exit

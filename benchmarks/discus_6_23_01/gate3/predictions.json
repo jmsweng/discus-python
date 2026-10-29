@@ -1,0 +1,121 @@
+{
+ "code_sha256": {
+  "analyze.py": "89775823954621117cb8e5c2f3d5be34938bf282d1c9fe9d05677a3a382cf6e9",
+  "generate.py": "1ab228d82eeb9ecebe4e3bb47bb1324098a1e0724daf2f3ec21b43a73e47d313",
+  "native3dpdf.py": "e712739bdd6aacdc12d75d1c0a904fa81dc676bde1f2ab7b815c3b10ab5d4a6a",
+  "selftest.py": "ab040954fdbbd7ecb45b4dd2facd8a349d3190a2182a2ad783b7a1628c6cc8e8"
+ },
+ "conversion_factor_k": 0.005524271728019903,
+ "design": {
+  "grid": "128^3, H = -4 + k/16",
+  "ncells": 4096,
+  "structure": "Gate 2 v4 block model, seed 20261101",
+  "v4_volumes_from": "8cd59ac:benchmarks/discus_6_23_01/gate2_prereg/evidence/20261029T010305Z_LAPTOP-NGU3BT0N"
+ },
+ "input_sha256": {
+  "gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede",
+  "gate3_block_diffuse.mac": "a74294de9d514c62579de8b20737e108d126fc6245b4e6078124280937500508",
+  "gate3_block_total.mac": "3a0ab3f83e9f8c0634ff4f79188185d6450d78d04444bc6a13414fe6a51f86f4"
+ },
+ "kinds": {
+  "diffuse": {
+   "four_weight_scalef": null,
+   "int_content_hash_gate2_v4": "756d781ee47bafe9024efa8f30a54e589548fbd6dc221f3ddd8636fe97033fa1",
+   "native_argmax_index": [
+    64,
+    64,
+    64
+   ],
+   "native_fingerprint": {
+    "sum": 4.76837158203125e-07,
+    "sum_sq": 1.5125696572969818e+19,
+    "voxels": [
+     -75206454.91040522,
+     1754287844.8301122,
+     -881070616.3404723,
+     907064567.9480356,
+     32846073.842873935,
+     -2146.3661686561263,
+     -2017.3002468063537,
+     6172.434377969388,
+     15835.625521789492,
+     -2000.1313624952277
+    ]
+   },
+   "native_max": 1754287844.8301122,
+   "with_bragg": "bragg_subtracted"
+  },
+  "total": {
+   "four_weight_scalef": 1.0,
+   "int_content_hash_gate2_v4": "e76cea5fa13e857b96f0f27ca118c51d35347391007c360a26d7bc5e60eea964",
+   "native_argmax_index": [
+    64,
+    64,
+    64
+   ],
+   "native_fingerprint": {
+    "sum": 70794049806913.19,
+    "sum_sq": 1.804451510692099e+23,
+    "voxels": [
+     6078086732.896849,
+     7907581032.637363,
+     5272222571.46678,
+     7060357755.755286,
+     6186139261.650125,
+     206888.5046826193,
+     229134.5468850204,
+     1501055.6309472055,
+     2878275.6596347727,
+     1546064.704358357
+    ]
+   },
+   "native_max": 7907581032.637363,
+   "with_bragg": "bragg_present"
+  }
+ },
+ "native_metadata_predicted": {
+  "data_corner": [
+   -7.937007874015748,
+   -7.937007874015748,
+   -7.937007874015748
+  ],
+  "data_type_style": "single_pdf",
+  "increment": [
+   0.12598425196850394,
+   0.12598425196850394,
+   0.12598425196850394
+  ]
+ },
+ "schema": "gate3-prereg-v1",
+ "source": "DiffuseCode tag v.6.23.01 (19a214a); see native3dpdf.py docstring",
+ "status": "PRE-REGISTERED: written before any native 3DPDF engine output on this grid existed",
+ "thresholds": {
+  "C1_pipeline_vs_converted_native_relL2_max": 1e-12,
+  "E1_native_vs_emulation_of_same_run_int_relL2_max": 1e-12,
+  "E2_native_fingerprint_rtol": 1e-09,
+  "M1_native_metadata_abs_tol": 1e-09,
+  "R0_int_content_hash_equals_gate2_v4": true
+ },
+ "true_axes": {
+  "corner": [
+   -8.0,
+   -8.0,
+   -8.0
+  ],
+  "increment": [
+   0.125,
+   0.125,
+   0.125
+  ],
+  "native_label_at_true_origin": [
+   0.1259842519685037,
+   0.1259842519685037,
+   0.1259842519685037
+  ],
+  "origin_index_0based": [
+   64,
+   64,
+   64
+  ]
+ }
+}

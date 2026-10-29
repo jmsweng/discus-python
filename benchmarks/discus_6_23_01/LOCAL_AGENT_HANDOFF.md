@@ -64,6 +64,39 @@ Expected inputs:
 - **Gate 2:** `gate2_block.stru`, `gate2_random.stru`, `gate2_{block,random}_{total,diffuse}.mac`, `gate2_probe.mac`.
 - **Gate 1:** `C1_frozen.stru`, `c1_dyadic.mac`, `c1_repro.mac`.
 
+## Gate 3 run (2026-10-28): READ THIS FIRST for the Gate 3 request
+
+Gate 2 is finished. Do **not** rerun Gate 1 or Gate 2. Gate 3 is a short pre-registered run: two macros, about 1 minute in total.
+
+1. `git pull --ff-only`. The head must include the commit "Gate 3: pre-register native 3DPDF experiment". Then:
+   - `python -m pytest -q tests/test_gate2_prereg.py tests/test_gate3_prereg.py tests/test_regenerate_evidence.py` → `15 passed`.
+   - `python benchmarks/discus_6_23_01/gate3/selftest.py` → 8 lines starting `ok`.
+   - `sha256sum benchmarks/discus_6_23_01/gate3/predictions.json` → `4b878496c559a190cf5792ab50506ad8e065fd85ca3ac920db9372e7e9644e8b`.
+2. Engine identity: same as Step 2 (binary hash `d4274f13…45706f3`). Write ENGINE_ENV.txt into the new evidence directory.
+3. Run:
+   ```sh
+   E3="benchmarks/discus_6_23_01/gate3/evidence/$RUN_ID"; mkdir -p "$E3"
+   cp -n benchmarks/discus_6_23_01/gate3/inputs/* "$E3/"; cd "$E3"
+   for m in gate3_block_total gate3_block_diffuse; do
+     timeout 3600 /usr/local/bin/discus_suite < "$m.mac" > "$m.log" 2>&1; echo "$m exit=$?" | tee -a RUN_STATUS.txt
+   done
+   cd "<REPO>"
+   python benchmarks/discus_6_23_01/gate3/analyze.py "$E3"; echo "analyze exit=$?" | tee -a "$E3/RUN_STATUS.txt"
+   python benchmarks/discus_6_23_01/regenerate_evidence.py hash "$E3"
+   ( cd "$E3" && sha256sum * > MANIFEST.sha256 )
+   ```
+   Stop conditions:
+   - any `***APPL***` line in a log;
+   - a missing `.h5` file;
+   - `Temp. factors` not `ignored`.
+
+   A FAIL from `analyze.py` is not a stop condition.
+4. Commit only `$E3`. The `.h5` files are git-ignored; that is intended. Push, then report:
+   - `GATE3_RESULTS_PREREG.md` in full;
+   - the `hash` output;
+   - RUN_STATUS.txt;
+   - any deviations.
+
 ## Evidence volumes (2026-10-28)
 
 Engine `.h5` outputs in `evidence/` directories are git-ignored and are no longer committed. After a run, add `python benchmarks/discus_6_23_01/regenerate_evidence.py hash <evidence_dir>` output to your report so the reviewer can record the content hashes. Everything else in the evidence directory is committed as before. See `EVIDENCE_VOLUMES.md`.
