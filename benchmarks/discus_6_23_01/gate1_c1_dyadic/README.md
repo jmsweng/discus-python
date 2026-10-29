@@ -19,3 +19,14 @@
 - `predictions.json`
 
 It reads the archived volumes from `structure_factor_benchmark_v4.2.tar.gz` at the repo root, SHA-256 checked. Run instructions: `../LOCAL_AGENT_HANDOFF.md`, Step 5.
+
+The archive is no longer kept on `main` (removed 2026-10-29 to keep the tree free of binaries; `c1_dyadic.py` is hash-registered in `predictions.json`, so it was left unchanged). Restore it from git history, at the repo root, before running `predict` or `analyze`:
+
+```bash
+git fetch origin e06f5df3b39d1d324fefc018f019ff38c28186bf   # only needed in a shallow clone
+git show e06f5df3b39d1d324fefc018f019ff38c28186bf:structure_factor_benchmark_v4.2.tar.gz > structure_factor_benchmark_v4.2.tar.gz
+sha256sum structure_factor_benchmark_v4.2.tar.gz
+# expected: 956f4e580c5e8019e6ab0ce448936837e8b2f1a85f1a8c1f13feb62b6c3a2270
+```
+
+The file is gitignored, so restoring it does not dirty the working tree. `c1_dyadic.py` also checks every extracted volume against its own SHA-256 list.
