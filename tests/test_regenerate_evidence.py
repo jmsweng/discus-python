@@ -29,7 +29,7 @@ def test_content_hash_ignores_date_and_detects_changes(tmp_path):
 
 def test_registry_covers_every_evidence_directory():
     reg = R.load_registry()["evidence"]
-    assert len(reg) == 4 and all(len(e["volumes"]) == 4 for e in reg.values())
+    assert len(reg) == 5 and all(len(e["volumes"]) == 4 for e in reg.values())
     for rel, e in reg.items():
         d = R.REPO / rel
         man = R.read_manifest(d)

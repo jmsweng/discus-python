@@ -154,6 +154,41 @@
     "gate2_random_diffuse.h5": "5274384e8f4417c2a360a34a263482eab6c2b21c36c11c89d62313e7e636b6f0",
     "gate2_random_total.h5": "ea611426e3e43fdba8ac4093bd0ac249f944f6d096c7535f2e4c1c93ddcb47fe"
    }
+  },
+  "benchmarks/discus_6_23_01/gate3/evidence/20261029T105111Z_LAPTOP-NGU3BT0N": {
+   "analysis": [
+    "benchmarks/discus_6_23_01/gate3/gate3_analyze.py"
+   ],
+   "binary_sha256": "d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3",
+   "bytes": {
+    "gate3_block_diffuse_3dpdf.h5": 16797728,
+    "gate3_block_diffuse_int.h5": 16792944,
+    "gate3_block_total_3dpdf.h5": 16797728,
+    "gate3_block_total_int.h5": 16792944
+   },
+   "content_hashes_source": "reported by the operator (regenerate_evidence.py hash) from the original files, which were never committed",
+   "inputs": [
+    "gate2_block.stru",
+    "gate3_block_diffuse.mac",
+    "gate3_block_total.mac"
+   ],
+   "macros": [
+    "gate3_block_total",
+    "gate3_block_diffuse"
+   ],
+   "original_file_sha256": {
+    "gate3_block_diffuse_3dpdf.h5": "3477cc17a175c1ddb10041a28730c7012dd244914d6f1955aaad63abae70c468",
+    "gate3_block_diffuse_int.h5": "adbfd596d75eb75adcf71b9d144aef19da83db3c6f3f2876cc0e804c9d99d706",
+    "gate3_block_total_3dpdf.h5": "fadad1477c55a61407eea0d4926714459be5ca9b9a26ecb59799b5eb8f3567bd",
+    "gate3_block_total_int.h5": "40dc7213cf49c81d11368fe85c39465fc3a4f9c21ddae217257578dd0801e3bf"
+   },
+   "registered_commit": "31b1740d11c593df01a8700eaa2941a72312f0d5",
+   "volumes": {
+    "gate3_block_diffuse_3dpdf.h5": "bb426961af4038fe7108da1d5a55108a71dd72a295f4ce20e98d5132e5d7e5aa",
+    "gate3_block_diffuse_int.h5": "756d781ee47bafe9024efa8f30a54e589548fbd6dc221f3ddd8636fe97033fa1",
+    "gate3_block_total_3dpdf.h5": "7561e72b04c9ed8b5259f3376f583eb5904aaa75117277c4e3128a4aaebfebb3",
+    "gate3_block_total_int.h5": "e76cea5fa13e857b96f0f27ca118c51d35347391007c360a26d7bc5e60eea964"
+   }
   }
  },
  "note": "Content hashes of the original engine HDF5 volumes, computed from the committed files before they were removed from the tree (they remain in the git history of the PR #8 branch). See regenerate_evidence.py.",
