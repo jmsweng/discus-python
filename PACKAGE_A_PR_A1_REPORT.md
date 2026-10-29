@@ -106,7 +106,7 @@ The 28 failures remain the same pre-existing environment-specific set (no regres
 
 ## Final fix-ups (overseer review, second pass)
 
-**New head SHA:** (see commit below) · PR remains **draft**.
+**New head SHA:** `5ea0b78` · PR remains **draft**.
 
 ### Changes
 
