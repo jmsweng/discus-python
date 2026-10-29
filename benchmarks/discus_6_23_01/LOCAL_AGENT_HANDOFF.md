@@ -64,7 +64,16 @@ Expected inputs:
 - **Gate 2:** `gate2_block.stru`, `gate2_random.stru`, `gate2_{block,random}_{total,diffuse}.mac`, `gate2_probe.mac`.
 - **Gate 1:** `C1_frozen.stru`, `c1_dyadic.mac`, `c1_repro.mac`.
 
-## Registration v3 (2026-10-28): READ THIS FIRST. It overrides the steps below where it conflicts.
+## Registration v4 (2026-10-28): READ THIS FIRST. It overrides everything below where it conflicts, including the v3 section.
+
+v3 failed one criterion because of rounding ties (`gate2_prereg/RESULT_v3.md`). The owner approved **gate2-prereg-v4**, which makes two changes: tie-aware criteria (new `R` rows) and **fresh structure seeds**. The macros are unchanged, but they now read new `.stru` files.
+
+- `git pull --ff-only`; the head must include the commit titled "Gate 2: register v4". Expected: `pytest tests/test_gate2_prereg.py` → `9 passed`; `python benchmarks/discus_6_23_01/gate2_prereg/selftest.py` → 12 lines starting `ok`; `gate2_prereg/predictions.json` SHA-256 = `bebdc86a80817439091834bb1252f5bb63f2f19644930c3bd298c4c87acba311`.
+- **Do NOT rerun Gate 1.** Only Gate 2 runs, with a new `RUN_ID`.
+- Order and stop conditions: same as v3. Run Step 1, then Step 2 (the binary hash must be `d4274f13…45706f3`), then the probe, which must give 4096 / 2 / 1. Then run `gate2_block_total.mac` first: its log must contain `Temp. factors      : ignored` and no `***APPL***` line. Then the other three macros, then `analyze.py`. A FAIL is not a stop condition.
+- Commit only the new v4 evidence directory. Do not edit any earlier evidence. Report as before; also paste the `tie_rounding` block from `gate2_results.json` for each model.
+
+## Registration v3 (2026-10-28): superseded by v4 above
 
 The v2 Gate 2 run (your report) FAILED because DISCUS applied an unrequested Debye–Waller factor (B = 1 Å²); see `gate2_prereg/DIAGNOSIS_v2_RESULT.md`. The owner approved **gate2-prereg-v3**: macros use `temp ignore`, and `analyze.py` has a corrected error check plus a `T` criterion. Predictions and thresholds are unchanged.
 

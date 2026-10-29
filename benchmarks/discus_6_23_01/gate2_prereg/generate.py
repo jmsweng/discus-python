@@ -84,6 +84,7 @@ THRESHOLDS = {
     "B3_imag_over_real_max": 1e-10,
     "B3_friedel_rel_error_max": 1e-12,
     "N_control_abs_nn_ratio_max": 0.05,
+    "R_tie_match_rel_max": 1e-12,
     "floor_for_factor_thresholds": 1e-6,
 }
 
@@ -117,8 +118,18 @@ def main():
         r = delta_pdf_fractional(vol, imaginary_tolerance=1e-6)
         return r
 
-    pred = {"schema": "gate2-prereg-v3",
+    pred = {"schema": "gate2-prereg-v4",
             "status": "PRE-REGISTERED: written before any engine run of these inputs that produced data",
+            "deviation_from_v3": (
+                "v3 (commit a243b4e, run 20261028T235829Z_LAPTOP-NGU3BT0N) FAILED 2/33: only B1 at engine precision "
+                "(2e-5 vs 1e-6). Cause: 14/44 voxels on exact rounding ties s/0.001 = n + 1/2, where the engine and the "
+                "NINT emulation pick different neighbouring table entries (RESULT_v3.md). Post hoc on v3 data, with the "
+                "tie voxels taken from the matching candidate, total and diffuse agree to 2e-16 and 5e-15. v4 changes: "
+                "(1) analyze.py declares the 216 tie voxels from the grid alone, requires the engine to equal one of the "
+                "two candidate lookups there to 1e-12 (new R criteria), and completes the engine-precision oracle with "
+                "that candidate; non-tie voxels are untouched; (2) FRESH seeds (block 20261101, random 20261102) so that "
+                "the predictions are blind again, since the v3 realization has been seen. Registered after seeing v3. "
+                "Grid, macros (apart from the structure they read), oracle physics and all numerical thresholds are unchanged."),
             "deviation_from_v2": (
                 "v2 (commit ec703b4, run 20261028T234015Z_LAPTOP-NGU3BT0N) FAILED: DISCUS applied exp(-2*B*s^2) "
                 "with B = 1.000 A^2 under 'temp use' although the files carry Biso = 0 (diagnosis: "
@@ -142,7 +153,7 @@ def main():
                        "boundary": "commensurate sampling: finite-crystal sum == periodic sum exactly",
                        "form_factors": "Waasmaier-Kirfel 1995 (DABAX transcription), f0 only, no anomalous",
                        "engine_precision_model": "f at s rounded to 0.001 1/A with Fortran NINT",
-                       "seeds": O.SEEDS, "tau_points": [tkey(t) for t in O.TAU_POINTS]},
+                       "seeds": O.SEEDS, "n_tie_voxels": int(O.tie_mask().sum()), "tau_points": [tkey(t) for t in O.TAU_POINTS]},
             "thresholds": THRESHOLDS, "models": {}}
     for model in ("block", "random"):
         sig = O.build_sigma(model)

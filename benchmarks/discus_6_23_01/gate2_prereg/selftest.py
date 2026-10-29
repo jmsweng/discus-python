@@ -73,6 +73,13 @@ def make_run(work: Path, corrupt: str | None = None) -> Path:
             H = O.H_AXIS; q = np.sqrt(H[:, None, None]**2 + H[None, :, None]**2 + H[None, None, :]**2) / (2 * O.A_CELL)
             dw = np.exp(-2 * (np.rint(q / O.CFINC) * O.CFINC) ** 2)
             It, Id = It * dw, Id * dw
+        elif corrupt in ("ties_rounded_down", "tie_voxels_wrong"):
+            _, s_dn = O.s_tie_candidates()
+            Itd, Idd, _ = O.forward(sig, "engine", s=s_dn)
+            if corrupt == "ties_rounded_down":      # legitimate alternative rounding: must still PASS
+                It, Id = Itd, Idd
+            else:                                    # 0.5 % off at tie voxels only: must FAIL R
+                t = O.tie_mask(); It = np.where(t, It * 1.005, It); Id = np.where(t, Id * 1.005, Id)
         elif corrupt == "physics_precision":
             It, Id, _ = O.forward(sig, "physics")
         write_discus_h5(run / f"gate2_{model}_total.h5", It, "bragg_present")
@@ -96,6 +103,8 @@ CASES = {  # corruption -> expected status and a criterion-name fragment that mu
     "physics_precision": ("FAIL", "engine-precision"),
     "unrequested_dw_B1": ("FAIL", "C0"),
     "temp_used_log": ("FAIL", "T "),
+    "ties_rounded_down": ("PASS", None),
+    "tie_voxels_wrong": ("FAIL", "R "),
     "edited_macro": ("INVALID", None),
 }
 

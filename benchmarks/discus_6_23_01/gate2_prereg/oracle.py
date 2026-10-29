@@ -46,7 +46,7 @@ N_H = int(round(2 * H_MAX / DH))           # 128
 H_AXIS = -H_MAX + DH * np.arange(N_H)      # -4 .. 3.9375, exact in binary
 CFINC = 0.001
 SPECIES = ("CU", "AU")                     # sigma = -1, +1
-SEEDS = {"block": 20261028, "random": 20261029}
+SEEDS = {"block": 20261101, "random": 20261102}   # v4 fresh, blind realizations (v1-v3: 20261028/20261029)
 
 # Predeclared real-space evaluation points, in lattice vectors (cells)
 TAU_POINTS = [(0, 0, 0), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1),
@@ -232,10 +232,26 @@ def lattice_sums(sig: np.ndarray):
     return {"AU": np.fft.ifftn(occ_au) * n ** 3, "CU": np.fft.ifftn(occ_cu) * n ** 3}
 
 
-def forward(sig: np.ndarray, mode: str, wk: dict | None = None):
-    """Return (I_total, I_diffuse, g2) on the full (128,128,128) grid, axes (h, k, l)."""
+def tie_mask(tol: float = 1e-9) -> np.ndarray:
+    """Voxels whose exact s/CFINC lies on a rounding tie n + 1/2 (decided from the grid alone, never from engine data).
+    At these voxels NINT is ill-conditioned: round-off in s^2 / sqrt can send a program to either neighbour."""
+    x = s_of_grid("physics") / CFINC
+    return np.abs(x - np.floor(x) - 0.5) < tol
+
+
+def s_tie_candidates() -> tuple:
+    """(s_up, s_down): the two legitimate table abscissae at every voxel; they differ only on tie_mask()."""
+    x = s_of_grid("physics") / CFINC
+    up = np.floor(x + 0.5) * CFINC
+    down = np.where(tie_mask(), np.floor(x) * CFINC, up)
+    return up, down
+
+
+def forward(sig: np.ndarray, mode: str, wk: dict | None = None, s: np.ndarray | None = None):
+    """Return (I_total, I_diffuse, g2) on the full (128,128,128) grid, axes (h, k, l).
+    s overrides the sin(theta)/lambda grid (used only for the two tie candidates of engine mode)."""
     wk = coefficients_for(mode) if wk is None else wk
-    s = s_of_grid(mode)
+    s = s_of_grid(mode) if s is None else s
     f = {sp: wk_f(wk[sp], s) for sp in SPECIES}
     A = lattice_sums(sig)
     k = np.mod(np.rint(H_AXIS * N_CELL).astype(int), N_CELL)

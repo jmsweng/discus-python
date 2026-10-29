@@ -112,6 +112,28 @@ def analyze_model(run_dir: Path, model: str, pred: dict) -> dict:
     eps = P["eps_tab"]; floor = T["floor_for_factor_thresholds"]
     It_eng, Id_eng = tot.values, dif.values
     crit = []
+    # v4: rounding ties. On the predeclared tie voxels (s/0.001 = n + 1/2 exactly; grid-only) NINT may legitimately
+    # land on either neighbour. The engine must equal ONE of the two candidates to R_tie_match_rel_max; the
+    # engine-precision oracle is then completed with that candidate. Non-tie voxels are never touched.
+    tie = O.tie_mask()
+    _, s_dn = O.s_tie_candidates()
+    It_d, Id_d, g2_d = O.forward(sig, "engine", s=s_dn)
+
+    def complete(eng, a, b):
+        sc = max(float(np.max(np.abs(eng))), 1e-300)
+        ea = np.abs(eng - a) / np.maximum(np.abs(a), 1e-9 * sc)
+        eb = np.abs(eng - b) / np.maximum(np.abs(b), 1e-9 * sc)
+        use_b = tie & (eb < ea)
+        return np.where(use_b, b, a), float(np.mean(np.minimum(ea, eb)[tie] <= T["R_tie_match_rel_max"])), use_b
+
+    It_e3, Id_e3 = It_e, Id_e                       # v3 (NINT-only) engine-precision oracle, kept for information
+    It_e, r_tot, _ = complete(It_eng, It_e3, It_d)
+    Id_e, r_dif, use_dn = complete(Id_eng, Id_e3, Id_d)
+    g2_e = np.where(use_dn, g2_d, g2_e)
+    tie_info = {"n_tie_voxels": int(tie.sum()), "diffuse_ties_rounded_down": int(use_dn.sum()),
+                "C0_total_vs_v3_NINT_only_oracle_relL2": O.rel_l2(It_eng, It_e3)}
+    crit.append(_crit("R total: tie voxels equal one candidate lookup (fraction)", r_tot, 1.0, ">="))
+    crit.append(_crit("R diffuse: tie voxels equal one candidate lookup (fraction)", r_dif, 1.0, ">="))
     # C0 forward model of total intensity
     crit.append(_crit("C0 total vs engine-precision oracle (relL2)", O.rel_l2(It_eng, It_e),
                       T["C0_total_vs_engine_precision_relL2_max"]))
@@ -144,6 +166,7 @@ def analyze_model(run_dir: Path, model: str, pred: dict) -> dict:
     # B pipeline 3D-dPDF of the engine diffuse volume
     r = delta_pdf_fractional(dif, imaginary_tolerance=1.0, raise_on_imaginary=False)
     from discuspdf.discus_output import DiscusVolume
+    orc["engine"] = (It_e, Id_e, g2_e); orc["engine_v3_nint_only"] = (It_e3, Id_e3, g2_e)
     rp = {m: delta_pdf_fractional(DiscusVolume(orc[m][1], dif.corner, dif.increments, dif.cell_lengths,
                                                dif.cell_angles, "bragg_subtracted"),
                                   imaginary_tolerance=1.0, raise_on_imaginary=False) for m in orc}
@@ -186,7 +209,9 @@ def analyze_model(run_dir: Path, model: str, pred: dict) -> dict:
     for k, lg in logs.items():
         crit.append(_crit(f"T {k} log: 'Temp. factors' line present and not 'used' (B = 0 requested)",
                           float(bool(lg.get("temp_ignored"))), 1.0, ">="))
-    return {"criteria": crit, "tau_table": table, "zone_consistency_max_rel_dev": zone_dev,
+    tie_info["B1_vs_v3_NINT_only_oracle_relL2_informational"] = O.rel_l2(
+        r.real_volume, rp["engine_v3_nint_only"].real_volume)
+    return {"criteria": crit, "tie_rounding": tie_info, "tau_table": table, "zone_consistency_max_rel_dev": zone_dev,
             "oracle_bitwise_identical_to_registration": bitwise,
             "hdf5_sha256": {"total": tot.provenance["sha256"], "diffuse": dif.provenance["sha256"]},
             "max_I_total_engine": float(It_eng.max()), "max_I_diffuse_engine": float(Id_eng.max()),

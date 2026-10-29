@@ -1,6 +1,8 @@
 # Gate 2 — pre-registered signed off-origin 3D-ΔPDF experiment (DISCUS_SUITE 6.23.01)
 
-**Registered:** 2026-10-28. v1 was commit `c3ab156` and v2 `ec703b4`; the current version is **v3**. v1 and v2 predate any engine run that produced data, except that v2 *did* produce data and FAILED.
+**Registered:** 2026-10-28. v1 was commit `c3ab156`, v2 `ec703b4`, v3 `a243b4e`; the current version is **v4**. v1 and v2 predate any engine run that produced data, except that v2 *did* produce data and FAILED.
+
+**Deviation v3 → v4 (registered after seeing the v3 results).** v3 failed only B1 at engine precision. The cause is that 14/44 voxels on exact rounding ties make the engine and the NINT emulation pick neighbouring table entries (`RESULT_v3.md`). v4 handles the tie voxels as described under criterion R, which is declared from the grid alone, and leaves every non-tie voxel and every numerical threshold unchanged. v4 also uses **fresh seeds** (block 20261101, random 20261102), because the v3 realization had been seen; that keeps the v4 predictions blind. Post hoc on v3 data, the tie-completed oracle matches the engine to 2×10⁻¹⁶ (total) and 5×10⁻¹⁵ (diffuse). This is the reason v4 is expected to pass, and it is stated here so that the expectation is on record.
 
 **Deviation v2 → v3 (registered after seeing the v2 results).** The v2 run applied an unrequested B = 1 Å² Debye–Waller factor (`temp use`; files carry B = 0). v3 changes only the macros (`temp ignore`) and `analyze.py` (error-line regex; new T criterion on the log's `Temp. factors` line). Predictions, oracle, grid and all numerical thresholds are unchanged. See `DIAGNOSIS_v2_RESULT.md`; the v2 result files are kept as they were.
 
@@ -61,22 +63,25 @@ A random permutation of 2048 Cu and 2048 Au. It has no correlation beyond sampli
 - **Pair sums** C(τ) = Σⱼ σⱼ σ_{j+τ} are computed by explicit shifted products and cross-checked against FFT.
 - **Independent real-space prediction:** ρ(τ) = Σ_τ′ C(τ′) K(τ − τ′). K is computed by zone folding plus explicit 16-point DFT matrices, which is a different code path from the 128³ FFT in the pipeline. Applied to oracle data, `delta_pdf_fractional` reproduces this prediction to 1.1×10⁻¹⁵ of ρ(0). That closes the PR #8 "direct vs FFT" discrepancy: boundaries, grid and normalization now match.
 
-## Registered predictions (block model; physics oracle; ρ(τ)/ρ(0))
+## Registered predictions (v4 block model, seed 20261101; physics oracle; ρ(τ)/ρ(0))
 
-| τ (cells) | τ (Å) | realized C(τ)/N | **predicted ρ/ρ₀** | sign required | ensemble (MC mean ± sd) |
-|---|---|---|---|---|---|
-| ±(1,0,0) | ±4 x̂ | −0.4883 | **−0.4886** | negative | −0.500 ± 0.016 |
-| ±(0,1,0) | ±4 ŷ | +0.5508 | **+0.5503** | positive | +0.500 ± 0.015 |
-| ±(0,0,1) | ±4 ẑ | −0.0234 | **−0.0242** | – | 0.000 ± 0.032 |
-| (1,1,0), (−1,−1,0) | | −0.2637 | **−0.2636** | negative | −0.250 ± 0.013 |
-| (1,−1,0), (−1,1,0) | | −0.2666 | **−0.2665** | negative | −0.250 ± 0.013 |
-| (1,0,1) | | +0.0078 | +0.0082 | – | 0.000 ± 0.023 |
-| (0,1,1) | | +0.0117 | +0.0113 | – | 0.000 ± 0.023 |
-| (2,0,0) | | −0.0234 | −0.0232 | – | 0.000 ± 0.032 |
-| (0,2,0) | | +0.1016 | **+0.1008** | positive | 0.000 ± 0.031 |
-| (0,0,2) | | −0.0312 | −0.0314 | – | 0.000 ± 0.032 |
+| τ (cells) | realized C(τ)/N | **predicted ρ/ρ₀** | sign required | ensemble (MC mean ± sd) |
+|---|---|---|---|---|
+| ±(1,0,0) | -0.5020 | **-0.5022** | negative | -0.500 ± 0.016 |
+| ±(0,1,0) | +0.5176 | **+0.5171** | positive | +0.500 ± 0.015 |
+| ±(0,0,1) | +0.0195 | +0.0187 | – | +0.001 ± 0.032 |
+| (1,1,0), (−1,−1,0) | -0.2607 | **-0.2606** | negative | -0.250 ± 0.013 |
+| (1,−1,0), (−1,1,0) | -0.2627 | **-0.2626** | negative | -0.250 ± 0.013 |
+| (1,0,1) | +0.0000 | +0.0004 | – | -0.000 ± 0.023 |
+| (0,1,1) | +0.0254 | +0.0249 | – | +0.000 ± 0.023 |
+| (2,0,0) | +0.0039 | +0.0041 | – | -0.001 ± 0.032 |
+| (0,2,0) | +0.0352 | +0.0344 | – | +0.000 ± 0.031 |
+| (0,0,2) | -0.0234 | -0.0237 | – | -0.001 ± 0.032 |
 
-**Honest note on the realization.** With the declared seed, the y-direction cross-block sum is a +3.25σ draw. That is why C(0,1,0)/N = +0.551 rather than ≈ +0.500, and C(0,2,0)/N = +0.102 rather than ≈ 0. The gate compares the engine with the **realized** pair sums of this frozen atom list, not with the ensemble, so this does not affect the test. The seed was not changed after seeing it. The negative control's realized nearest-neighbour ratios are all |ρ/ρ₀| ≤ 0.015.
+The realization is a typical draw: every |z| against the ensemble is ≤ 1.25. The seeds were set before computing the predictions and not changed afterwards.
+The negative control (seed 20261102) has realized nearest-neighbour ratios |ρ/ρ₀| ≤ 0.0187.
+
+*v1–v3 used seeds 20261028/20261029, with predictions −0.4886, +0.5503, −0.0242, −0.2636, −0.2665 (and +0.1008 at (0,2,0)). Those are kept in git history and in `RESULT_v3.md`.*
 
 ## Acceptance criteria
 
@@ -84,7 +89,7 @@ These are evaluated for *both* models by `analyze.py`. Values come from `predict
 
 | ID | Criterion | Limit |
 |---|---|---|
-| C0 | engine total vs engine-precision oracle, rel L2 | ≤ 1×10⁻⁶ |
+| C0 | engine total vs engine-precision oracle (tie-completed, see R), rel L2 | ≤ 1×10⁻⁶ |
 | C0 | engine total vs physics oracle, rel L2 | ≤ 3 ε_tab (2.4×10⁻³) |
 | C1 | engine diffuse at integer H (Bragg positions) / max diffuse | ≤ 1×10⁻⁹ |
 | C1 | engine (diffuse − total) at non-integer H, rel L2 | ≤ 1×10⁻⁹ |
@@ -95,6 +100,7 @@ These are evaluated for *both* models by `analyze.py`. Values come from `predict
 | B2 | sign agreement wherever \|predicted ratio\| ≥ 0.05 | 100 % |
 | B3 | imag/real of the transform; Friedel relative error of the engine diffuse | ≤ 1×10⁻¹⁰; ≤ 1×10⁻¹² |
 | N | negative control: max \|ρ/ρ₀\| over the six nearest neighbours | ≤ 0.05 |
+| R | at every predeclared tie voxel (s/0.001 Å⁻¹ = n + ½ exactly; 216 voxels, from the grid alone), engine total and diffuse equal one of the two candidate table lookups (round up / round down), relative | ≤ 1×10⁻¹², fraction 100 % |
 | T | each engine log has a `Temp. factors` line that does not say `used` | required |
 | L | each engine log: `Atom typ = CU (# 2048)`, `AU (# 2048)`, and no error lines | required |
 

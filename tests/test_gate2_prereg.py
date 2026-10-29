@@ -82,6 +82,13 @@ def test_lattice_sum_forward_model_equals_brute_force(mode):
     np.testing.assert_allclose(Id, g2 * S[np.ix_(k, k, k)], rtol=1e-9, atol=1e-6)
 
 
+def test_tie_voxels_are_grid_only_and_candidates_differ_only_there():
+    t = O.tie_mask(); up, dn = O.s_tie_candidates()
+    assert t.sum() == PRED["design"]["n_tie_voxels"] == 216
+    assert np.array_equal(up != dn, t) and np.allclose(up[t] - dn[t], O.CFINC)
+    assert np.array_equal(up, O.s_of_grid("engine"))
+
+
 def test_pair_sums_direct_match_fft_and_analytic_within_block_values():
     sig = O.build_sigma("block")
     C = O.pair_sums_direct(sig)
