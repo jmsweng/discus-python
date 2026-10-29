@@ -1,6 +1,6 @@
 # PR #8 — independent scientific validation
 
-**2026-10-28.** Baseline: merged PR #7 at dc67a722bf55b3f6aa8b2f8d5132a4175324bb91. **This report documents Gate 0 (evidence reproduction), Gate 1 (set aver,100 diagnosis), and Gate 2 (correlated-disorder 3D-ΔPDF). Absolute normalization (Gate 3) remains OPEN.**
+**2026-10-28.** Baseline: merged PR #7 at dc67a722bf55b3f6aa8b2f8d5132a4175324bb91. **Summary: Gate 1 PASSED on a dyadic grid; Gate 2 PASSED (pre-registered v4, blind); Gate 3 (absolute normalization, native `value 3DPDF`) OPEN and out of scope for PR #8.** Sections further below that predate the independent review are kept as a historical record and are superseded by the gate table.
 
 ## Gate Status (updated 2026-10-28 after independent review)
 
@@ -12,9 +12,9 @@ The independent review is `benchmarks/discus_6_23_01/REVIEW_2026-10-28.md`; ever
 | 1 — DISCUS set aver | **PASSED on dyadic grid; non-dyadic residual DIAGNOSED** | Pre-registered dyadic C1 run: total 7.7×10⁻¹⁵, diffuse 6.9×10⁻¹² vs oracle; archived macro rerun bit-identical (`gate1_c1_dyadic/evidence/20261028T234015Z_LAPTOP-NGU3BT0N`). The averaging model is correct. The earlier 1.77 % residual does not occur on a dyadic grid, which supports (does not prove) the non-dyadic phase-increment explanation. |
 | 2 — controlled pair disorder and off-origin 3D-ΔPDF | **PASSED (gate2-prereg-v4, 0/37 failed)** | Blind fresh-seed structures. ΔPDF peaks match the independent prediction to 4.5×10⁻⁶ (positions, signs, amplitudes); engine-precision agreement 4×10⁻¹⁵; random control clean. Scope and limits: `benchmarks/discus_6_23_01/gate2_prereg/RESULT_v4.md`. History: v2 FAIL (unrequested B = 1), v3 FAIL (rounding ties); previous PR #8 comparison remains RETRACTED. |
 | 3 — coordinate/FFT and absolute normalization | **OPEN** | `delta_pdf_fractional` verified against an independent real-space prediction on a commensurate synthetic grid (1×10⁻¹⁵). The native `value 3DPDF` convention is not identified (fits 5.517×10⁻³ × direct + constant, 4–5 % residual). Absolute normalization unresolved. |
-| 4 — PR/CI/reproduction | **PARTIAL** | Pre-registration tests added (`tests/test_gate2_prereg.py`). No evidence deleted. Engine runs done (Gate 1 dyadic PASS, Gate 2 v4 PASS). |
+| 4 — PR/CI/reproduction | **DONE for Gates 0–2** | Pre-registration code, oracle, selftest and CI tests (`tests/test_gate2_prereg.py`); all engine evidence committed with SHA-256 manifests; nothing deleted. Real-engine runs: WSL2, DISCUS_SUITE 6.23.01, binary SHA-256 `d4274f13…45706f3`. |
 
-**Do not merge PR #8** without explicit user approval and further scientific validation. PR #7 was not reopened or modified.
+**Do not merge PR #8** without explicit owner approval. Gate 3 is a separate follow-up and is not a merge requirement. PR #7 was not reopened or modified.
 
 ## Reproducing the archived evidence
 
@@ -209,4 +209,4 @@ To convert to Cartesian Å, multiply by `direct_basis`. For a 4×5.0 Å supercel
 | 3 — coordinate/FFT and absolute normalization | **OPEN**: coordinate convention corrected (fractional units, not Å); absolute normalization unresolved. |
 | 4 — PR/CI/reproduction | **PARTIAL**: code, tests and report; verify full CI and live WSL2 evidence separately. |
 
-**Do not merge PR #8** without explicit user approval and further scientific validation. PR #7 was not reopened or modified.
+**Do not merge PR #8** without explicit owner approval. Gate 3 is a separate follow-up and is not a merge requirement. PR #7 was not reopened or modified.
