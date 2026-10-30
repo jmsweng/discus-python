@@ -91,6 +91,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.Lattice` is the shared crystal-lattice value type (direct/reciprocal basis, Q, d-spacings, PBC distances). See [docs/LATTICE.md](docs/LATTICE.md) and `examples/lattice_basics.py`.
 
+## Structure model
+
+`discuspdf.Structure` is an immutable atomic-structure value type (per-atom NumPy arrays + `Lattice`). Supports `"average"` (site-occupancy) and `"configuration"` (realised) models. See [docs/STRUCTURE.md](docs/STRUCTURE.md) and `examples/structure_basics.py`.
+
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.

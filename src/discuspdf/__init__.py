@@ -25,3 +25,7 @@ __all__ += ["DiscusVolume", "FractionalFFTResult", "read_discus_volume", "delta_
 # General lattice core (Package A, Feature A5).
 from .lattice import Lattice
 __all__ += ["Lattice"]
+
+# Editable Structure model (Package A, Feature A1).
+from .structure import Structure
+__all__ += ["Structure"]
