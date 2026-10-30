@@ -255,6 +255,14 @@ class Lattice:
            then 2; components equal if they differ by < 1e-12). In a cubic
            cell this maps half-cell ties to −½, i.e. the half-open interval
            [−½, ½). The result is deterministic and translation invariant.
+
+        Performance: the candidate-offset grid is enumerated in chunks sized
+        by *element* count (``chunk = max(1, 2**22 // K)`` rows, ``K`` =
+        number of candidate offsets), so each ``(chunk, K, 3)`` float64
+        temporary stays at or below about 100 MB (2**22 · 8 bytes) regardless
+        of the number of displacements. The tie-resolution block (reduced
+        vectors + lexsort) allocates a few more temporaries of the same
+        shape, so the peak stays at a small multiple of the budget.
         """
         df = np.asarray(df, dtype=float)
         if df.shape[-1:] != (3,):
@@ -269,8 +277,9 @@ class Lattice:
         n0 = np.rint(flat)
         r0 = (flat - n0) @ A
         R = np.linalg.norm(r0, axis=1)
+        # Bounded search window for the offset k = n - n0: |k_i| <= R |b_i|
+        # (rows of B).
         Rmax = R.max() if R.size else 0.0
-        # Bounded search window for the offset k = n - n0: |k_i| <= R |b_i| (rows of B).
         b_norms = np.linalg.norm(B, axis=1)  # (3,)
         bounds = np.ceil(Rmax * b_norms).astype(int) + 1
         # Candidate offsets k in the box [-bounds, +bounds] per axis.
@@ -279,7 +288,10 @@ class Lattice:
         k_all = grid.reshape(-1, 3).astype(float)  # (K, 3)
 
         # Process in chunks so the temporary (chunk, K, 3) stays bounded.
-        chunk = max(1, min(flat.shape[0], 65536 // max(k_all.shape[0], 1)))
+        # Budget: 2**20 float64 elements (~8 MB) per (chunk, K, 3) temporary,
+        # i.e. chunk = 2**20 // K rows.  The smaller budget keeps peak memory
+        # low even when K is very large (e.g. |df| up to 1000 → K ≈ 4×10⁸).
+        chunk = max(1, 2**20 // max(k_all.shape[0], 1))
         out = np.empty_like(flat)
         n_out = np.empty(flat.shape, dtype=np.int64)
         for start in range(0, flat.shape[0], chunk):
@@ -297,16 +309,22 @@ class Lattice:
             atol = 1e-12 * Rc + 1e-15
             tie = dist <= dmin[:, None] + atol[:, None]  # (chunk, K)
             if tie.any():
-                # Reduced fractional vector for each candidate: (df - (n0 + k))
-                red = fc[:, None, :] - nc[:, None, :] - k_all[None, :, :]  # (chunk, K, 3)
-                # Lexicographic key with 1e-12 component equality:
-                # key = (round(red_0 / 1e-12)) * S^2 + (round(red_1 / 1e-12)) * S + round(red_2 / 1e-12)
-                S = 2 * int(bounds.max()) + 3  # > max possible |red_i / 1e-12| in the window
-                key = (np.round(red[:, :, 0] / 1e-12) * S**2
-                       + np.round(red[:, :, 1] / 1e-12) * S
-                       + np.round(red[:, :, 2] / 1e-12))
-                key[~tie] = np.inf
-                best = key.argmin(axis=1)
+                # Lexicographic key with 1e-12 component equality: round each
+                # reduced component by 1e-12, then lexsort (component 0 first,
+                # then 1, then 2) restricted to the tied candidates. This is
+                # exact: two tied candidates differ by an integer lattice
+                # vector, so their reduced components differ by integers, which
+                # cannot collapse under 1e-12 rounding.
+                # The reduced vector of a tied candidate is (df - (n0 + k)),
+                # i.e. the main-loop ``d`` values at the tied positions.
+                tie_rows, tie_cols = np.nonzero(tie)
+                red_t = d[tie_rows, tie_cols]  # (T, 3)
+                order = np.lexsort((
+                    np.round(red_t[:, 2]) / 1e-12,
+                    np.round(red_t[:, 1]) / 1e-12,
+                    np.round(red_t[:, 0]) / 1e-12,
+                ))
+                best[tie_rows] = tie_cols[order]
             n_best = (nc + k_all[best]).astype(int)
             out[start:stop] = fc - n_best
             n_out[start:stop] = n_best
