@@ -351,6 +351,102 @@ def test_renumbered_is_only_method_that_renumbers():
     assert np.array_equal(s.atom_id, [10, 20])
 
 
+# ------------------------------ 5b. ids mean atom_id ------------------------------
+def test_select_ids_are_atom_ids_not_rows():
+    """ids= selects by atom_id values, not row numbers."""
+    lat = _cubic()
+    s = Structure(lat, np.array(["Ga", "As", "Cu"]),
+                 np.array([[0.25, 0.25, 0.25], [0.75, 0.75, 0.75], [0.5, 0.5, 0.5]]),
+                 model="configuration",
+                 atom_id=np.array([10, 20, 30]))
+    # id 20 is row 1; id 1 does not exist
+    s2 = s.select(ids=[20])
+    assert np.array_equal(s2.atom_id, [20])
+    with pytest.raises(ValueError, match="unknown atom_id"):
+        s.select(ids=[1])
+
+
+def test_remove_unknown_id_raises():
+    lat = _cubic()
+    s = Structure(lat, np.array(["Ga", "As"]),
+                 np.array([[0.25, 0.25, 0.25], [0.75, 0.75, 0.75]]),
+                 model="configuration",
+                 atom_id=np.array([1, 2]))
+    with pytest.raises(ValueError, match="unknown atom_id"):
+        s.remove([99])
+
+
+def test_remove_selects_by_atom_id_not_row():
+    """atom_id = [1, 2, 0]: remove([0]) removes the atom with id 0 (row 2)."""
+    lat = _cubic()
+    s = Structure(lat, np.array(["Ga", "As", "Cu"]),
+                 np.array([[0.25, 0.25, 0.25], [0.75, 0.75, 0.75], [0.5, 0.5, 0.5]]),
+                 model="configuration",
+                 atom_id=np.array([1, 2, 0]))
+    s2 = s.remove([0])
+    assert np.array_equal(s2.atom_id, [1, 2])
+
+
+def test_select_ids_preserve_row_order():
+    lat = _cubic()
+    s = Structure(lat, np.array(["Ga", "As", "Cu", "Au"]),
+                 np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.2, 0.3, 0.4], [0.5, 0.6, 0.7]]),
+                 model="configuration",
+                 atom_id=np.array([30, 10, 20, 40]))
+    s2 = s.select(ids=[40, 10, 30])
+    assert np.array_equal(s2.atom_id, [30, 10, 40])
+
+
+def test_remove_after_select():
+    """remove on a structure that has already been through select."""
+    lat = _cubic()
+    s = Structure(lat, np.array(["Ga", "As", "Cu"]),
+                 np.array([[0.25, 0.25, 0.25], [0.75, 0.75, 0.75], [0.5, 0.5, 0.5]]),
+                 model="configuration",
+                 atom_id=np.array([10, 20, 30]))
+    s2 = s.select(ids=[10, 30])
+    assert np.array_equal(s2.atom_id, [10, 30])
+    s3 = s2.remove([30])
+    assert np.array_equal(s3.atom_id, [10])
+
+
+def test_select_rows_keyword_selects_by_row_position():
+    lat = _cubic()
+    s = Structure(lat, np.array(["Ga", "As", "Cu"]),
+                 np.array([[0.25, 0.25, 0.25], [0.75, 0.75, 0.75], [0.5, 0.5, 0.5]]),
+                 model="configuration",
+                 atom_id=np.array([10, 20, 30]))
+    s2 = s.select(rows=[2, 0])
+    assert np.array_equal(s2.atom_id, [10, 30])
+
+
+def test_distance_and_displacement_use_atom_ids():
+    """distance/displacement take atom_id values, not row numbers."""
+    lat = _cubic(5.0)
+    s = Structure(lat, np.array(["Ga", "As"]),
+                 np.array([[0.05, 0.5, 0.5], [0.95, 0.5, 0.5]]),
+                 model="configuration",
+                 atom_id=np.array([10, 20]))
+    assert s.distance(10, 20) == pytest.approx(0.5, rel=1e-12)
+    d = s.displacement(10, 20)
+    assert np.allclose(np.abs(d), [0.5, 0.0, 0.0], atol=1e-12)
+    with pytest.raises(ValueError, match="unknown atom_id"):
+        s.distance(0, 1)
+
+
+def test_distance_matrix_ids_are_atom_ids():
+    lat = _cubic(5.0)
+    s = Structure(lat, np.array(["Ga", "As", "Cu"]),
+                 np.array([[0.05, 0.5, 0.5], [0.95, 0.5, 0.5], [0.5, 0.5, 0.5]]),
+                 model="configuration",
+                 atom_id=np.array([10, 20, 30]))
+    m = s.distance_matrix(ids=[10, 30])
+    assert m.shape == (2, 2)
+    assert m[0, 0] == pytest.approx(0.0, abs=1e-12)
+    with pytest.raises(ValueError, match="unknown atom_id"):
+        s.distance_matrix(ids=[0])
+
+
 # ------------------------------ 6. periodicity ------------------------------
 def test_periodic_distance_across_boundary():
     """0.05 → 0.95 in 5 Å gives 0.5 Å."""
@@ -508,6 +604,149 @@ def test_scale_1k_atoms_with_separation():
     t1 = time.perf_counter()
     assert s.n_atoms == n
     print(f"  1k atoms with separation check: {t1 - t0:.2f} s")
+
+
+# ------------------------------ 8b. isclose ------------------------------
+def _two_atom_base():
+    lat = _cubic(5.0)
+    return Structure(lat, np.array(["Ga", "As"]),
+                    np.array([[0.25, 0.25, 0.25], [0.75, 0.75, 0.75]]),
+                    model="configuration",
+                    atom_id=np.array([1, 2]),
+                    site_label=np.array(["S1", "S2"]))
+
+
+def test_isclose_requires_matching_species():
+    s = _two_atom_base()
+    other = s.replace(species=np.array(["Ga", "Xe"]))
+    assert not s.isclose(other)
+
+
+def test_isclose_requires_matching_atom_id():
+    s = _two_atom_base()
+    other = s.replace(atom_id=np.array([1, 3]))
+    assert not s.isclose(other)
+
+
+def test_isclose_requires_matching_pbc():
+    s = _two_atom_base()
+    other = s.replace(pbc=(True, True, False))
+    assert not s.isclose(other)
+
+
+def test_isclose_requires_matching_site_label_and_cell_index():
+    s = _two_atom_base()
+    assert not s.isclose(s.replace(site_label=np.array(["T1", "S2"])))
+    assert not s.isclose(s.replace(cell_index=np.array([[0, 0, 0], [0, 0, 1]]), supercell=(1, 1, 2)))
+
+
+def test_isclose_requires_matching_supercell_and_model():
+    s = _two_atom_base()
+    assert not s.isclose(s.replace(supercell=(2, 1, 1)))
+    other = Structure(_cubic(5.0), np.array(["Ga", "As"]),
+                     np.array([[0.25, 0.25, 0.25], [0.75, 0.75, 0.75]]),
+                     model="average",
+                     occupancy=np.array([0.5, 0.5]),
+                     atom_id=np.array([1, 2]),
+                     site_label=np.array(["S1", "S2"]))
+    assert not s.isclose(other)
+
+
+def test_isclose_b_iso_presence_must_match():
+    s = _two_atom_base()
+    with_b = s.replace(b_iso=np.array([1.0, 1.0]))
+    assert not s.isclose(with_b)
+    assert not with_b.isclose(s)
+    # both have b_iso: numeric closeness applies
+    assert with_b.isclose(with_b.replace(b_iso=np.array([1.0 + 1e-13, 1.0])))
+
+
+def test_isclose_tolerance_applies_to_frac():
+    s = _two_atom_base()
+    other = s.replace(frac=np.array([[0.25 + 1e-13, 0.25, 0.25], [0.75, 0.75, 0.75]]))
+    assert s.isclose(other)
+    assert not s.isclose(other, rtol=0.0, atol=0.0)
+
+
+# ------------------------------ 8c. validation ------------------------------
+def test_site_label_validation():
+    lat = _cubic()
+    # non-string
+    with pytest.raises(ValueError, match="site_label"):
+        Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                  model="configuration", site_label=np.array([3.5]))
+    # empty
+    with pytest.raises(ValueError, match="site_label"):
+        Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                  model="configuration", site_label=np.array([""]))
+    # whitespace
+    with pytest.raises(ValueError, match="whitespace|site_label"):
+        Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                  model="configuration", site_label=np.array(["S 1"]))
+    # too long (> 16)
+    with pytest.raises(ValueError, match="16|site_label"):
+        Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                  model="configuration", site_label=np.array(["S" * 17]))
+    # internal key separators
+    with pytest.raises(ValueError, match="site_label"):
+        Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                  model="configuration", site_label=np.array(["S|1"]))
+    with pytest.raises(ValueError, match="site_label"):
+        Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                  model="configuration", site_label=np.array(["S,1"]))
+    # boundary: 16 characters is accepted
+    s = Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                 model="configuration", site_label=np.array(["S" * 16]))
+    assert s.n_atoms == 1
+
+
+def test_pbc_validation():
+    lat = _cubic()
+    for bad in (("yes", 0, None), (True, 1, False), (True, False), (1, 0, 0)):
+        with pytest.raises(ValueError, match="pbc"):
+            Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                      model="configuration", pbc=bad)
+    # np.bool_ is accepted
+    s = Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                 model="configuration", pbc=(np.bool_(True), True, np.bool_(True)))
+    assert s.pbc == (True, True, True)
+    # mixed PBC is accepted
+    s = Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                 model="configuration", pbc=(np.bool_(True), False, np.bool_(True)),
+                 min_separation=None)
+    assert s.pbc == (True, False, True)
+
+
+def test_site_error_messages_format_site_and_cell():
+    """Site-consistency and overlap errors format the site as
+    ``site 'S0' in cell (0, 0, 0)``, in both the small-n and large-n paths."""
+    lat = _cubic(50.0)
+
+    def _build(n, model, occupancy=None, site_label=None):
+        rng = np.random.default_rng(0)
+        coords = np.zeros((n, 3))
+        # spread atoms so the overlap check passes, then duplicate one site
+        for i in range(n):
+            coords[i] = [0.01 * (i % 7 + 1), 0.01 * ((i // 7) % 7 + 1), 0.01 * ((i // 49) % 7 + 1)]
+        if site_label is None:
+            site_label = np.array([f"S{i}" for i in range(n)], dtype=object)
+        if occupancy is None:
+            occupancy = np.ones(n)
+        return Structure(lat, np.array(["Ga"] * n, dtype=object), coords,
+                         model=model, occupancy=occupancy, site_label=site_label)
+
+    # small-n path: configuration, two atoms on one site
+    n = 10
+    sl = np.array([f"S{i}" for i in range(n)], dtype=object)
+    sl[1] = sl[0]
+    with pytest.raises(ValueError, match=r"site 'S0' in cell \(0, 0, 0\)"):
+        _build(n, "configuration", site_label=sl)
+    # large-n path (> 1000): same expectation
+    n = 1100
+    sl = np.array([f"S{i}" for i in range(n)], dtype=object)
+    sl[1] = sl[0]
+    with pytest.raises(ValueError, match=r"site 'S0' in cell \(0, 0, 0\)"):
+        _build(n, "configuration", site_label=sl)
 
 
 # ------------------------------ 9. example script ------------------------------

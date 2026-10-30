@@ -283,8 +283,7 @@ def test_minimum_image_skewed_cells():
     # Two-sided: the code may not return a *shorter* vector than the true
     # minimum (impossible) NOR a longer one (the batched tie-resolution bug).
     d_ref, _ = _brute_force_minimum_image_vec(lat, df, window=4)
-    worst = float(np.max(np.abs(min_dist - d_ref)))
-    assert worst <= 1e-12
+    assert np.max(np.abs(min_dist - d_ref)) <= 1e-12
 
     # a cell with all angles ≈ 30°: check all 500 (two-sided, same rule)
     lat30 = Lattice.from_parameters(4.0, 4.0, 4.0, 30.0, 30.0, 30.0)
@@ -292,30 +291,34 @@ def test_minimum_image_skewed_cells():
     df_min2, n2 = lat30.minimum_image(df2)
     min_dist2 = np.linalg.norm((df2 - n2) @ lat30.matrix, axis=1)
     d_ref2, _ = _brute_force_minimum_image_vec(lat30, df2, window=4)
-    worst30 = float(np.max(np.abs(min_dist2 - d_ref2)))
-    assert worst30 <= 1e-12
+    assert np.max(np.abs(min_dist2 - d_ref2)) <= 1e-12
 
 
-def test_minimum_image_batch_matches_single_and_oracle():
-    """Batched minimum_image must equal per-vector results and an independent
-    per-row brute-force oracle (documented tie rule), for the five cells from
-    the PR #11 review.  The batch is large enough to need several chunks.
+def test_minimum_image_batch_equals_single_and_oracle():
+    """Batched minimum_image equals per-vector calls and an independent per-row
+    oracle, for the five cells from the PR #11 review.
 
-    The oracle applies the documented tie rule directly: among all shifts
-    n with |df - n| <= d_min + atol (atol = 1e-12 * d_min + 1e-15), keep the
-    one whose reduced vector (df - n) is lexicographically smallest.
+    Cells: cubic 5 Å; hexagonal (4, 4, 4, 90, 90, 120); γ = 20° (5, 5, 5,
+    90, 90, 20); (4, 4, 4, 30, 30, 30); triclinic (4.1, 5.3, 6.7, 78, 95, 112).
+    For each: 2000 random df in [−3, 3] plus the 27 vectors v/2 with
+    v ∈ {−1, 0, 1}³.  Asserts:
+      * batched shifts == per-vector shifts (np.array_equal);
+      * both == an independent per-row oracle: all shifts within ±4 of rint(df),
+        shortest within 1e-12·R + 1e-15, then lexicographically smallest
+        round((df − n)/1e-12).
+    Also runs one batch large enough to span several chunks.
     """
     cells = [
-        ((5.0, 5.0, 5.0), (90.0, 90.0, 90.0)),      # cubic
-        ((5.0, 5.0, 5.0), (90.0, 90.0, 120.0)),   # hexagonal 120°
-        ((5.0, 5.0, 5.0), (90.0, 90.0, 20.0)),    # gamma = 20°
+        ((5.0, 5.0, 5.0), (90.0, 90.0, 90.0)),      # cubic 5 Å
+        ((4.0, 4.0, 4.0), (90.0, 90.0, 120.0)),   # hexagonal
+        ((5.0, 5.0, 5.0), (90.0, 90.0, 20.0)),    # γ = 20°
         ((4.0, 4.0, 4.0), (30.0, 30.0, 30.0)),    # all angles 30°
-        TRIC,                                     # triclinic
+        ((4.1, 5.3, 6.7), (78.0, 95.0, 112.0)),   # triclinic
     ]
     rng = np.random.default_rng(20261030)
 
-    def _oracle(lat, df):
-        """Per-row brute force over shifts within ±4 of rint(df)."""
+    def _oracle_row(lat, df):
+        """Independent per-row brute force over shifts within ±4 of rint(df)."""
         df = np.asarray(df, float)
         A = lat.matrix
         n0 = np.rint(df)
@@ -338,23 +341,21 @@ def test_minimum_image_batch_matches_single_and_oracle():
                     n = n0 + np.array([i, j, k], float)
                     d = (df - n) @ A
                     if float(np.linalg.norm(d)) <= best_d + atol:
-                        red = df - n
-                        key = tuple(np.round(red / 1e-12))
+                        key = tuple(np.round((df - n) / 1e-12))
                         if best_key is None or key < best_key:
                             best_key = key
                             best_n = n
-        return best_d, best_n
+        return best_n
+
+    tie_vecs = np.array(
+        [[x, y, z] for x in (-1.0, 0.0, 1.0) for y in (-1.0, 0.0, 1.0)
+         for z in (-1.0, 0.0, 1.0)]
+    ) / 2.0
 
     for cell, angles in cells:
         lat = Lattice.from_parameters(*cell, *angles)
-        # 2000 random displacements + the 27 half-lattice-vector ties
-        df = rng.uniform(-2.5, 2.5, (2000, 3))
-        tie_vecs = np.array(
-            [[x, y, z] for x in (0.0, 0.5) for y in (0.0, 0.5) for z in (0.0, 0.5)]
-        )
-        df = np.vstack([df, tie_vecs])
-        # batched call: 2027 rows; chunk = 2**20 // K with K up to ~10^3,
-        # i.e. several chunks
+        df = np.vstack([rng.uniform(-3.0, 3.0, (2000, 3)), tie_vecs])
+        # batched call: 2027 rows
         df_min_b, n_b = lat.minimum_image(df)
         # per-vector calls
         n_single = np.empty_like(n_b)
@@ -365,8 +366,17 @@ def test_minimum_image_batch_matches_single_and_oracle():
         # 2. both equal the independent per-row oracle
         n_oracle = np.empty_like(n_b)
         for i in range(df.shape[0]):
-            _, n_oracle[i] = _oracle(lat, df[i])
+            n_oracle[i] = _oracle_row(lat, df[i])
         assert np.array_equal(n_b, n_oracle), (cell, angles)
+
+    # one batch large enough to span several chunks
+    lat = Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 20.0)
+    df = rng.uniform(-3.0, 3.0, (50_000, 3))
+    n_b = lat.minimum_image(df)[1]
+    n_single = np.empty_like(n_b)
+    for i in range(0, df.shape[0], 500):  # representative sample of per-vector calls
+        _, n_single[i] = lat.minimum_image(df[i])
+    assert np.array_equal(n_b[::500], n_single[::500])
 
 
 def test_minimum_image_cubic_half_cell_tie():

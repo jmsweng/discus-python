@@ -270,10 +270,7 @@ class Lattice:
         if not np.isfinite(df).all():
             raise ValueError("fractional displacements must be finite")
         leading = df.shape[:-1]
-        # Reduce mod 1 first: minimum_image is translation invariant, and the
-        # bounded search window is a function of |df mod 1|, so the candidate
-        # grid stays small even for very large |df| (e.g. |df| ~ 1000).
-        flat = (df - np.rint(df)).reshape(-1, 3)
+        flat = df.reshape(-1, 3)
         A = self._A
         B = self._B
 
@@ -291,9 +288,7 @@ class Lattice:
         k_all = grid.reshape(-1, 3).astype(float)  # (K, 3)
 
         # Process in chunks so the temporary (chunk, K, 3) stays bounded.
-        # Budget: 2**20 float64 elements (~8 MB) per (chunk, K, 3) temporary,
-        # i.e. chunk = 2**20 // K rows.  The smaller budget keeps peak memory
-        # low even when K is very large (e.g. |df| up to 1000 → K ≈ 4×10⁸).
+        # Budget: 2**20 elements (~8 MB) per temporary.
         chunk = max(1, 2**20 // max(k_all.shape[0], 1))
         out = np.empty_like(flat)
         n_out = np.empty(flat.shape, dtype=np.int64)

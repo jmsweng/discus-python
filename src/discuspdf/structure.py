@@ -61,6 +61,33 @@ def _validate_cell_index(ci: np.ndarray, supercell: np.ndarray) -> None:
             )
 
 
+def _validate_site_label(site_label: np.ndarray) -> None:
+    """Validate a (N,) string array of site labels.
+
+    Each label must be a non-empty string, at most 16 characters, with no
+    whitespace and no ``|`` or ``,`` (both are used in the internal
+    ``(site_label, cell_index)`` key format).
+    """
+    for i, s in enumerate(site_label):
+        if not isinstance(s, str) or not s:
+            raise ValueError(f"site_label[{i}] must be a non-empty string, got {s!r}")
+        if len(s) > 16:
+            raise ValueError(f"site_label[{i}] exceeds 16 characters: {s!r}")
+        if any(c.isspace() for c in s):
+            raise ValueError(f"site_label[{i}] contains whitespace: {s!r}")
+        if "|" in s or "," in s:
+            raise ValueError(f"site_label[{i}] must not contain '|' or ',': {s!r}")
+
+
+def _validate_pbc(pbc: tuple) -> None:
+    """Validate that pbc is exactly 3 real booleans."""
+    if len(pbc) != 3:
+        raise ValueError(f"pbc must be 3 booleans, got {pbc}")
+    for i, x in enumerate(pbc):
+        if not isinstance(x, (bool, np.bool_)):
+            raise ValueError(f"pbc[{i}] must be a boolean, got {x!r}")
+
+
 def _validate_b_iso(b_iso: np.ndarray | None) -> None:
     """Validate an optional (N,) float array of isotropic B factors (>= 0)."""
     if b_iso is None:
@@ -87,24 +114,20 @@ def _check_site_consistency(
     if n == 0:
         return
 
-    # Build a composite key for grouping.
-    # For large n, use a tuple-based approach to avoid slow Python string formatting.
-    if n > 1000:
-        # Use a structured view: (site_label, ci0, ci1, ci2) as a composite key.
-        # np.unique works on structured arrays.
-        dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
-        keys = np.empty(n, dtype=dtype)
-        keys["sl"] = site_label
-        keys["c0"] = cell_index[:, 0]
-        keys["c1"] = cell_index[:, 1]
-        keys["c2"] = cell_index[:, 2]
-    else:
-        keys = np.array(
-            [f"{site_label[i]}|{cell_index[i, 0]},{cell_index[i, 1]},{cell_index[i, 2]}"
-             for i in range(n)],
-            dtype=object,
-        )
+    # Build a structured composite key: (site_label, ci0, ci1, ci2).
+    # np.unique works on structured arrays, and this avoids the slow Python
+    # string formatting for every n.
+    dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
+    keys = np.empty(n, dtype=dtype)
+    keys["sl"] = site_label
+    keys["c0"] = cell_index[:, 0]
+    keys["c1"] = cell_index[:, 1]
+    keys["c2"] = cell_index[:, 2]
     unique_keys, inverse, counts = np.unique(keys, return_inverse=True, return_counts=True)
+
+    def _site_name(key) -> str:
+        """Format a structured key as ``site 'S0' in cell (0, 0, 0)``."""
+        return f"site {key['sl']!r} in cell ({key['c0']}, {key['c1']}, {key['c2']})"
 
     # Only sites with > 1 member need checking.
     multi_mask = counts > 1
@@ -122,7 +145,7 @@ def _check_site_consistency(
         members = np.where(multi_site_ids == key_idx)[0]
         if model == "configuration":
             raise ValueError(
-                f"configuration model: site {key!r} has "
+                f"configuration model: {_site_name(key)} has "
                 f"{len(members)} atoms; a configuration site holds at most one atom"
             )
         # average model: all rows must share the same fractional position (<= 1e-6)
@@ -130,21 +153,21 @@ def _check_site_consistency(
         ref_frac = frac[members[0]]
         if np.max(np.abs(frac[members] - ref_frac)) > 1e-6:
             raise ValueError(
-                f"average model: site {key!r} has rows with "
+                f"average model: {_site_name(key)} has rows with "
                 f"differing fractional positions (> 1e-6)"
             )
         if b_iso is not None:
             ref_b = b_iso[members[0]]
             if np.max(np.abs(b_iso[members] - ref_b)) > 1e-12:
                 raise ValueError(
-                    f"average model: site {key!r} has rows with "
+                    f"average model: {_site_name(key)} has rows with "
                     f"differing b_iso values"
                 )
         # Occupancies must sum to <= 1 + 1e-6.
         occ_sum = float(np.sum(occupancy[members]))
         if occ_sum > 1.0 + 1e-6:
             raise ValueError(
-                f"average model: site {key!r} has total occupancy "
+                f"average model: {_site_name(key)} has total occupancy "
                 f"{occ_sum:.6f} > 1 + 1e-6"
             )
 
@@ -172,25 +195,22 @@ def _check_overlap(
     if n >= n_atoms_limit:
         return
 
+    def _site_name(key) -> str:
+        """Format a structured key as ``site 'S0' in cell (0, 0, 0)``."""
+        return f"site {key['sl']!r} in cell ({key['c0']}, {key['c1']}, {key['c2']})"
+
     all_pbc = all(pbc)
     no_pbc = not any(pbc)
     if not all_pbc and not no_pbc:
         raise NotImplementedError("mixed PBC not yet supported")
 
     # Group rows by site.
-    if n > 1000:
-        dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
-        keys = np.empty(n, dtype=dtype)
-        keys["sl"] = site_label
-        keys["c0"] = cell_index[:, 0]
-        keys["c1"] = cell_index[:, 1]
-        keys["c2"] = cell_index[:, 2]
-    else:
-        keys = np.array(
-            [f"{site_label[i]}|{cell_index[i, 0]},{cell_index[i, 1]},{cell_index[i, 2]}"
-             for i in range(n)],
-            dtype=object,
-        )
+    dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
+    keys = np.empty(n, dtype=dtype)
+    keys["sl"] = site_label
+    keys["c0"] = cell_index[:, 0]
+    keys["c1"] = cell_index[:, 1]
+    keys["c2"] = cell_index[:, 2]
     unique_sites, inverse = np.unique(keys, return_inverse=True)
     n_sites = len(unique_sites)
 
@@ -227,7 +247,7 @@ def _check_overlap(
                     dmin_idx = np.unravel_index(np.argmin(dists), dists.shape)
                     d = float(dists[dmin_idx])
                     raise ValueError(
-                        f"atoms at sites {unique_sites[i]!r} and {unique_sites[j]!r} "
+                        f"atoms at sites {_site_name(unique_sites[i])} and {_site_name(unique_sites[j])} "
                         f"are {d:.6f} Å apart (< {min_separation} Å)"
                     )
             else:
@@ -236,7 +256,7 @@ def _check_overlap(
                     dmin_idx = np.unravel_index(np.argmin(dists), dists.shape)
                     d = float(dists[dmin_idx])
                     raise ValueError(
-                        f"atoms at sites {unique_sites[i]!r} and {unique_sites[j]!r} "
+                        f"atoms at sites {_site_name(unique_sites[i])} and {_site_name(unique_sites[j])} "
                         f"are {d:.6f} Å apart (< {min_separation} Å)"
                     )
 
@@ -352,6 +372,7 @@ class Structure:
             site_label = np.array(site_label, dtype=object, copy=True)
             if site_label.shape != (n,):
                 raise ValueError(f"site_label must have shape ({n},), got {site_label.shape}")
+            _validate_site_label(site_label)
 
         if atom_id is None:
             atom_id = np.arange(n, dtype=np.int64)
@@ -380,8 +401,7 @@ class Structure:
         supercell = supercell_arr
 
         pbc = tuple(pbc)
-        if len(pbc) != 3:
-            raise ValueError(f"pbc must be 3 booleans, got {pbc}")
+        _validate_pbc(pbc)
 
         # Model-specific validation.
         if model == "configuration":
@@ -591,13 +611,16 @@ class Structure:
         mask: np.ndarray | None = None,
         *,
         ids: np.ndarray | None = None,
+        rows: np.ndarray | None = None,
         species: str | list[str] | None = None,
         site: str | None = None,
         allow_empty: bool = False,
     ) -> "Structure":
         """Return a new Structure with the selected rows (original atom_ids, original order).
 
-        An empty selection raises ``ValueError`` unless ``allow_empty=True``.
+        ``ids`` selects by ``atom_id`` values (not row numbers); unknown ids raise
+        ``ValueError``.  ``rows`` selects by row position.  An empty selection
+        raises ``ValueError`` unless ``allow_empty=True``.
         """
         n = self.n_atoms
         if mask is not None:
@@ -606,11 +629,15 @@ class Structure:
                 raise ValueError(f"mask must have shape ({n},), got {mask.shape}")
             selected = mask
         elif ids is not None:
-            ids = np.asarray(ids, dtype=np.int64)
-            if np.any(ids < 0) or np.any(ids >= n):
-                raise ValueError(f"ids must be in [0, {n})")
+            rows_ = self._rows_for_ids(ids)
             selected = np.zeros(n, dtype=bool)
-            selected[ids] = True
+            selected[rows_] = True
+        elif rows is not None:
+            rows_ = np.asarray(rows, dtype=np.int64)
+            if np.any(rows_ < 0) or np.any(rows_ >= n):
+                raise ValueError(f"rows must be in [0, {n})")
+            selected = np.zeros(n, dtype=bool)
+            selected[rows_] = True
         elif species is not None:
             if isinstance(species, str):
                 species = [species]
@@ -689,15 +716,13 @@ class Structure:
         return self.replace(occupancy=np.asarray(values, dtype=float))
 
     def remove(self, ids: np.ndarray) -> "Structure":
-        """Return a new Structure without the given atom IDs."""
-        ids = np.asarray(ids, dtype=np.int64)
+        """Return a new Structure without the given atom IDs.
+
+        ``ids`` are ``atom_id`` values; unknown ids raise ``ValueError``.
+        """
+        rows_ = self._rows_for_ids(ids)
         mask = np.ones(self.n_atoms, dtype=bool)
-        mask[np.isin(np.arange(self.n_atoms), ids)] = False
-        # More efficient: find which rows have the given IDs.
-        id_to_row = {int(aid): i for i, aid in enumerate(self._atom_id)}
-        for aid in ids:
-            if int(aid) in id_to_row:
-                mask[id_to_row[int(aid)]] = False
+        mask[rows_] = False
         idx = np.where(mask)[0]
         if len(idx) == 0:
             raise ValueError("removing all atoms; pass allow_empty=True to permit it")
@@ -796,8 +821,7 @@ class Structure:
         if ids is None:
             idx = np.arange(self.n_atoms)
         else:
-            ids = np.asarray(ids, dtype=np.int64)
-            idx = np.array([self._row_for_id(int(i)) for i in ids])
+            idx = self._rows_for_ids(ids)
         m = len(idx)
         if m > 5000:
             raise ValueError(
@@ -833,11 +857,29 @@ class Structure:
         return df @ self._lattice.matrix
 
     def _row_for_id(self, atom_id: int) -> int:
-        """Find the row index for a given atom_id."""
-        for i, aid in enumerate(self._atom_id):
-            if int(aid) == atom_id:
-                return i
-        raise ValueError(f"atom_id {atom_id} not found")
+        """Find the row index for a given atom_id (raises if unknown)."""
+        return int(self._rows_for_ids(np.array([atom_id], dtype=np.int64))[0])
+
+    def _rows_for_ids(self, ids: np.ndarray) -> np.ndarray:
+        """Vectorised lookup: rows for the given atom_id values.
+
+        Unknown ids raise ``ValueError`` naming up to five of them.
+        """
+        ids = np.asarray(ids, dtype=np.int64)
+        order = np.argsort(self._atom_id)
+        positions = np.searchsorted(self._atom_id, ids, sorter=order)
+        found = (positions < self.n_atoms) & (
+            self._atom_id[order][np.minimum(positions, self.n_atoms - 1)] == ids
+        )
+        missing = ids[~found]
+        if missing.size:
+            shown = np.unique(missing)[:5]
+            names = ", ".join(str(int(x)) for x in shown)
+            more = f" (and {missing.size - shown.size} more)" if missing.size > 5 else ""
+            raise ValueError(f"unknown atom_id(s): {names}{more}")
+        rows = order[positions]
+        rows[~found] = 0  # keep indices valid; only valid rows are used
+        return rows
 
     def _cartesian_subset(self, idx: np.ndarray) -> np.ndarray:
         return self._frac[idx] @ self._lattice.matrix
@@ -875,12 +917,31 @@ class Structure:
         )
 
     def isclose(self, other: "Structure", rtol: float = 1e-12, atol: float = 1e-15) -> bool:
-        """Element-wise closeness of all numeric fields."""
+        """Element-wise closeness of the numeric fields.
+
+        Species, site_label, atom_id, cell_index, supercell, pbc and model are
+        compared exactly; tolerances apply only to the lattice, frac, occupancy
+        and b_iso.  Returns ``False`` if exactly one side has ``b_iso``.
+        """
         if not isinstance(other, Structure):
             raise TypeError("isclose requires another Structure")
         if self._model != other._model:
             return False
         if self.n_atoms != other.n_atoms:
+            return False
+        if not np.array_equal(self._species, other._species):
+            return False
+        if not np.array_equal(self._site_label, other._site_label):
+            return False
+        if not np.array_equal(self._atom_id, other._atom_id):
+            return False
+        if not np.array_equal(self._cell_index, other._cell_index):
+            return False
+        if not np.array_equal(self._supercell, other._supercell):
+            return False
+        if self._pbc != other._pbc:
+            return False
+        if (self._b_iso is None) != (other._b_iso is None):
             return False
         if not self._lattice.isclose(other._lattice, rtol=rtol, atol=atol):
             return False
@@ -888,7 +949,7 @@ class Structure:
             return False
         if not np.allclose(self._occupancy, other._occupancy, rtol=rtol, atol=atol):
             return False
-        if self._b_iso is not None and other._b_iso is not None:
+        if self._b_iso is not None:
             if not np.allclose(self._b_iso, other._b_iso, rtol=rtol, atol=atol):
                 return False
         return True
