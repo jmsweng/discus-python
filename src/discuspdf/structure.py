@@ -134,15 +134,13 @@ def _check_site_consistency(
     if not multi_mask.any():
         return
 
-    # Map from original row index to multi-site index (or -1 if not a multi-site).
-    multi_site_ids = np.where(multi_mask[inverse], inverse, -1)
     n_multi = int(multi_mask.sum())
 
     for key_idx in range(n_multi):
         # Find the original unique_keys index for this multi-site.
         orig_idx = np.where(multi_mask)[0][key_idx]
         key = unique_keys[orig_idx]
-        members = np.where(multi_site_ids == key_idx)[0]
+        members = np.where(inverse == orig_idx)[0]
         if model == "configuration":
             raise ValueError(
                 f"configuration model: {_site_name(key)} has "
@@ -654,7 +652,11 @@ class Structure:
         return self._subset(idx)
 
     def _subset(self, idx: np.ndarray) -> "Structure":
-        """Internal: create a new Structure from the given row indices."""
+        """Internal: create a new Structure from the given row indices.
+
+        Skips re-validation on purpose: any subset of a valid structure is valid
+        (no new sites, positions or occupancies are introduced).
+        """
         b_iso = self._b_iso[idx].copy() if self._b_iso is not None else None
         return _Structure_bypass_validation(
             lattice=self._lattice,
@@ -671,49 +673,47 @@ class Structure:
         )
 
     # -- functional edits -------------------------------------------------
-    def replace(self, **fields) -> "Structure":
+    def replace(self, *, min_separation: float | None = 0.1, **fields) -> "Structure":
         """Return a new Structure with the given fields replaced.
 
         Supported fields: species, frac, occupancy, site_label, atom_id,
-        b_iso, cell_index, supercell, pbc.  The new values are re-validated.
+        b_iso, cell_index, supercell, pbc.  The result is fully re-validated,
+        including the overlap check; pass ``min_separation=None`` to skip it.
         """
         if not fields:
             return self
+        allowed = ("species", "frac", "occupancy", "site_label", "atom_id",
+                   "b_iso", "cell_index", "supercell", "pbc")
+        for name in fields:
+            if name not in allowed:
+                raise ValueError(f"unknown field {name!r} for replace()")
         kwargs = {
-            "lattice": self._lattice,
             "species": self._species.copy(),
             "frac": self._frac.copy(),
-            "model": self._model,
             "occupancy": self._occupancy.copy(),
             "site_label": self._site_label.copy(),
             "atom_id": self._atom_id.copy(),
+            "b_iso": None if self._b_iso is None else self._b_iso.copy(),
             "cell_index": self._cell_index.copy(),
             "supercell": tuple(self._supercell),
             "pbc": self._pbc,
-            "min_separation": None,
         }
-        if self._b_iso is not None:
-            kwargs["b_iso"] = self._b_iso.copy()
-        for name, value in fields.items():
-            if name not in ("species", "frac", "occupancy", "site_label", "atom_id",
-                           "b_iso", "cell_index", "supercell", "pbc"):
-                raise ValueError(f"unknown field {name!r} for replace()")
-            kwargs[name] = value
-        return Structure(**kwargs)
+        kwargs.update(fields)
+        return Structure(self._lattice, model=self._model,
+                         min_separation=min_separation, **kwargs)
 
-    def with_frac(self, frac: np.ndarray) -> "Structure":
-        """Return a new Structure with the given fractional coordinates."""
-        return self.replace(frac=np.asarray(frac, dtype=float))
+    def with_frac(self, frac: np.ndarray, *, min_separation: float | None = 0.1) -> "Structure":
+        """Return a new Structure with the given fractional coordinates (re-validated)."""
+        return self.replace(frac=np.asarray(frac, dtype=float), min_separation=min_separation)
 
-    def with_cartesian(self, cart: np.ndarray) -> "Structure":
-        """Return a new Structure with the given Cartesian coordinates (Å)."""
-        cart = np.asarray(cart, dtype=float)
-        frac = self._lattice.cart_to_frac(cart)
-        return self.replace(frac=frac)
+    def with_cartesian(self, cart: np.ndarray, *, min_separation: float | None = 0.1) -> "Structure":
+        """Return a new Structure with the given Cartesian coordinates in Å (re-validated)."""
+        frac = self._lattice.cart_to_frac(np.asarray(cart, dtype=float))
+        return self.replace(frac=frac, min_separation=min_separation)
 
-    def with_occupancy(self, values: np.ndarray) -> "Structure":
+    def with_occupancy(self, values: np.ndarray, *, min_separation: float | None = 0.1) -> "Structure":
         """Return a new Structure with the given occupancies (re-validated)."""
-        return self.replace(occupancy=np.asarray(values, dtype=float))
+        return self.replace(occupancy=np.asarray(values, dtype=float), min_separation=min_separation)
 
     def remove(self, ids: np.ndarray) -> "Structure":
         """Return a new Structure without the given atom IDs.
@@ -728,65 +728,53 @@ class Structure:
             raise ValueError("removing all atoms; pass allow_empty=True to permit it")
         return self._subset(idx)
 
-    def concat(self, other: "Structure", *, renumber: bool = False) -> "Structure":
+    def concat(self, other: "Structure", *, renumber: bool = False,
+               min_separation: float | None = 0.1) -> "Structure":
         """Return a new Structure that is the concatenation of self and other.
 
-        The lattices must be isclose.  atom_id clashes raise unless
-        ``renumber=True``, in which case new IDs start at max(existing) + 1.
+        Lattices must be isclose; model, supercell and pbc must be equal; either
+        both or neither structure has ``b_iso``.  atom_id clashes raise unless
+        ``renumber=True``, in which case other's IDs are shifted to start at
+        max(existing) + 1.  The result is fully re-validated (site consistency
+        and overlap check); pass ``min_separation=None`` to skip the overlap check.
         """
         if not self._lattice.isclose(other._lattice):
             raise ValueError("concat: lattices are not isclose")
         if self._model != other._model:
+            raise ValueError(f"concat: models differ ({self._model!r} vs {other._model!r})")
+        if not np.array_equal(self._supercell, other._supercell):
             raise ValueError(
-                f"concat: models differ ({self._model!r} vs {other._model!r})"
-            )
-        n1, n2 = self.n_atoms, other.n_atoms
-        species = np.concatenate([self._species, other._species])
-        frac = np.concatenate([self._frac, other._frac])
-        occ = np.concatenate([self._occupancy, other._occupancy])
-        site = np.concatenate([self._site_label, other._site_label])
-        ci = np.concatenate([self._cell_index, other._cell_index])
-        sc = np.maximum(self._supercell, other._supercell)
+                f"concat: supercells differ ({tuple(self._supercell)} vs {tuple(other._supercell)})")
+        if self._pbc != other._pbc:
+            raise ValueError(f"concat: pbc differ ({self._pbc} vs {other._pbc})")
+        if (self._b_iso is None) != (other._b_iso is None):
+            raise ValueError("concat: only one structure has b_iso; set it on both or neither")
 
         if renumber:
             max_id = max(int(self._atom_id.max()), int(other._atom_id.max()))
-            id1 = self._atom_id.copy()
-            # Remap other's IDs to start at max_id + 1 (preserving relative order).
-            min_other = int(other._atom_id.min())
-            id2 = other._atom_id - min_other + (max_id + 1)
-            atom_id = np.concatenate([id1, id2])
+            id2 = other._atom_id - int(other._atom_id.min()) + (max_id + 1)
         else:
-            atom_id = np.concatenate([self._atom_id, other._atom_id])
-            if len(np.unique(atom_id)) != n1 + n2:
-                raise ValueError(
-                    "concat: atom_id clash; pass renumber=True to reassign IDs"
-                )
+            id2 = other._atom_id
+        atom_id = np.concatenate([self._atom_id, id2])
+        if not renumber and len(np.unique(atom_id)) != len(atom_id):
+            raise ValueError("concat: atom_id clash; pass renumber=True to reassign IDs")
 
-        b1 = self._b_iso
-        b2 = other._b_iso
-        if b1 is None and b2 is None:
-            b_iso = None
-        elif b1 is None:
-            b_iso = np.concatenate([np.full(n1, np.nan), b2])
-        elif b2 is None:
-            b_iso = np.concatenate([b1, np.full(n2, np.nan)])
-        else:
-            b_iso = np.concatenate([b1, b2])
-
-        # Note: concat does not re-validate site consistency; the caller is
-        # responsible for ensuring the combined structure is valid.
-        return _Structure_bypass_validation(
-            lattice=self._lattice,
-            species=species,
-            frac=frac,
+        b_iso = None
+        if self._b_iso is not None:
+            b_iso = np.concatenate([self._b_iso, other._b_iso])
+        return Structure(
+            self._lattice,
+            np.concatenate([self._species, other._species]),
+            np.concatenate([self._frac, other._frac]),
             model=self._model,
-            occupancy=occ,
-            site_label=site,
+            occupancy=np.concatenate([self._occupancy, other._occupancy]),
+            site_label=np.concatenate([self._site_label, other._site_label]),
             atom_id=atom_id,
             b_iso=b_iso,
-            cell_index=ci,
-            supercell=tuple(sc),
+            cell_index=np.concatenate([self._cell_index, other._cell_index]),
+            supercell=tuple(self._supercell),
             pbc=self._pbc,
+            min_separation=min_separation,
         )
 
     def renumbered(self) -> "Structure":

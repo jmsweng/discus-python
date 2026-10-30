@@ -257,9 +257,9 @@ class Lattice:
            [−½, ½). The result is deterministic and translation invariant.
 
         Performance: the candidate-offset grid is enumerated in chunks sized
-        by *element* count (``chunk = max(1, 2**22 // K)`` rows, ``K`` =
+        by *element* count (``chunk = max(1, 2**20 // K)`` rows, ``K`` =
         number of candidate offsets), so each ``(chunk, K, 3)`` float64
-        temporary stays at or below about 100 MB (2**22 · 8 bytes) regardless
+        temporary stays at about 8 MB (2**20 · 8 bytes) regardless
         of the number of displacements. The tie-resolution block (reduced
         vectors + lexsort) allocates a few more temporaries of the same
         shape, so the peak stays at a small multiple of the budget.

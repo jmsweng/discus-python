@@ -216,10 +216,17 @@ def test_mixed_site_preservation():
     assert s4.occupancy[0] == pytest.approx(0.7)
     assert s4.composition() == {"Cu": 1.6, "Au": 0.3}
 
-    # concat
-    s5 = s.concat(s, renumber=True)
-    assert s5.n_atoms == 6
-    assert s5.composition() == {"Cu": 3.3, "Au": 0.5}
+    # concat with a compatible average model (different sites, no overlap)
+    other = Structure(lat,
+                      np.array(["Cu", "Au"]),
+                      np.array([[0.25, 0.75, 0.25], [0.25, 0.75, 0.25]]),
+                      model="average",
+                      occupancy=np.array([0.5, 0.5]),
+                      site_label=np.array(["S3", "S3"]))
+    s5 = s.concat(other, renumber=True)
+    assert s5.n_atoms == 5
+    assert s5.composition() == pytest.approx({"Cu": 2.15, "Au": 0.75})
+    assert list(s5.occupancy) == [0.75, 0.25, 0.9, 0.5, 0.5]  # no row became fully occupied
 
 
 # ------------------------------ 3. coordinates ------------------------------
@@ -630,7 +637,7 @@ def test_isclose_requires_matching_atom_id():
 
 def test_isclose_requires_matching_pbc():
     s = _two_atom_base()
-    other = s.replace(pbc=(True, True, False))
+    other = s.replace(pbc=(True, True, False), min_separation=None)
     assert not s.isclose(other)
 
 
@@ -759,3 +766,86 @@ def test_example_script_runs():
     result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr
     assert "gaas" in result.stdout.lower() or "structure" in result.stdout.lower()
+
+
+# ------------------------------ review fix-ups: Task 2a ------------------------------
+def test_edits_recheck_overlap():
+    s = _two_atom_base()
+    with pytest.raises(ValueError, match=r"site 'S1' in cell \(0, 0, 0\)"):
+        s.with_frac(np.array([[0.25, 0.25, 0.25], [0.2501, 0.25, 0.25]]))
+    with pytest.raises(ValueError, match="apart"):
+        s.with_cartesian(np.array([[1.25, 1.25, 1.25], [1.25, 1.25, 1.26]]))
+    with pytest.raises(ValueError, match="apart"):
+        s.replace(frac=np.array([[0.25, 0.25, 0.25], [0.25, 0.25, 0.25]]))
+    # explicit opt-out still works
+    t = s.with_frac(np.array([[0.25, 0.25, 0.25], [0.2501, 0.25, 0.25]]), min_separation=None)
+    assert t.n_atoms == 2
+    # the original is untouched
+    assert np.array_equal(s.frac, [[0.25, 0.25, 0.25], [0.75, 0.75, 0.75]])
+
+
+def test_concat_validates_result():
+    s = _two_atom_base()
+    # configuration concatenated with itself: two atoms per site
+    with pytest.raises(ValueError, match="configuration"):
+        s.concat(s, renumber=True)
+    # average model concatenated with itself: site occupancy sum 2.0
+    lat = _cubic(4.0)
+    avg = Structure(lat, np.array(["Cu", "Au"]),
+                    np.array([[0.25, 0.25, 0.25], [0.25, 0.25, 0.25]]),
+                    model="average", occupancy=np.array([0.75, 0.25]),
+                    site_label=np.array(["S1", "S1"]))
+    with pytest.raises(ValueError, match="occupancy"):
+        avg.concat(avg, renumber=True)
+
+
+def test_concat_rejects_mismatched_metadata():
+    lat = _cubic(5.0)
+    a = Structure(lat, np.array(["Ga"]), np.array([[0.1, 0.1, 0.1]]),
+                  model="configuration", atom_id=np.array([0]), site_label=np.array(["A1"]))
+    b_iso = Structure(lat, np.array(["As"]), np.array([[0.6, 0.6, 0.6]]),
+                      model="configuration", atom_id=np.array([1]), site_label=np.array(["B1"]),
+                      b_iso=np.array([0.5]))
+    with pytest.raises(ValueError, match="b_iso"):
+        a.concat(b_iso)
+    big = Structure(lat, np.array(["As"]), np.array([[0.6, 0.6, 0.6]]),
+                    model="configuration", atom_id=np.array([1]), site_label=np.array(["B1"]),
+                    supercell=(2, 2, 2))
+    with pytest.raises(ValueError, match="supercell"):
+        a.concat(big)
+    slab = Structure(lat, np.array(["As"]), np.array([[0.6, 0.6, 0.6]]),
+                     model="configuration", atom_id=np.array([1]), site_label=np.array(["B1"]),
+                     pbc=(True, True, False), min_separation=None)
+    with pytest.raises(ValueError, match="pbc"):
+        a.concat(slab)
+    # compatible structures concatenate, keeping ids and order
+    c = Structure(lat, np.array(["As"]), np.array([[0.6, 0.6, 0.6]]),
+                  model="configuration", atom_id=np.array([7]), site_label=np.array(["B1"]))
+    ab = a.concat(c)
+    assert list(ab.atom_id) == [0, 7]
+    assert list(ab.species) == ["Ga", "As"]
+
+
+def test_site_consistency_checks_the_right_rows():
+    """Mixed sites are validated using their own rows, whatever order the site keys sort in."""
+    lat = _cubic(4.0)
+    # S2 (mixed) sorts after S1 (single): its two rows sit at different positions -> must raise
+    with pytest.raises(ValueError, match="S2.*differing fractional positions"):
+        Structure(lat, np.array(["X", "Cu", "Au"]),
+                  np.array([[0.0, 0.0, 0.0], [0.25, 0.25, 0.25], [0.5, 0.5, 0.5]]),
+                  model="average", occupancy=np.array([1.0, 0.5, 0.5]),
+                  site_label=np.array(["S1", "S2", "S2"]))
+    # two mixed sites after a single site: the over-occupied one (S3) is reported
+    with pytest.raises(ValueError, match="S3.*total occupancy"):
+        Structure(lat, np.array(["X", "Cu", "Au", "Cu", "Au"]),
+                  np.array([[0, 0, 0], [0.25, 0.25, 0.25], [0.25, 0.25, 0.25],
+                            [0.5, 0.5, 0.5], [0.5, 0.5, 0.5]], dtype=float),
+                  model="average", occupancy=np.array([1.0, 0.5, 0.5, 0.7, 0.7]),
+                  site_label=np.array(["S1", "S2", "S2", "S3", "S3"]))
+    # same structure with valid occupancies is accepted
+    ok = Structure(lat, np.array(["X", "Cu", "Au", "Cu", "Au"]),
+                   np.array([[0, 0, 0], [0.25, 0.25, 0.25], [0.25, 0.25, 0.25],
+                             [0.5, 0.5, 0.5], [0.5, 0.5, 0.5]], dtype=float),
+                   model="average", occupancy=np.array([1.0, 0.5, 0.5, 0.6, 0.4]),
+                   site_label=np.array(["S1", "S2", "S2", "S3", "S3"]))
+    assert ok.n_atoms == 5
