@@ -270,7 +270,10 @@ class Lattice:
         if not np.isfinite(df).all():
             raise ValueError("fractional displacements must be finite")
         leading = df.shape[:-1]
-        flat = df.reshape(-1, 3)
+        # Reduce mod 1 first: minimum_image is translation invariant, and the
+        # bounded search window is a function of |df mod 1|, so the candidate
+        # grid stays small even for very large |df| (e.g. |df| ~ 1000).
+        flat = (df - np.rint(df)).reshape(-1, 3)
         A = self._A
         B = self._B
 
@@ -309,22 +312,29 @@ class Lattice:
             atol = 1e-12 * Rc + 1e-15
             tie = dist <= dmin[:, None] + atol[:, None]  # (chunk, K)
             if tie.any():
-                # Lexicographic key with 1e-12 component equality: round each
-                # reduced component by 1e-12, then lexsort (component 0 first,
-                # then 1, then 2) restricted to the tied candidates. This is
-                # exact: two tied candidates differ by an integer lattice
-                # vector, so their reduced components differ by integers, which
-                # cannot collapse under 1e-12 rounding.
+                # Lexicographic key with 1e-12 component equality: divide each
+                # reduced component by 1e-12 first, then round, so the key is
+                # the integer number of 1e-12 units (np.round(x / 1e-12)).
+                # Ties are resolved WITHIN EACH ROW: the row index is the
+                # primary sort key, so the first entry per row (smallest
+                # reduced vector, component 0 then 1 then 2) wins.
+                # This is exact: two tied candidates of the same row differ
+                # by an integer lattice vector, so their reduced components
+                # differ by integers, which cannot collapse under 1e-12
+                # rounding.
                 # The reduced vector of a tied candidate is (df - (n0 + k)),
                 # i.e. the main-loop ``d`` values at the tied positions.
                 tie_rows, tie_cols = np.nonzero(tie)
                 red_t = d[tie_rows, tie_cols]  # (T, 3)
                 order = np.lexsort((
-                    np.round(red_t[:, 2]) / 1e-12,
-                    np.round(red_t[:, 1]) / 1e-12,
-                    np.round(red_t[:, 0]) / 1e-12,
+                    np.round(red_t[:, 2] / 1e-12),
+                    np.round(red_t[:, 1] / 1e-12),
+                    np.round(red_t[:, 0] / 1e-12),
+                    tie_rows,
                 ))
-                best[tie_rows] = tie_cols[order]
+                # First (per-row) entry after the sort wins the tie.
+                _, first_pos = np.unique(tie_rows[order], return_index=True)
+                best[tie_rows[order[first_pos]]] = tie_cols[order[first_pos]]
             n_best = (nc + k_all[best]).astype(int)
             out[start:stop] = fc - n_best
             n_out[start:stop] = n_best
