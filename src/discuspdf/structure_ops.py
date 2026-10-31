@@ -332,3 +332,106 @@ def check_composition(structure: Structure, expected: dict, *, atol: float = 0.0
     if mismatches:
         details = "; ".join(f"{sp}: expected {exp}, got {act}" for sp, exp, act in mismatches)
         raise ValueError(f"composition mismatch: {details}")
+
+
+def sample_configuration(structure: Structure, *, seed: int) -> EditResult:
+    """Draw one realised configuration from an average (site-occupancy) structure.
+
+    Each site's occupancies are treated as a categorical distribution over its
+    member rows (in row order); the last member is realised when the total
+    occupancy is 1 (within 1e-9), so the site may be a vacancy when the total
+    occupancy is < 1.  Draws use ``np.random.default_rng(seed).random(n_sites)``
+    once, in site order of first appearance.
+
+    Args:
+        structure: a ``model="average"`` ``Structure``.
+        seed: integer seed for the random draw.
+
+    Returns:
+        An ``EditResult`` with ``model="configuration"`` (occupancies all 1.0),
+        the realised rows in their original order, and ``ids`` = the sorted
+        ``atom_id``s of removed rows (vacancies and rejected alternatives).
+
+    Raises:
+        ValueError: if ``structure.model`` is not ``"average"``, or if the
+            result is empty (all sites vacant).
+    """
+    if structure.model == "configuration":
+        raise ValueError(
+            "sample_configuration requires model='average'; "
+            "a configuration structure is already sampled"
+        )
+    if structure.model != "average":
+        raise ValueError(
+            f"sample_configuration requires model='average', got {structure.model!r}"
+        )
+
+    # Sites in order of first appearance (smallest member row index).
+    sites = sorted(structure.sites(), key=lambda s: min(s["members"]))
+
+    # One draw per site, in that site order.
+    u = np.random.default_rng(seed).random(len(sites))
+
+    keep_rows: list[int] = []
+    n_vacancies = 0
+    for k, site in enumerate(sites):
+        members = site["members"]  # in row order
+        cum = np.cumsum(structure.occupancy[members])
+        if cum[-1] >= 1.0 - 1e-9:
+            cum = cum.copy()
+            cum[-1] = 1.0
+        j = int(np.searchsorted(cum, u[k], side="right"))
+        if j < len(members):
+            keep_rows.append(members[j])
+        else:
+            n_vacancies += 1
+
+    if not keep_rows:
+        raise ValueError("sample_configuration produced an empty structure (all sites vacant)")
+
+    keep_rows = sorted(keep_rows)
+
+    keep_set = set(keep_rows)
+    removed_rows = [i for i in range(structure.n_atoms) if i not in keep_set]
+
+    n = len(keep_rows)
+    species_new = structure.species[keep_rows]
+    frac_new = structure.frac[keep_rows]
+    occ_new = np.ones(n, dtype=float)
+    sl_new = structure.site_label[keep_rows]
+    aid_new = structure.atom_id[keep_rows]
+    ci_new = structure.cell_index[keep_rows]
+    b_iso_new = None
+    if structure.b_iso is not None:
+        b_iso_new = structure.b_iso[keep_rows]
+
+    new_struct = Structure(
+        structure.lattice,
+        species_new,
+        frac_new,
+        model="configuration",
+        occupancy=occ_new,
+        site_label=sl_new,
+        atom_id=aid_new,
+        b_iso=b_iso_new,
+        cell_index=ci_new,
+        supercell=structure.supercell,
+        pbc=structure.pbc,
+    )
+
+    # expected: occupancy-weighted count per species (from the input)
+    expected = structure.composition()
+    # realised: raw count per species in the output
+    realised = new_struct.counts()
+
+    return EditResult(
+        structure=new_struct,
+        ids=np.sort(structure.atom_id[removed_rows]),
+        seed=seed,
+        info={
+            "n_sites": int(len(sites)),
+            "n_vacancies": int(n_vacancies),
+            "expected": expected,
+            "realised": realised,
+        },
+    )

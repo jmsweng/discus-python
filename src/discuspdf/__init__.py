@@ -79,5 +79,5 @@ from .diffpy_io import to_diffpy, from_diffpy
 __all__ += ["to_diffpy", "from_diffpy"]
 
 # Structure editing operations (Package A, Feature A4).
-from .structure_ops import EditResult, repeat, substitute, displace, check_composition
-__all__ += ["EditResult", "repeat", "substitute", "displace", "check_composition"]
+from .structure_ops import EditResult, repeat, substitute, displace, check_composition, sample_configuration
+__all__ += ["EditResult", "repeat", "substitute", "displace", "check_composition", "sample_configuration"]
