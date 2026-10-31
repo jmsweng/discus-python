@@ -179,10 +179,11 @@ def test_live_python_written_stru_loads_and_roundtrips(case_id, builder):
     diff = np.abs(s2_unit - s_unit)
     assert diff.max() < tol, f"Cartesian mismatch {diff.max():.3e} A >= {tol:.3e} A"
 
-    # Biso: the writer always writes B explicitly (None -> 0.0), and DISCUS
-    # must keep exactly what was written.  If this fails, DISCUS changes B on
-    # `read stru` / `save` and the writer policy must be revisited (report it).
-    expected_b = np.zeros(N) if s.b_iso is None else s.b_iso
+    # Biso: the writer always writes B explicitly (None -> 1.0, the DISCUS
+    # default, A3-9), and DISCUS must keep exactly what was written.  If this
+    # fails, DISCUS changes B on `read stru` / `save` and the writer policy
+    # must be revisited (report it).
+    expected_b = np.ones(N) if s.b_iso is None else s.b_iso
     assert np.allclose(s2.structure.b_iso, expected_b, atol=2e-6), (
         f"Biso written {sorted(set(np.round(expected_b, 6)))} but DISCUS saved "
         f"{sorted(set(np.round(s2.structure.b_iso, 6)))}"
@@ -413,7 +414,7 @@ def test_live_species_names():
     s = Structure(
         lat, species, frac,
         model="configuration",
-        b_iso=np.full(4, 0.0),
+        b_iso=np.full(4, 1.0),
         cell_index=np.zeros((4, 3), dtype=np.int64),
         supercell=(1, 1, 1),
         pbc=(True, True, True),
@@ -440,3 +441,128 @@ def test_live_species_names():
     # DISCUS uppercases: Ga → GA, Fe3+ → FE3+; O2- and Ga1 unchanged.
     assert list(s2.structure.species) == ["GA", "O2-", "FE3+", "GA1"]
     evidence_log("test_live_species_names", macro, None, result)
+
+
+# -- L6: B values survive the DISCUS round trip (A3-9) -----------------------
+def test_live_b_values_survive():
+    """L6: B values in [0.001, 2.0] survive write → DISCUS read → save → read.
+
+    Exercises both read paths: ``read stru`` (saved structure) and
+    ``read cell`` (unit-cell source, P1 1×1×1).  DISCUS 6.23.01 treats B
+    below about 1e-3 as "unset" and replaces it with 1.0 (probe Q15), so a
+    value at the boundary (0.001) and typical values (0.35, 2.0) must come
+    back unchanged.
+    """
+    workdir = _workdir()
+    import numpy as np
+    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
+    species = np.array(["CU", "CU", "CU"], dtype=object)
+    frac = np.array([[0.0, 0.0, 0.0], [0.25, 0.25, 0.25], [0.5, 0.5, 0.5]])
+    b_iso = np.array([0.001, 0.35, 2.0])
+    s = Structure(
+        lat, species, frac,
+        model="configuration",
+        b_iso=b_iso,
+        cell_index=np.zeros((3, 3), dtype=np.int64),
+        supercell=(1, 1, 1),
+        pbc=(True, True, True),
+    )
+
+    # Path 1: .stru (read stru → save → read back).
+    fname = "live_b.stru"
+    write_stru(os.path.join(workdir, fname), s)
+    macro = (
+        "discus\n"
+        "read\n"
+        f"  stru {fname}\n"
+        "eval n[1]\n"
+        f"save {fname}_out.stru\n"
+        "exit\n"
+        "exit\n"
+    )
+    result = run_discus(macro, workdir)
+    assert "3.00000000000" in result.stdout
+    # `read stru` + `save` does not centre the origin; use the explicit
+    # supercell (1,1,1).
+    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell=(1, 1, 1))
+    assert s2.structure.n_atoms == 3
+    assert np.allclose(s2.structure.b_iso, b_iso, atol=1e-6), (
+        f"Biso written {list(b_iso)} but DISCUS saved {list(s2.structure.b_iso)}"
+    )
+    evidence_log("test_live_b_values_survive", macro, None, result)
+
+    # Path 2: .cll (read cell,1,1,1 → save → read back).  P1: no expansion.
+    cfname = "live_b.cll"
+    write_cll(os.path.join(workdir, cfname), s)
+    macro = (
+        "discus\n"
+        "read\n"
+        f"  cell {cfname},1,1,1\n"
+        "eval n[1]\n"
+        f"save {cfname}_out.stru\n"
+        "exit\n"
+        "exit\n"
+    )
+    result = run_discus(macro, workdir)
+    assert "3.00000000000" in result.stdout
+    s3 = read_stru(os.path.join(workdir, f"{cfname}_out.stru"), supercell=(1, 1, 1))
+    assert s3.structure.n_atoms == 3
+    assert np.allclose(s3.structure.b_iso, b_iso, atol=1e-6), (
+        f"Biso written {list(b_iso)} but DISCUS saved {list(s3.structure.b_iso)}"
+    )
+    evidence_log("test_live_b_values_survive", macro, None, result)
+
+
+# -- L7: DISCUS replaces B=0 with its default 1.0 (A3-9) ----------------------
+def test_live_zero_b_is_replaced_by_discus():
+    """L7: a hand-written .stru with Biso 0.000000 → DISCUS saves Biso 1.0.
+
+    Documents the engine behaviour that justifies the writer rule (B < 0.001
+    is rejected on write): DISCUS 6.23.01 treats B = 0.000000 as "unset" and
+    silently replaces it with its default 1.0 on ``read stru`` / ``save``
+    (probe Q15).  A non-tiny B (0.35) is kept unchanged.
+    """
+    workdir = _workdir()
+    import numpy as np
+    # Hand-written .stru (NOT through our writer): 2-atom P1 cell, Biso
+    # 0.000000 on the first atom and 0.350000 on the second.  DISCUS
+    # ``read stru`` rejects positive coordinates with P1 (it expects the
+    # centred-origin layout), so use negative coordinates (the centred
+    # layout DISCUS writes on save).  No ``ncell`` line (DISCUS drops it
+    # on save; ``read stru`` rejects a file that has one).
+    text = (
+        "title live zero b test\n"
+        "spcgr P1\n"
+        "cell    4.000000,  4.000000,  4.000000, 90.000000, 90.000000, 90.000000\n"
+        "format numbers,XYZBPMMOS\n"
+        "atoms      x,              y,              z,             Biso,    "
+        "Property,  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl\n"
+        "GA        -1.000000,      -1.000000,      -1.000000,      0.000000,       "
+        "1,       0,       0,   1.000000, _,   0,   0,   0\n"
+        "GA        -1.000000,      -0.500000,      -0.500000,      0.350000,       "
+        "1,       0,       0,   1.000000, _,   0,   0,   0\n"
+    )
+    fname = "live_zero_b.stru"
+    with open(os.path.join(workdir, fname), "w", newline="\n", encoding="ascii") as fh:
+        fh.write(text)
+
+    macro = (
+        "discus\n"
+        "read\n"
+        f"  stru {fname}\n"
+        "eval n[1]\n"
+        f"save {fname}_out.stru\n"
+        "exit\n"
+        "exit\n"
+    )
+    result = run_discus(macro, workdir)
+    assert "2.00000000000" in result.stdout
+
+    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell=(1, 1, 1))
+    assert s2.structure.n_atoms == 2
+    # DISCUS replaced the 0.0 B with its default 1.0; the 0.35 B is unchanged.
+    assert np.allclose(s2.structure.b_iso, [1.0, 0.35], atol=1e-6), (
+        f"DISCUS saved Biso {list(s2.structure.b_iso)}, expected [1.0, 0.35] "
+        "(0.0 must be replaced by the DISCUS default 1.0)"
+    )
+    evidence_log("test_live_zero_b_is_replaced_by_discus", macro, None, result)

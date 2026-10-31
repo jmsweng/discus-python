@@ -42,6 +42,10 @@ def test_read_fixture_gaas_222():
     assert dict(Counter(s.structure.species)) == {"GA": 32, "AS": 32}
     assert s.structure.model == "configuration"
     assert s.structure.pbc == (True, True, True)
+    # the fixture has Biso 1.000000 on every atom: read back as 1.0, no
+    # default applied
+    assert np.allclose(s.structure.b_iso, 1.0)
+    assert "b_iso" not in s.defaults_applied
 
 
 # -- 2. round-trip ----------------------------------------------------------
@@ -67,6 +71,10 @@ def test_read_fixture_p1_2x2x2():
     assert c == pytest.approx(8.0)
     from collections import Counter
     assert dict(Counter(s.structure.species)) == {"CU": 4, "AG": 4}
+    # the fixture has Biso 0.000000 on every atom: the reader maps that to the
+    # DISCUS default (1.0) and records the applied default
+    assert np.allclose(s.structure.b_iso, 1.0)
+    assert "b_iso" in s.defaults_applied
 
 
 # -- 4. C1 no-ncell with supercell ------------------------------------------
@@ -429,7 +437,7 @@ def test_writer_header_golden():
         np.array(["CU", "AG"], dtype=object),
         np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
         model="configuration",
-        b_iso=np.array([0.0, 0.0]),
+        b_iso=np.array([1.0, 0.5]),
         cell_index=np.zeros((2, 3), dtype=np.int64),
         supercell=(1, 1, 1),
         pbc=(True, True, True),
@@ -652,7 +660,7 @@ def test_species_policy():
     s = Structure(
         lat, species, frac,
         model="configuration",
-        b_iso=np.zeros(3),
+        b_iso=np.ones(3),
         cell_index=np.zeros((3, 3), dtype=np.int64),
         supercell=(1, 1, 1),
         pbc=(True, True, True),
@@ -674,7 +682,7 @@ def test_species_policy():
         np.array(["ABCDE"], dtype=object),
         np.array([[0.0, 0.0, 0.0]]),
         model="configuration",
-        b_iso=np.zeros(1),
+        b_iso=np.ones(1),
         cell_index=np.zeros((1, 3), dtype=np.int64),
         supercell=(1, 1, 1),
         pbc=(True, True, True),
@@ -727,3 +735,109 @@ def test_write_rejects_out_of_order_rows():
     )
     with pytest.raises(DiscusFormatError, match="not in DISCUS order"):
         format_stru(s_bad)
+
+
+# -- A3-9: B-factor policy ---------------------------------------------------
+def _stru_two_atom(b_iso) -> Structure:
+    """Two-atom P1 structure (model="configuration") for the B-policy tests."""
+    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
+    return Structure(
+        lat,
+        np.array(["Cu", "Ag"], dtype=object),
+        np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
+        model="configuration",
+        b_iso=b_iso,
+        cell_index=np.zeros((2, 3), dtype=np.int64),
+        supercell=(1, 1, 1),
+        pbc=(True, True, True),
+    )
+
+
+# -- 1. b_iso None -> explicit 1.0 (DISCUS default) --------------------------
+def test_b_iso_none_becomes_explicit_default(tmp_path):
+    s = _stru_two_atom(None)
+    text = format_stru(s)
+    # the written text contains an explicit Biso column (1.000000, not 0.000000)
+    assert "1.000000" in text
+    # the Biso value is the 4th field on each atom line
+    atom_lines = [l for l in text.splitlines() if l.split(",")[0].split()[0] in ("Cu", "Ag")]
+    assert len(atom_lines) == 2
+    assert all(l.split(",")[3].strip() == "1.000000" for l in atom_lines)
+    out = tmp_path / "b1.stru"
+    write_stru(out, s)
+    s2 = read_stru(out)
+    assert np.allclose(s2.structure.b_iso, [1.0, 1.0])
+    # B was written explicitly, so no default is applied on read-back
+    assert "b_iso" not in s2.defaults_applied
+
+
+# -- 2. writer rejects B below the DISCUS representable floor ---------------
+@pytest.mark.parametrize("bad_b", [0.0, 1e-6, 5e-4, -0.1])
+def test_writer_rejects_unrepresentable_b(tmp_path, bad_b):
+    s = _stru_two_atom(np.array([bad_b, 0.35]))
+    with pytest.raises(DiscusFormatError) as exc:
+        format_stru(s)
+    msg = str(exc.value)
+    assert "DISCUS" in msg
+    assert "0.001" in msg
+    assert "2" in msg  # atom count
+    # write_stru raises too, and leaves neither the target nor a temp file
+    out = tmp_path / "bad.stru"
+    with pytest.raises(DiscusFormatError):
+        write_stru(out, s)
+    assert not out.exists()
+    leftovers = [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")]
+    assert leftovers == []
+
+
+# -- 3. small-but-safe B round-trips -----------------------------------------
+@pytest.mark.parametrize("good_b", [0.001, 0.35, 2.0])
+def test_small_but_safe_b_roundtrips(tmp_path, good_b):
+    s = _stru_two_atom(np.array([good_b, 1.0]))
+    out = tmp_path / "b_safe.stru"
+    write_stru(out, s)
+    s2 = read_stru(out)
+    assert np.allclose(s2.structure.b_iso, [good_b, 1.0], atol=1e-6)
+    assert "b_iso" not in s2.defaults_applied
+
+
+# -- 4. reader maps a 0 B to the DISCUS default ------------------------------
+def test_reader_maps_zero_b_to_discus_default():
+    # the tracked fixture has Biso 0.000000 on all 8 atoms
+    s = read_stru(FIX_P1)
+    assert np.allclose(s.structure.b_iso, 1.0)
+    assert "b_iso" in s.defaults_applied
+    # a hand-made .stru with explicit 0.0 Biso behaves the same
+    text = (
+        "title t\n"
+        "spcgr P1\n"
+        "cell 4.0 4.0 4.0 90.0 90.0 90.0\n"
+        "ncell 1, 1, 1, 2\n"
+        "format numbers,XYZBPMMOS\n"
+        "atoms x,y,z,Biso,Property,MoleNo,MoleAt,Occ,St,Sh,Sk,Sl\n"
+        "CU 0.000000, 0.000000, 0.000000, 0.000000, 1, 0, 0, 1.000000, _, 0, 0, 0\n"
+        "CU 0.500000, 0.000000, 0.000000, 0.000000, 1, 0, 0, 1.000000, _, 0, 0, 0\n"
+    )
+    s2 = parse_stru(text)
+    assert np.allclose(s2.structure.b_iso, [1.0, 1.0])
+    assert "b_iso" in s2.defaults_applied
+
+
+# -- 5. reader rejects a tiny (0, 0.001) B -----------------------------------
+def test_reader_rejects_tiny_b():
+    text = (
+        "title t\n"
+        "spcgr P1\n"
+        "cell 4.0 4.0 4.0 90.0 90.0 90.0\n"
+        "ncell 1, 1, 1, 2\n"
+        "format numbers,XYZBPMMOS\n"
+        "atoms x,y,z,Biso,Property,MoleNo,MoleAt,Occ,St,Sh,Sk,Sl\n"
+        "CU 0.000000, 0.000000, 0.000000, 0.000100, 1, 0, 0, 1.000000, _, 0, 0, 0\n"
+        "CU 0.500000, 0.000000, 0.000000, 1.000000, 1, 0, 0, 1.000000, _, 0, 0, 0\n"
+    )
+    with pytest.raises(DiscusFormatError) as exc:
+        parse_stru(text)
+    msg = str(exc.value)
+    assert "0.001" in msg
+    # the message names a line number
+    assert ":" in msg

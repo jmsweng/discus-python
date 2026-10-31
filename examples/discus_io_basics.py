@@ -27,7 +27,7 @@ s = read_cll("examples/gaas.cll")
 print(f"atoms: {s.structure.n_atoms}")
 for i in range(s.structure.n_atoms):
     x, y, z = s.structure.frac[i]
-    b = 0.0 if s.structure.b_iso is None else s.structure.b_iso[i]
+    b = 1.0 if s.structure.b_iso is None else s.structure.b_iso[i]
     print(f"  {s.structure.species[i]:<4} {x:.6f} {y:.6f} {z:.6f} B={b:.6f}")
 
 # 2. Build a 2×2×2 P1 GaAs Structure (8 atoms per cell: 4 Ga + 4 As).

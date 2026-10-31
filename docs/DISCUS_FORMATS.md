@@ -65,7 +65,22 @@ Evidence: `Q6.log`. DISCUS prints no warning. This is the PR #8 failure mode.
 A `.cll` atom line with no B column is read with **B = 1.0** (DISCUS default), and
 `save` writes `Biso 1.000000`. Evidence: `Q1.log` / `q1_xyz.stru`. PR #8 failed
 once because a missing B silently became DISCUS's default. The Python writer must
-therefore always write B explicitly (`0.0` when `b_iso` is `None`).
+therefore always write B explicitly (`1.0` when `b_iso` is `None` — DISCUS's own
+default).  B values below `DISCUS_MIN_B = 0.001` Å² are rejected on write (DISCUS
+treats them as unset and uses 1.0; probe Q15).
+
+**Q15 probe** (B in the input file → what ends up in the saved `.stru`):
+
+| B in file | `read stru` + save | `read cell` + save |
+|---|---|---|
+| 0.000000 | **1.0** | **1.0** |
+| 0.000001 | **1.0** | **1.0** |
+| 0.000010 | 0.00001 | **1.0** |
+| 0.001, 0.35, 2.0 | unchanged | unchanged |
+| −0.1 | rejected | **1.0** |
+
+Evidence: `Q15_cll.log`, `Q15_stru.log`, `q15.cll`, `q15.stru`,
+`q15_cll_out.stru`, `q15_stru_out.stru`.
 
 ## Decisions for the Python I/O
 
@@ -124,3 +139,9 @@ therefore always write B explicitly (`0.0` when `b_iso` is `None`).
    constants for a plain crystal; dropping them loses no per-atom data for the
    fixtures). `Biso` is **never** droppable (a missing B silently becomes 1.0).
    Rationale: Q14 (constants) + Q1/Q10 (B default).
+8. **B-factor policy** — the writer always writes B explicitly: `b_iso=None`
+   becomes `1.0` (DISCUS's own default); any B < `DISCUS_MIN_B = 0.001` Å² is
+   rejected with `DiscusFormatError` (DISCUS treats such values as unset and
+   silently uses 1.0, on at least one read path).  The reader maps B = 0.0 in a
+   file to 1.0 (recorded in `defaults_applied`), rejects 0 < B < 0.001, and
+   rejects negative B.  Rationale: Q15 (probe table above).

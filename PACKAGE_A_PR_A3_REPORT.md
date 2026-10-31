@@ -25,7 +25,7 @@
 |---|---|---|
 | `.cll` atom columns | ≤ 4 (name,x,y,z[,B]) | Q1: 5-column form is rejected by DISCUS |
 | `.stru` atom columns | 12 (x,y,z,Biso,Property,MoleNo,MoleAt,Occ,St,Sh,Sk) | Q14: DISCUS writes 12 columns |
-| Missing B in `.cll` | Written as explicit `0.0` | Q1: DISCUS defaults missing B to 1.0 |
+| Missing B in `.cll` | Written as explicit `1.0` (DISCUS default); B < 0.001 rejected (Q15) | Q1: DISCUS defaults missing B to 1.0; Q15: DISCUS treats B < 0.001 as unset and uses 1.0 |
 | `.stru` without `ncell` | `supercell=` selects the supercell: `None` reads one cell only if every axis spans < 1 unit cell (else raise); `(n1,n2,n3)` uses it; `"infer"` recovers a centred crystal (`n = round(−2·lo)`) | Q4/Q5/Q7: a saved supercell is centred and spans n cells, so one-cell is wrong (A3-6a) |
 | Species names | Written **verbatim** (no upper-casing); DISCUS upper-cases on save; >4 chars rejected on read and write | Q9: DISCUS uppercases and truncates |
 | Decimal places | 6 (F11.6-style) | Q12: DISCUS accepts only fixed 6-decimal form |
@@ -43,21 +43,35 @@ Copied from `docs/DISCUS_FORMATS.md` "Decisions":
 5. **Telling a `.cll` from a `.stru`** — `.cll` has no `format`/`ncell` and ≤ 4 numeric columns; `.stru` has `format` and 12 columns.
 6. **Species name policy** — written verbatim (no upper-casing); DISCUS upper-cases on save; >4 chars rejected on read and write.
 7. **Columns droppable only with `allow_loss=True`** — `Property`, `MoleNo`, `MoleAt`, `Occ`, `St`, `Sh`, `Sk`; `Biso` is never droppable.
+8. **B-factor policy (Q15)** — the writer always writes B explicitly (`1.0` when `b_iso` is `None`); B < `DISCUS_MIN_B = 0.001` Å² is rejected on write. The reader maps B = 0.0 in a file to 1.0 (`defaults_applied`), rejects 0 < B < 0.001, and rejects negative B.
+
+   Q15 probe (B in the input file → what ends up in the saved `.stru`):
+
+   | B in file | `read stru` + save | `read cell` + save |
+   |---|---|---|
+   | 0.000000 | **1.0** | **1.0** |
+   | 0.000001 | **1.0** | **1.0** |
+   | 0.000010 | 0.00001 | **1.0** |
+   | 0.001, 0.35, 2.0 | unchanged | unchanged |
+   | −0.1 | rejected | **1.0** |
+
+   Evidence: `tests/fixtures/discus_6_23_01/evidence/` (Q15_cll.log, Q15_stru.log, q15.cll, q15.stru, q15_cll_out.stru, q15_stru_out.stru).
 
 ## 5. Tests
 
-- **Offline:** 56 tests (22 `.cll` + 34 `.stru`), all passing.
-- **Live:** 7 tests (L0–L5), all passing with `DISCUS_LIVE=1` (~5 s); all skipped without the env var.
+- **Offline:** 75 tests (`.cll` + `.stru`), all passing.
+- **Live:** 9 tests, all passing with `DISCUS_LIVE=1` (~5 s); all skipped without the env var.
 - **Mutation (A3-3):** 5 breaks caught (ncell count, occupancy, order, ncell line, `/n` → `*n`).
 - **Mutation (A3-4):** 3 breaks caught (B default, ncell line, order check).
 - **Mutation (A3-6a):** 4 breaks caught — (a) `min_separation=None` back → `test_overlap_check_is_active`; (b) span guard removed → `test_no_ncell_policy`; (c) `infer` → `round(−lo)` → `test_no_ncell_policy`; (d) order check skips `m=1` → new `test_order_check_runs_for_m1`.
 - **Mutation (A3-6b):** 3 breaks caught — (a) `format_stru` writes supercell lengths → L2 + `test_roundtrip_gaas_222`; (b) `format_stru` writes `frac` unscaled → L2 + `test_roundtrip_gaas_222`; (c) `infer` off by 2 → L1/L3 + `test_no_ncell_policy`/`test_gaas_222_is_zinc_blende`.
+- **Mutation (A3-9):** 4 breaks caught — (a) writer accepts B=0.0 → `test_writer_rejects_unrepresentable_b[0.0]`; (b) writer writes None as 0.0 → `test_b_iso_none_becomes_explicit_default`; (c) reader keeps B=0.0 as 0.0 → `test_reader_maps_zero_b_to_discus_default`; (d) `DISCUS_MIN_B=0.0` → `test_writer_rejects_unrepresentable_b` + `test_reader_rejects_tiny_b`.
 
 ## 6. Evidence
 
 - **Fixtures:** `tests/fixtures/discus_6_23_01/` (gaas.cll, gaas_111.stru, gaas_222.stru, p1_2x2x2_a4.stru).
-- **Probe logs:** `tests/fixtures/discus_6_23_01/evidence/` (Q1–Q14, smoke).
-- **Live evidence:** `tests/fixtures/discus_6_23_01/live_evidence/20261031T0403Z/` (7 passing-run logs + `MANIFEST.sha256`, 157 419 bytes total). **Superseded in part:** this run predates the A3-6c correction of the live-test crystals (L2 used unit-cell-sized supercell frames and a 32-atom Ga-only "GaAs") and of the B assertion (see below). A new run with the corrected tests must be committed as an additional folder; it is pending on the owner's DISCUS machine.
+- **Probe logs:** `tests/fixtures/discus_6_23_01/evidence/` (Q1–Q15, smoke).
+- **Live evidence:** `tests/fixtures/discus_6_23_01/live_evidence/20261031T514Z/` (9 passing-run logs + `MANIFEST.sha256`), from the corrected live tests. The older folder `20261031T0403Z/` (7 passing-run logs + `MANIFEST.sha256`, 157 419 bytes total) is from before the A3-6c/A3-9 corrections (L2 used unit-cell-sized supercell frames and a 32-atom Ga-only "GaAs"; the B assertion predated the Q15 policy) and is superseded by `20261031T514Z`.
 
 ## 7. Caveats / not done
 

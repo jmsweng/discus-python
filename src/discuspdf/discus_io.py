@@ -34,6 +34,10 @@ from .structure import Structure
 # (verified by probe Q1/Q10: a missing B silently becomes 1.0 on save).
 _DISCUS_B_DEFAULT = 1.0
 
+# Smallest B (Å²) probed to survive unchanged on both DISCUS read paths (Q15).
+# DISCUS treats B below this as "unset" and uses its default 1.0.
+DISCUS_MIN_B = 0.001
+
 # Number of decimal places the writer uses (DISCUS's ``numbers`` format is
 # ``F11.6``; probe Q12 shows DISCUS accepts only the fixed 6-decimal form).
 _DECIMALS = 6
@@ -73,6 +77,51 @@ class DiscusCell:
 
 def _fail(source: str, line_no: int, text: str, msg: str) -> None:
     raise DiscusFormatError(f"{source}:{line_no}: {msg}: {text!r}")
+
+
+def _validate_b_for_write(b_iso: np.ndarray | None, n_atoms: int) -> np.ndarray:
+    """Validate B values for writing.
+
+    ``b_iso is None`` -> return an array of 1.0 (DISCUS's own default).
+    ``b_iso`` given: if any value < DISCUS_MIN_B, raise ``DiscusFormatError``.
+    """
+    if b_iso is None:
+        return np.full(n_atoms, _DISCUS_B_DEFAULT, dtype=float)
+    if np.any(b_iso < DISCUS_MIN_B):
+        min_val = float(np.min(b_iso))
+        bad_idx = np.where(b_iso < DISCUS_MIN_B)[0]
+        first_ids = ", ".join(str(int(i)) for i in bad_idx[:3])
+        n_bad = len(bad_idx)
+        raise DiscusFormatError(
+            f"B = {min_val:.6f} ({n_bad} atoms, first ids {first_ids}) cannot be written: "
+            f"DISCUS 6.23.01 treats B below about 1e-3 as unset and uses 1.0 (probe Q15). "
+            f"Use B >= 0.001, or pass b_iso=None and set `temp ignore` in the macro."
+        )
+    return b_iso
+
+
+def _validate_b_for_read(
+    b_iso: np.ndarray, n_atoms: int, source: str, line_no: int
+) -> tuple[np.ndarray, bool]:
+    """Validate B values for reading.
+
+    Returns ``(b_iso, False)`` for all non-negative, non-tiny values.
+    If any value is exactly 0.0, replace those with ``_DISCUS_B_DEFAULT`` (1.0)
+    and return ``(b_iso, True)``.  Raises ``DiscusFormatError`` for values in
+    (0, DISCUS_MIN_B) or negative values.
+    """
+    if np.any(b_iso < 0):
+        _fail(source, line_no, "", "negative B value")
+    if np.any((b_iso > 0) & (b_iso < DISCUS_MIN_B)):
+        _fail(
+            source, line_no, "",
+            f"B value in (0, {DISCUS_MIN_B}) is treated as unset on at least one "
+            f"read path; probe Q15",
+        )
+    if np.any(b_iso == 0.0):
+        b_iso = np.where(b_iso == 0.0, _DISCUS_B_DEFAULT, b_iso)
+        return b_iso, True
+    return b_iso, False
 
 
 def detect_discus_kind(text: str, *, source: str = "<string>") -> str:
@@ -286,9 +335,10 @@ def parse_cll(text: str, *, source: str = "<string>") -> DiscusCell:
     defaults: list[str] = []
     b_iso: np.ndarray | None
     if all(len(a[1]) == 4 for a in atoms):
-        b_iso = np.array([a[1][3] for a in atoms], dtype=float)
-        if np.any(b_iso < 0):
-            _fail(source, 0, "", "negative B value")
+        b_iso_raw = np.array([a[1][3] for a in atoms], dtype=float)
+        b_iso, b_was_zero = _validate_b_for_read(b_iso_raw, n, source, 0)
+        if b_was_zero:
+            defaults.append("b_iso")
     elif all(len(a[1]) == 3 for a in atoms):
         b_iso = np.full(n, _DISCUS_B_DEFAULT, dtype=float)
         defaults.append("b_iso")
@@ -332,7 +382,7 @@ def format_cll(obj, *, title: str | None = None, spacegroup: str | None = None) 
     True); a supercell raises ``ValueError`` (use ``write_stru``).  The
     spacegroup defaults to ``"P1"`` for a bare ``Structure`` (the atoms are
     written explicitly, so no symmetry is applied) and to the cell's own
-    spacegroup for a ``DiscusCell``.  B is always written explicitly (``0.0``
+    spacegroup for a ``DiscusCell``.  B is always written explicitly (``1.0``
     when ``b_iso`` is ``None``).  Lines end with ``\\n``.
     """
     if isinstance(obj, DiscusCell):
@@ -362,10 +412,10 @@ def format_cll(obj, *, title: str | None = None, spacegroup: str | None = None) 
         f"{alpha:.{d}f} {beta:.{d}f} {gamma:.{d}f}",
         "atoms",
     ]
-    b_iso = structure.b_iso
+    b_iso = _validate_b_for_write(structure.b_iso, structure.n_atoms)
     for i in range(structure.n_atoms):
         x, y, z = (f"{v:.{d}f}" for v in structure.frac[i])
-        b_val = 0.0 if b_iso is None else float(b_iso[i])
+        b_val = float(b_iso[i])
         lines.append(f"{structure.species[i]:<4} {x} {y} {z} {b_val:.{d}f}")
     return "\n".join(lines) + "\n"
 
@@ -736,9 +786,8 @@ def parse_stru(
     full_lattice = Lattice.from_parameters(a * n[0], b * n[1], c * n[2], alpha, beta, gamma)
 
     species_arr = np.array([at[0] for at in atoms], dtype=object)
-    b_iso = np.array([at[1][3] for at in atoms], dtype=float)
-    if np.any(b_iso < 0):
-        _fail(source, 0, "", "negative B value")
+    b_iso_raw = np.array([at[1][3] for at in atoms], dtype=float)
+    b_iso, b_was_zero = _validate_b_for_read(b_iso_raw, N, source, 0)
     # Occ is the 8th value (index 8 in tokens, index 4 in the values list is
     # Biso; the Occ column is tokens[8]).
     occ = np.array([float(at[2]["Occ"]) for at in atoms], dtype=float)
@@ -805,13 +854,16 @@ def parse_stru(
         supercell=n,
         pbc=(True, True, True),
     )
+    defaults: list[str] = []
+    if b_was_zero:
+        defaults.append("b_iso")
     return DiscusStru(
         title=title,
         spacegroup=spacegroup,
         ncell=ncell,
         structure=structure,
         dropped=tuple(dropped),
-        defaults_applied=(),
+        defaults_applied=tuple(defaults),
     )
 
 
@@ -841,7 +893,7 @@ def format_stru(obj, *, title: str | None = None, spacegroup: str | None = None)
     first — Package A, A5).  Rows must already be in DISCUS cell-major order
     consistent with ``cell_index`` and ``supercell``; otherwise
     ``DiscusFormatError`` (the writer never reorders).  B is always written
-    explicitly (``0.0`` when ``b_iso is None``).  ``ncell = (*supercell, m)``
+    explicitly (``1.0`` when ``b_iso is None``).  ``ncell = (*supercell, m)``
     with ``m = N / prod(supercell)``.  Lines end with ``\\n``.
     """
     if isinstance(obj, DiscusStru):
@@ -901,12 +953,12 @@ def format_stru(obj, *, title: str | None = None, spacegroup: str | None = None)
         "atoms      x,              y,              z,             Biso,    "
         "Property,  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl",
     ]
-    b_iso = structure.b_iso
+    b_iso = _validate_b_for_write(structure.b_iso, N)
     for i in range(N):
         x = structure.frac[i, 0] * n[0]
         y = structure.frac[i, 1] * n[1]
         z = structure.frac[i, 2] * n[2]
-        b_val = 0.0 if b_iso is None else float(b_iso[i])
+        b_val = float(b_iso[i])
         # DISCUS writes atom lines with fixed-width columns (verified from
         # gaas_222.stru): name(4) + 5sp + x(10) + , + y(15) + , + z(15) + ,
         # + Biso(14) + , + Property(8) + , + MoleNo(8) + , + MoleAt(8) + ,
@@ -991,7 +1043,7 @@ def _stru_roundtrip_agrees(source, written: DiscusStru) -> bool:
     # ordering preserved: cell_index identical
     if not np.array_equal(written.structure.cell_index, ref.cell_index):
         return False
-    ref_b = np.zeros(ref.n_atoms) if ref.b_iso is None else ref.b_iso
+    ref_b = np.full(ref.n_atoms, _DISCUS_B_DEFAULT) if ref.b_iso is None else ref.b_iso
     if not np.allclose(ref_b, written.structure.b_iso, atol=0.5 * 10 ** -_DECIMALS):
         return False
     return True
@@ -1017,8 +1069,8 @@ def _cll_roundtrip_agrees(source, written: DiscusCell, text: str) -> bool:
     if not np.allclose(ref.frac, written.structure.frac, atol=0.5 * 10 ** -_DECIMALS):
         return False
     # b_iso: the writer always writes it explicitly, so compare to the written
-    # value (0.0 when the input had b_iso=None).
-    ref_b = np.zeros(ref.n_atoms) if ref.b_iso is None else ref.b_iso
+    # value (1.0 when the input had b_iso=None).
+    ref_b = np.full(ref.n_atoms, _DISCUS_B_DEFAULT) if ref.b_iso is None else ref.b_iso
     if not np.allclose(ref_b, written.structure.b_iso, atol=0.5 * 10 ** -_DECIMALS):
         return False
     return True

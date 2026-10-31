@@ -104,7 +104,11 @@ kind = detect_discus_kind("file.txt")  # "cll" or "stru"
 - **Not stored:** atom ids, site labels, lattice orientation, symmetry expansion
   (not performed), `Property`/`MoleNo`/`MoleAt`/`St` columns (only with
   `allow_loss=True`).
-- **`b_iso=None`** → explicit `0.0` in the file (DISCUS defaults missing B to 1.0).
+- **`b_iso=None`** → explicit `1.0` in the file (DISCUS's own default).
+- **B-factor policy (probe Q15):** `DISCUS_MIN_B = 0.001` Å² (in `discus_io.py`).
+  The writer rejects any B < 0.001 (`DiscusFormatError`): DISCUS treats such
+  values as unset and silently uses 1.0.  The reader maps B = 0.0 in a file to
+  1.0 (recorded in `defaults_applied`), rejects 0 < B < 0.001 and negative B.
 - **Species names** are written **verbatim** (the writer does not upper-case
   them); DISCUS upper-cases on save (`Ga` → `GA`).  Names longer than 4
   characters are rejected on read and on write.
@@ -119,13 +123,13 @@ kind = detect_discus_kind("file.txt")  # "cll" or "stru"
 
 ## Testing
 
-- **Offline tests:** `tests/test_discus_io_cll.py` (22 tests),
-  `tests/test_discus_io_stru.py` (15 tests).
+- **Offline tests:** 75 tests total across `tests/test_discus_io_cll.py` and
+  `tests/test_discus_io_stru.py`.
 - **Live tests:** set `DISCUS_LIVE=1` and run:
   ```powershell
   $env:DISCUS_LIVE="1"; .\.venv\Scripts\python.exe -m pytest -q -m discus_live
   ```
-  7 tests (L0–L5) against the real DISCUS 6.23.01 engine via WSL.
+  9 tests against the real DISCUS 6.23.01 engine via WSL.
 - **Committed evidence:** `tests/fixtures/discus_6_23_01/evidence/` (probe logs),
   `tests/fixtures/discus_6_23_01/` (fixture files).
 

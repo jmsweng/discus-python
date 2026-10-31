@@ -90,8 +90,8 @@ def test_structure_to_cll_to_structure():
     )
 
 
-# -- 4. b_iso None -> explicit 0.0 ------------------------------------------
-def test_b_iso_none_becomes_explicit_zero(tmp_path):
+# -- 4. b_iso None -> explicit 1.0 (DISCUS default) --------------------------
+def test_b_iso_none_becomes_explicit_default(tmp_path):
     lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
     s = Structure(
         lat,
@@ -102,12 +102,97 @@ def test_b_iso_none_becomes_explicit_zero(tmp_path):
         min_separation=None,
     )
     text = format_cll(s)
-    # the written text contains an explicit B column (0.000000)
-    assert "0.000000" in text
-    out = tmp_path / "b0.cll"
+    # the written text contains an explicit B column (1.000000, not 0.000000)
+    assert "1.000000" in text
+    # the B values are the last token on each atom line
+    atom_lines = [l for l in text.splitlines() if l.split()[0] in ("Cu", "Ag")]
+    assert len(atom_lines) == 2
+    assert all(l.rsplit(" ", 1)[1] == "1.000000" for l in atom_lines)
+    out = tmp_path / "b1.cll"
     write_cll(out, s)
     c = read_cll(out)
-    assert np.allclose(c.structure.b_iso, [0.0, 0.0])
+    assert np.allclose(c.structure.b_iso, [1.0, 1.0])
+    # B was written explicitly, so no default is applied on read-back
+    assert "b_iso" not in c.defaults_applied
+
+
+# -- 4b. writer rejects B below the DISCUS representable floor --------------
+@pytest.mark.parametrize("bad_b", [0.0, 1e-6, 5e-4, -0.1])
+def test_writer_rejects_unrepresentable_b(tmp_path, bad_b):
+    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
+    s = Structure(
+        lat,
+        np.array(["Cu", "Ag"], dtype=object),
+        np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
+        model="average",
+        b_iso=np.array([bad_b, 1.0]),
+        min_separation=None,
+    )
+    with pytest.raises(DiscusFormatError) as exc:
+        format_cll(s)
+    msg = str(exc.value)
+    assert "DISCUS" in msg
+    assert "0.001" in msg
+    assert "2" in msg  # atom count
+    # write_cll raises too, and leaves neither the target nor a temp file
+    out = tmp_path / "bad.cll"
+    with pytest.raises(DiscusFormatError):
+        write_cll(out, s)
+    assert not out.exists()
+    leftovers = [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")]
+    assert leftovers == []
+
+
+# -- 4c. small-but-safe B round-trips ---------------------------------------
+@pytest.mark.parametrize("good_b", [0.001, 0.35, 2.0])
+def test_small_but_safe_b_roundtrips(tmp_path, good_b):
+    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
+    s = Structure(
+        lat,
+        np.array(["Cu", "Ag"], dtype=object),
+        np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]]),
+        model="average",
+        b_iso=np.array([good_b, 1.0]),
+        min_separation=None,
+    )
+    out = tmp_path / "b_safe.cll"
+    write_cll(out, s)
+    c = read_cll(out)
+    assert np.allclose(c.structure.b_iso, [good_b, 1.0], atol=1e-6)
+    assert "b_iso" not in c.defaults_applied
+
+
+# -- 4d. reader maps a 0 B to the DISCUS default ----------------------------
+def test_reader_maps_zero_b_to_discus_default():
+    text = (
+        "title t\n"
+        "spcgr P1\n"
+        "cell 4.0 4.0 4.0 90.0 90.0 90.0\n"
+        "atoms\n"
+        "Cu 0.0 0.0 0.0 0.0\n"
+        "Ag 0.5 0.5 0.5 0.0\n"
+    )
+    c = parse_cll(text)
+    assert np.allclose(c.structure.b_iso, [1.0, 1.0])
+    assert "b_iso" in c.defaults_applied
+
+
+# -- 4e. reader rejects a tiny (0, 0.001) B ---------------------------------
+def test_reader_rejects_tiny_b():
+    text = (
+        "title t\n"
+        "spcgr P1\n"
+        "cell 4.0 4.0 4.0 90.0 90.0 90.0\n"
+        "atoms\n"
+        "Cu 0.0 0.0 0.0 0.0001\n"
+        "Ag 0.5 0.5 0.5 1.0\n"
+    )
+    with pytest.raises(DiscusFormatError) as exc:
+        parse_cll(text)
+    msg = str(exc.value)
+    assert "0.001" in msg
+    # the message names a line number
+    assert ":" in msg
 
 
 # -- 5. missing B column -> DISCUS default ----------------------------------
