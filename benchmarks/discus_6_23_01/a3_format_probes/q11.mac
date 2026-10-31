@@ -1,0 +1,15 @@
+discus
+read
+  stru gaas_111_crlf.stru
+eval n[1]
+read
+  stru gaas_111_trail.stru
+eval n[1]
+read
+  stru gaas_111_tab.stru
+eval n[1]
+read
+  cell gaas_crlf.cll,1,1,1
+eval n[1]
+exit
+exit

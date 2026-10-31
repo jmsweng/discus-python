@@ -1,0 +1,5 @@
+title p1_1atom
+spcgr P1
+cell 4.0 4.0 4.0 90.0 90.0 90.0
+atoms
+Cu 0.0 0.0 0.0 0.0

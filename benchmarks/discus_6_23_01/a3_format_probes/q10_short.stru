@@ -1,0 +1,7 @@
+title q10 short
+spcgr P1
+cell 4.0 4.0 4.0 90.0 90.0 90.0
+format numbers,XYZBPMMOS
+atoms x, y, z, Biso, Property, MoleNo, MoleAt, Occ
+Ga 0.0 0.0 0.0
+Ga 1.0 0.0 0.0

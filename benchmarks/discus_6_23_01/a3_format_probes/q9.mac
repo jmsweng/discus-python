@@ -1,0 +1,31 @@
+discus
+read
+  stru q9_ga.stru
+eval n[1]
+save q9_ga_out.stru
+read
+  stru q9_GA.stru
+eval n[1]
+save q9_GA_out.stru
+read
+  stru q9_ga2.stru
+eval n[1]
+save q9_ga2_out.stru
+read
+  stru q9_O2m.stru
+eval n[1]
+save q9_O2m_out.stru
+read
+  stru q9_Fe3p.stru
+eval n[1]
+save q9_Fe3p_out.stru
+read
+  stru q9_Ga1.stru
+eval n[1]
+save q9_Ga1_out.stru
+read
+  stru q9_long9.stru
+eval n[1]
+save q9_long9_out.stru
+exit
+exit
