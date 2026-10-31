@@ -2,7 +2,7 @@
 
 ## 1. Base / head / PR / environment
 
-- **Base:** `d4b60ad` (`main`, PR #10 merged) · **Head at measurement:** `84772a5`
+- **Base:** `d4b60ad` (`main`, PR #10 merged) · **Head at measurement:** `6872dff`
 - **PR:** [Draft PR #11](https://github.com/jmsweng/discus-python/pull/11) · **Branch:** `feat/structure-model`
 - **Measured on:** Windows 10, Python 3.14.7, NumPy 2.5.4 (numbers in sections 5–6 come from this machine
   unless marked "cloud").
@@ -53,8 +53,8 @@ Overseer review of head `04d1034` found five blockers and four should-fix items;
 
 | Command | Result |
 |---|---|
-| `pytest tests/test_lattice.py tests/test_structure.py` | 87 passed in 107.58s (0:01:47) (failures: none) |
-| `pytest` (full suite) | 28 failed, 230 passed, 2 skipped in 201.81s (0:03:21) |
+| `pytest tests/test_lattice.py tests/test_structure.py` | 87 passed in 103.93s (0:01:43) (failures: none) |
+| `pytest` (full suite) | 28 failed, 230 passed, 2 skipped in 186.53s (0:03:06) |
 
 Full-suite failures on this machine are in: `tests/test_gate2_prereg.py`, `tests/test_gate3_prereg.py`, `tests/test_native_3d_integration.py`, `tests/test_regenerate_evidence.py`. On native Windows these are the
 known environment-specific failures (CRLF checkouts and symlinks in the evidence/probe tests); they
@@ -71,12 +71,12 @@ Independent checks run by the overseer (cloud):
 | Operation | Size | Time |
 |---|---|---|
 | Construct + validate GaAs 4×4×4 configuration | 512 atoms | 0.02 s |
-| Construct + validate GaAs 8×8×8 | 4 096 atoms | 0.04 s |
-| Construct + validate GaAs 16×16×16 | 32 768 atoms | 0.38 s |
-| Construct + validate GaAs 20×20×20 | 64 000 atoms | 0.82 s |
-| Construct + validate random configuration | 100 000 atoms | 1.11 s |
-| `distance_matrix` | 2 000 atoms | 4.92 s |
-| `Lattice.minimum_image`, γ = 20° cell | 400 000 displacements | 3.29 s |
+| Construct + validate GaAs 8×8×8 | 4 096 atoms | 0.03 s |
+| Construct + validate GaAs 16×16×16 | 32 768 atoms | 0.26 s |
+| Construct + validate GaAs 20×20×20 | 64 000 atoms | 0.58 s |
+| Construct + validate random configuration | 100 000 atoms | 0.77 s |
+| `distance_matrix` | 2 000 atoms | 3.85 s |
+| `Lattice.minimum_image`, γ = 20° cell | 400 000 displacements | 2.94 s |
 
 For comparison (cloud runner): before the fixes, the 512-atom case took 16 s and the 4 096-atom case
 was estimated at ~40 min; `minimum_image` on 4×10⁵ displacements went from 18.3 s to 2.8 s.
@@ -91,7 +91,7 @@ was estimated at ~40 min; `minimum_image` on 4×10⁵ displacements went from 18
 ## 8. Changed files (vs `main`)
 
 ```
-PACKAGE_A_PR_A2_REPORT.md           |   90 ++++
+PACKAGE_A_PR_A2_REPORT.md           |  107 ++++
  README.md                           |    4 +
  docs/STRUCTURE.md                   |  124 +++++
  examples/structure_basics.py        |   64 +++
@@ -103,5 +103,5 @@ PACKAGE_A_PR_A2_REPORT.md           |   90 ++++
  tests/test_lattice.py               |   97 +++-
  tests/test_structure.py             |  942 ++++++++++++++++++++++++++++++++
  todo/TASKS.md                       |    3 +-
- 12 files changed, 2748 insertions(+), 20 deletions(-)
+ 12 files changed, 2765 insertions(+), 20 deletions(-)
 ```
