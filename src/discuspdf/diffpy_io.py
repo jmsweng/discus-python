@@ -108,7 +108,10 @@ def from_diffpy(
     """
     diffpy = _import_diffpy()
 
-    a, b, c, alpha, beta, gamma = dstructure.lattice.cell_parms()
+    # ``cell_parms`` is the replacement for the deprecated ``abcABG``;
+    # fall back to the individual attributes (present in all versions).
+    lat = dstructure.lattice
+    a, b, c, alpha, beta, gamma = lat.a, lat.b, lat.c, lat.alpha, lat.beta, lat.gamma
     lattice = Lattice.from_parameters(a, b, c, alpha, beta, gamma)
 
     atoms = list(dstructure)
