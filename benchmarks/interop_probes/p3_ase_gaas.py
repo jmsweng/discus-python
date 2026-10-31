@@ -1,4 +1,4 @@
-"""P3: ASE on the real COD GaAs CIF."""
+"""P3: ASE on the real COD GaAs CIF (with info)."""
 import os
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "..", "..", "tests", "fixtures", "interop")
@@ -13,12 +13,11 @@ def main():
         atoms = read(CIF)
         print(f"n_atoms: {len(atoms)}")
         print(f"species: {atoms.get_chemical_symbols()}")
-        print(f"cell: {atoms.cell}")
-        print(f"cell lengths: {atoms.cell.lengths()}")
-        print(f"cell angles: {atoms.cell.angles()}")
-        print(f"positions (fractional): {atoms.get_positions()}")
-        # ASE does not expose spacegroup from CIF reading
-        print(f"spacegroup: NOT AVAILABLE from ASE CIF reader")
+        print(f"cell.array:\n{atoms.cell.array}")
+        print(f"pbc: {atoms.pbc}")
+        print(f"info: {atoms.info}")
+        print(f"arrays keys: {list(atoms.arrays.keys())}")
+        print(f"scaled positions:\n{atoms.get_scaled_positions()}")
     except Exception as e:
         print(f"ERROR: {type(e).__name__}: {e}")
     print("=== P3 done ===")

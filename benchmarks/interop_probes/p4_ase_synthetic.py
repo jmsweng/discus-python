@@ -1,4 +1,4 @@
-"""P4: ASE on the 5 synthetic CIFs."""
+"""P4: ASE on the 5 synthetic CIFs (with info)."""
 import os
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "..", "..", "tests", "fixtures", "interop")
@@ -11,11 +11,11 @@ def inspect(fname):
         atoms = read(cif)
         print(f"n_atoms: {len(atoms)}")
         print(f"species: {atoms.get_chemical_symbols()}")
-        print(f"cell: {atoms.cell}")
-        print(f"cell lengths: {atoms.cell.lengths()}")
-        print(f"cell angles: {atoms.cell.angles()}")
-        print(f"positions (fractional): {atoms.get_positions()}")
-        print(f"spacegroup: NOT AVAILABLE from ASE CIF reader")
+        print(f"cell.array:\n{atoms.cell.array}")
+        print(f"pbc: {atoms.pbc}")
+        print(f"info: {atoms.info}")
+        print(f"arrays keys: {list(atoms.arrays.keys())}")
+        print(f"scaled positions:\n{atoms.get_scaled_positions()}")
     except Exception as e:
         print(f"ERROR reading: {type(e).__name__}: {e}")
 
