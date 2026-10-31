@@ -30,6 +30,10 @@ __all__ += ["Lattice"]
 from .reciprocal_grid import ReciprocalGrid, FFTCompatibility
 __all__ += ["ReciprocalGrid", "FFTCompatibility"]
 
+# Labelled scattering data, xarray adapter and versioned HDF5 (Package B, Features 7 and 19).
+from .scattering_data import ScatteringVolume, mask_near_bragg
+__all__ += ["ScatteringVolume", "mask_near_bragg"]
+
 # DISCUS 6.23.01 Fourier macro writer: Bragg subtraction and LOTS (Package B, Features 8 and 9).
 from .fourier_macro import FourierConfig, Lots, Seed, StructureSource, prepare_fourier_run
 __all__ += ["FourierConfig", "Lots", "Seed", "StructureSource", "prepare_fourier_run"]
