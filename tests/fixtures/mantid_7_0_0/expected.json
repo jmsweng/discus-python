@@ -1,0 +1,120 @@
+{
+ "mantid_version": "7.0.0",
+ "cell": {
+  "a": 5.0,
+  "b": 6.0,
+  "c": 7.0,
+  "alpha": 90.0,
+  "beta": 105.0,
+  "gamma": 90.0
+ },
+ "files": {
+  "aligned_hkl.nxs": {
+   "events_hkl": [
+    [
+     1.125,
+     -0.375,
+     0.25,
+     100
+    ],
+    [
+     -1.875,
+     1.125,
+     -0.75,
+     300
+    ]
+   ],
+   "shape": [
+    24,
+    24,
+    12
+   ]
+  },
+  "projected_hh0.nxs": {
+   "events_hkl": [
+    [
+     1.75,
+     -0.5,
+     0.25,
+     200
+    ],
+    [
+     -2.25,
+     -1.5,
+     -2.25,
+     50
+    ]
+   ],
+   "events_projected": [
+    [
+     0.625,
+     -1.125,
+     0.25
+    ],
+    [
+     -1.875,
+     0.375,
+     -2.25
+    ]
+   ],
+   "shape": [
+    24,
+    24,
+    12
+   ]
+  },
+  "w_matrix_after.nxs": {
+   "event_projected": [
+    1.25,
+    -0.75,
+    2.25
+   ],
+   "event_hkl": [
+    3.5,
+    -1.0,
+    -0.75
+   ],
+   "weight": 500,
+   "names": [
+    "[H,H,0]",
+    "[0,0,L]",
+    "[H,-H,0]"
+   ],
+   "difference_with": "w_matrix_before.nxs",
+   "shape": [
+    20,
+    20,
+    20
+   ]
+  },
+  "histo_formula.nxs": {
+   "signal_formula": "100*i0 + 10*i1 + i2 + 1 (i0 along [H,0,0])",
+   "error_formula": "0.1*signal",
+   "nan_index": [
+    2,
+    3,
+    1
+   ],
+   "masked": "i0 == 0",
+   "shape": [
+    6,
+    5,
+    4
+   ],
+   "extents": [
+    [
+     -1.5,
+     1.5
+    ],
+    [
+     -1.25,
+     1.25
+    ],
+    [
+     0,
+     2
+    ]
+   ]
+  }
+ }
+}

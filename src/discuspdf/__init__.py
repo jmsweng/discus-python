@@ -42,6 +42,10 @@ __all__ += ["FourierConfig", "Lots", "Seed", "StructureSource", "prepare_fourier
 from .viz import SampledVolume, plot_slice, plot_isosurfaces, isosurface, write_vtk, read_vtk
 __all__ += ["SampledVolume", "plot_slice", "plot_isosurfaces", "isosurface", "write_vtk", "read_vtk"]
 
+# Mantid MDHistoWorkspace (SaveMD v2) import/export (Package B, Feature 18).
+from .mantid_io import MantidFormatError, read_mantid_mdhisto, write_mantid_mdhisto
+__all__ += ["MantidFormatError", "read_mantid_mdhisto", "write_mantid_mdhisto"]
+
 # Editable Structure model (Package A, Feature A1).
 from .structure import Structure
 __all__ += ["Structure"]

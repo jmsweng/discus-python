@@ -115,6 +115,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.SampledVolume` puts reciprocal-space data and 3D-ΔPDF results on physical coordinates (Å⁻¹ or Å); `plot_slice` draws layers in their true geometry, `plot_isosurfaces` needs the `viz` extra (scikit-image), and `write_vtk` writes ParaView files (`.vti` only for axis-aligned grids, `.vts` otherwise). See [docs/VISUALIZATION.md](docs/VISUALIZATION.md).
 
+## Mantid MDHisto files
+
+`discuspdf.read_mantid_mdhisto` / `write_mantid_mdhisto` convert between Mantid `SaveMD` (v2) MDHistoWorkspace files in the HKL frame and `ScatteringVolume`, including projections (`[H,H,0]`-style axes, `W_MATRIX`), errors² and masks. Checked against files written by Mantid 7.0.0, and Mantid loads the files we write. See [docs/MANTID_IO.md](docs/MANTID_IO.md).
+
 ## Interoperability (CIF, ASE, DiffPy)
 
 `discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
