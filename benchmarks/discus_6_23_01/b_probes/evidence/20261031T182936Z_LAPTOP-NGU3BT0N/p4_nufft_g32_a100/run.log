@@ -1,0 +1,168 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\bprobe\20261031T182936Z_LAPTOP-NGU3BT0N\p4_nufft_g32_a100\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mrun.mac
+ suite>  
+ suite> discus
+ discus> read
+ discus/read> stru gate2_block.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    4.00000    4.00000    4.00000   90.00000   90.00000   90.00000    64.0000    
+
+ Metric Tensor     :
+      16.00000      0.00000      0.00000
+       0.00000     16.00000      0.00000
+       0.00000      0.00000     16.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.25000    0.25000    0.25000   90.00000   90.00000   90.00000   0.156250E-01
+
+ Reciprocal metric tensor     : 
+       0.06250     -0.00000     -0.00000
+      -0.00000      0.06250     -0.00000
+      -0.00000     -0.00000      0.06250
+
+ discus> eval n[1]
+ Value of n[1] =    4096.00000000    
+ discus> eval n[2]
+ Value of n[2] =    2.00000000000    
+ discus> eval n[3]
+ Value of n[3] =    1.00000000000    
+ discus> fourier
+ discus/fourier> xray
+ discus/fourier> wvle moa1
+ discus/fourier> ll -2,-2,-2
+ discus/fourier> lr 1.875,-2,-2
+ discus/fourier> ul -2,1.875,-2
+ discus/fourier> tl -2,-2,1.875
+ discus/fourier> na 32
+ discus/fourier> no 32
+ discus/fourier> nt 32
+ discus/fourier> abs h
+ discus/fourier> ord k
+ discus/fourier> top l
+ discus/fourier> temp ignore
+ discus/fourier> disp off
+ discus/fourier> lots off
+ discus/fourier> set technique:nufft
+ discus/fourier> set aver,100.0
+ discus/fourier> show
+ Fourier technique    : Non-uniform FFT Fourier, minus <F> (based on 100.0% of cryst.)
+ Fourier calculated by: atom form factors taken from: Waasmeier & Kirfel         
+   Fourier volume     : complete crystal
+   Radiation          : X-ray   , wavelength = MOA1 =  0.7093 A
+   Temp. factors      : ignored
+   Anomalous scat.    : ignored
+   Symmetry averaging : Friedel pairs merged
+   Exctinction Param. : No extinction correction applied
+   Filter function    : Not applied 
+   Intensity scale    :     1.0000
+
+ Reciprocal layer     : 
+   lower left  corner :     -2.0000    -2.0000    -2.0000
+   lower right corner :      1.8750    -2.0000    -2.0000
+   upper left  corner :     -2.0000     1.8750    -2.0000
+   top   left  corner :     -2.0000    -2.0000     1.8750
+
+   hor. increment     :      0.1250     0.0000     0.0000   ->    0.0312 A**-1
+   vert. increment    :      0.0000     0.1250     0.0000   ->    0.0312 A**-1
+   top   increment    :      0.0000     0.0000     0.1250   ->    0.0312 A**-1
+   # of points        :     32 x   32 x   32  (h,k,l)
+   Angle Ratio Aver v/h     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver h/t     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver t/v     90.0000 degrees        1.0000     1.0000
+ discus/fourier> run
+ Computing sin(theta)/lambda table ...
+ Computing formfactor lookup table ...
+
+ Elapsed time    :  0.102680E-01 sec
+ discus/fourier> exit
+ discus> output
+ discus/output> value int
+ discus/output> form nexus
+ discus/output> outf p4_nufft_g32_a100_int.h5
+ discus/output> run
+
+      Partial dump of unified data 
+
+   Crystal Meta information
+audit_conform_dict_name    Disorder unified data
+audit_conform_dict_version 0.0.0
+audit_creation_date        2026-10-31
+audit_creation_method      6.23.01
+audit_author_name          DISCUS
+
+ Unit cell params     4.000000    4.000000    4.000000
+ Unit cell angles    90.000000   90.000000   90.000000
+ Symmetry H_M     P 1                             
+ Symmetry Origin      1
+ Symmetry abc     abc
+ Symmetry n MAT       1
+ Symmetry 1 fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry 1 scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry 1 lst      0.000000   0.000000   1.000000   0.000000
+ Symmetry N fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry N scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry N lst      0.000000   0.000000   1.000000   0.000000
+
+ Data experiment  calculated                      
+ Data with  bragg bragg_subtracted                
+ Data symmetrized none                            
+ Data number                                      
+ Data axes        hkl                             
+ Data radiation   xray                            
+ Data dimensions     32   32   32
+ Data abs,ord,top     1    2    3
+ Data style       single_diffraction              
+ Data content     intensity                       
+ Data symbol      MOA1            
+ Data length         0.709260   0.709260   0.000000
+
+Axes coordinates: basecell_fractional             
+
+ Data corner        -2.000000  -2.000000  -2.000000
+
+ Data abscissa       0.125000   0.000000   0.000000
+ Data ordinate       0.000000   0.125000   0.000000
+ Data top_axis       0.000000   0.000000   0.125000
+
+  DATA_VALUES   0.0000000000000000        0.0000000000000000     
+  DATA_MINMAX   0.0000000000000000        0.0000000000000000     
+
+ discus/output> exit
+ discus> exit
+ suite> exit
+
+--- STDERR ---
+xdpyinfo:  unable to open display "".
+spreadcheck NU pt not in valid range (central three periods): kx[6]=10.21017612416683, N1=64 (pirange=1)
+FINUFFT invokeGuru: setpts error (ier=4)!
+spreadcheck NU pt not in valid range (central three periods): kx[7]=10.99557428756428, N1=64 (pirange=1)
+FINUFFT invokeGuru: setpts error (ier=4)!

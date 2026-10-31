@@ -1,0 +1,111 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\bprobe\20261031T182936Z_LAPTOP-NGU3BT0N\p1c_hhl\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mrun.mac
+ suite>  
+ suite> discus
+ discus> read
+ discus/read> cell gaas.cll,4,4,4
+ F -4 3 m          216
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    5.65370    5.65370    5.65370   90.00000   90.00000   90.00000    180.717    
+
+ Metric Tensor     :
+      31.96432      0.00000      0.00000
+       0.00000     31.96432      0.00000
+       0.00000      0.00000     31.96432
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.17688    0.17688    0.17688   90.00000   90.00000   90.00000   0.553352E-02
+
+ Reciprocal metric tensor     : 
+       0.03128     -0.00000     -0.00000
+      -0.00000      0.03128     -0.00000
+      -0.00000     -0.00000      0.03128
+
+ discus> eval n[1]
+ Value of n[1] =    512.000000000    
+ discus> eval n[2]
+ Value of n[2] =    2.00000000000    
+ discus> eval n[3]
+ Value of n[3] =    8.00000000000    
+ discus> fourier
+ discus/fourier> xray
+ discus/fourier> wvle moa1
+ discus/fourier> ll -2,-2,-2
+ discus/fourier> lr 2,2,-2
+ discus/fourier> ul -2,-2,2
+ discus/fourier> tl -2,-2,-2
+ discus/fourier> na 41
+ discus/fourier> no 41
+ discus/fourier> nt 1
+ discus/fourier> abs h
+ discus/fourier> ord k
+ discus/fourier> top l
+ discus/fourier> temp ignore
+ discus/fourier> disp off
+ discus/fourier> lots off
+ discus/fourier> set technique:turbo
+ discus/fourier> set aver,0.0
+ discus/fourier> show
+ Fourier technique    : turbo Fourier
+ Fourier calculated by: atom form factors taken from: Waasmeier & Kirfel         
+   Fourier volume     : complete crystal
+   Radiation          : X-ray   , wavelength = MOA1 =  0.7093 A
+   Temp. factors      : ignored
+   Anomalous scat.    : ignored
+   Symmetry averaging : Friedel pairs merged
+   Exctinction Param. : No extinction correction applied
+   Filter function    : Not applied 
+   Intensity scale    :     1.0000
+
+ Reciprocal layer     : 
+   lower left  corner :     -2.0000    -2.0000    -2.0000
+   lower right corner :      2.0000     2.0000    -2.0000
+   upper left  corner :     -2.0000    -2.0000     2.0000
+   top   left  corner :     -2.0000    -2.0000    -2.0000
+
+   hor. increment     :      0.1000     0.1000     0.0000   ->    0.0250 A**-1
+   vert. increment    :      0.0000     0.0000     0.1000   ->    0.0177 A**-1
+   top   increment    :      0.0000     0.0000     0.0000   ->    0.0000 A**-1
+   # of points        :     41 x   41 x    1  (h,k,l)
+   Angle Ratio Aver v/h     90.0000 degrees        0.7071     0.0000
+[31m ***MAC *** Error in macro line:    26 Level   1          ***[39m
+[31m ***MAC *** /mnt/c/tmp/bprobe/20261031T182936Z_LAPTOP-NGU3BT0N/p1c_hhl/run.mac[39m
+[31m ***COMM***  Error occured in fourier menu                *** -10 ***[39m
+  
+ ------ > Working directory : C:\tmp\bprobe\20261031T182936Z_LAPTOP-NGU3BT0N\p1c_hhl\
+  
+ suite >exit
+
+--- STDERR ---
+xdpyinfo:  unable to open display "".
+[31m ***FOUR*** Component of increment vector is zero         ***  -4 ***[39m
+[31m ***COMM*** Sub menu returned with error                  *** -10 ***[39m
+[31m ***COMM*** Program section returned with error           ***  -9 ***[39m

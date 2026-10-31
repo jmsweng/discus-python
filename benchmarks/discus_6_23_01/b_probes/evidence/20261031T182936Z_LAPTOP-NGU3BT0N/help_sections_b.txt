@@ -1,0 +1,1007 @@
+3  seed
+!p seed [ <value> ]
+!p seed [ <value_a>, <value_b> ] , group:<no>
+
+   Reinitializes the pseudo random generator. The seed passed to the
+   random generator is -abs(nint(value)). If the <value> is omitted,
+   the random generator will be passed the number of hundredth of
+   seconds passed since midnight, essentially initializing the sequence
+   at a unknown fairly random point.
+
+   The seed may take more than one parameter, usually the compiler
+   takes 12 different seeds.
+
+   To overcome limited internal precision, a patch has been introduced
+   in version 5.17.0. 
+   As the random number generator takes seeds in the range from
+   1 to 99999999 the internal precision that calculates the value 
+   on the command line via the detour of a real valued number turned
+   out to be insufficient. To ensure that an eight digit seed number
+   is properly transfered to the seed initialization routine, split
+   the number into two groups of four digit integers as in:
+   12345678  => 1234, 5678, group:2
+   The optional parameter "group" tells the SUITE to group these two 
+   numbers together to the original intended eith digit no.
+3  set
+!p set <command>,..
+
+   This command allows to alter various program independent setting.
+   Allowed values for <command> are:
+
+3  seed
+!p seed [ <value> ]
+!p seed [ <value_a>, <value_b> ] , group:<no>
+
+   Reinitializes the pseudo random generator. The seed passed to the
+   random generator is -abs(nint(value)). If the <value> is omitted,
+   the random generator will be passed the number of hundredth of
+   seconds passed since midnight, essentially initializing the sequence
+   at a unknown fairly random point.
+
+   The seed may take more than one parameter, usually the compiler
+   takes 12 different seeds.
+
+   To overcome limited internal precision, a patch has been introduced
+   in version 5.17.0. 
+   As the random number generator takes seeds in the range from
+   1 to 99999999 the internal precision that calculates the value 
+   on the command line via the detour of a real valued number turned
+   out to be insufficient. To ensure that an eight digit seed number
+   is properly transfered to the seed initialization routine, split
+   the number into two groups of four digit integers as in:
+   12345678  => 1234, 5678, group:2
+   The optional parameter "group" tells the SUITE to group these two 
+   numbers together to the original intended eith digit no.
+3  set
+!p set <command>,..
+
+   This command allows to alter various program independent setting.
+   Allowed values for <command> are:
+
+3  set
+!p set <subcommand>,...
+
+   This command sets various parameters within the 'chem' section of 
+   the DISCUS program. Valid <subcommands> are:
+
+4  lots
+!p lots "off"
+!p lots {"box" | "ellipsoid"},<lx>,<ly>,<lz>,<n>,{"yes" | "no"},[<fname>]
+
+   This command allows the definition of 'small crystal volumes' to
+   be used to check the homogeneity of the crystal (-> 'homo').
+   For details about the command and its parameters see the help file
+   entry for -> 'four lots'. 
+3  set
+!p set <central_atom_type>, {<def.no.>| <def_name>}, <neigh types>, <rmin>, 
+                                                                    <rmax> 
+
+   This command allows you to replace the settings for the definition 
+   number <def.no.> or name <def_name> for the central atom type 
+   <central_atom_type>.
+   The definition must have been created by a previous 'add' command.
+3  set
+!p set
+!p set <name>, "ligand", <file>, <density>
+!p set <name>, "bond", <atom_type> [, <atom_type>,...], <ligand atom no>, 
+!p                                                      <distance>
+!p                                  [, "angle:"<b_angle>]
+!p                                  [, "anchor:"<n_anchors>]
+!p                                  [,{"distri:even" ! "distri:fixed"} ]
+!p set <name>, "axis", <ligand atom no 1 >, <ligand atom no 2>
+!p
+!p set <name>, "tilt", "angle", <value>
+!p set <name>, "tilt", "atoms", "auto"
+!p set <name>, "tilt", "atoms", <n1>, <n2>, <n3>, <n4>
+!p
+!p set <name>, {"hkl"| "form"}, {<h>, <k>, <l>| "none"}
+!p set <name>, "surface", <ligand atom no> [, <ligand atom no>...]
+
+   This command allows to set the detailed definitions needed to decorate the
+   surface.
+
+   set <name>, "ligand", <file>, <density>
+       Defines the input file from which the ligand is read. 
+       The last parameter <density> defines the ligand density on the surface in
+       units of [ligands per A^2]. DISCUS estimates the surface area by counting 
+       the number of atoms with the "external" property flag. An average area of
+       11.0 A^2 is assigned to each surface atom. 
+
+   set <name>, "bond", <atom_type> [, <atom_type>,...], <ligand atom no>, 
+                       <distance>, [, "angle:"<b_angle>]
+                                   [, "anchor:"<n_anchors>]
+       Defines the bonds of length <distance> between surface atoms of type 
+       <atom_type> and atom number <ligand atom no> of the ligand. 
+
+       The number of surface atom types can be flexible, the number 
+       of 'set bond ' commands depend on the 
+       decoration that is defined by the "add" command.
+       For the "normal", "acceptor" and "donor" type exactly 
+           one 'set bond' command is required.
+       For the "bridge", "chelate", "double", and "multi" type exactly 
+           two 'set bond' commands are required.
+       For the "multi" type exactly three surface type
+           parameters must be given.
+           Two 'set bond' commands are required.
+           The first 'set bond' command requires three surface types.
+
+       The surface types can be given as type number or as type name. 
+       If the type number is given, this atom type will act as anchor. 
+       If the type name is given, all atom types with this atom name will act
+       as anchors.
+
+       The optional parameter "angle:" is relevant to "acceptor" and
+       "donor" bond schemes only. For these schemes the angle is 
+       interpreted as the hydrogen bond angle in the Hydrogen atom and
+       should be close to 170°.
+
+       The optional parameter "distri" with default value "even" 
+       allows you to influence the distribution of surface sites 
+       onto which the ligand molecules at bonded. In the default 
+       case of "even", the surface site will be -reasonably- evenly
+       spread across the surface. With "fixed", the surface sites 
+       will be randomly chosen among the surface atoms defined by 
+       the <atom_type> parameter, but their locations will remain 
+       fixed. As optional parameters default if absent, make sure
+       that you specify this optional parameter on the last 
+       'set bond' command.
+
+   set <name>, "tilt", "angle", <value>
+   set <name>, "tilt", "atoms", "auto"
+   set <name>, "tilt", "atoms", <n1>, <n2>, <n3>, <n4>
+       Defines a tilt of the molecules relative to the local surface normal.
+       If the molecule is reasonably flat, one can expect that the molecules
+       will be tilted around an axis that is parallel to both, the 
+       local surface and the molecule plane. 
+       With "tilt, atoms, auto" DISCUS will 
+       calculate a least squares plane through the ligand molecule and 
+       tilt the molecule around the axis described above. 
+       Alternatively, DISCUS can construct the normal to the molecule
+       if you provide the four atom numbers <n1>, <n2>, <n3>, <n4>.
+       The normal will be calculated via the vector product of the
+       two difference vectors between the pairs: n2-n1  and n4-n3. Make sure
+       that these two vectors are not parallel. One of the atoms may
+       be present in both vectors. The value of <n1> could for example be
+       identical to either <n3> or <n4>.
+
+   set <name>, "axis", "auto"
+   set <name>, "axis", <ligand atom no 1 >, <ligand atom no 2>
+       Defines the ligand molecule axis. This axis is placed normal to the local
+       surface, in as much as the decoration type allows. 
+       The two atom numbers define the ligand axis. 
+
+       For the default mode "auto", DISCUS searches for the furthest molecule
+       atom that is not involved in a bond. The axis is then defined by
+       the first bonding atom and this furthest atom.
+       If a molecule consists of just one atom or just of the two atoms
+       involved in the "double" or "multiple" bonds, the "auto" mode will
+       flag an internal message not to rotate the molecule at all.
+
+       For the types "normal" and "bridge" the axis is placed parallel to the
+       normal by an appropriate rotation of the ligand. 
+       For the types "double" and "multi" the orientation of the molecule is
+       partially defined by the bonds. The remaining freedom is to rotate
+       the molecule around the axis defined by the two atoms involved in the
+       two bonds. The molecule is rotated to place the axis into a 
+       plane that is parallel to the local surface normal.
+
+   set <name>, {"hkl"| "form"}, {<h>, <k>, <l>| "none"}
+       Allows to define a restricted placement of the ligands onto one or
+       several surface faces or complete forms.
+       With "hkl" the restriction applies to a single face <h>, <k>, <l>,
+       with "form" the Miller indices <h>, <k>, <l> are expanded to the 
+       complete form for the current crystal system. 
+       You can use several commands to combine more than one restriction.
+       DISCUS calculates the local surface normal and applies a strict
+       adherence to the specified Miller indices.
+       If the last parameter is "none", all restrictions are removed.
+
+   set <name>, "surface", <ligand atom no> [, <ligand atom no>...]
+       Allows to define, which ligand atom numbers will be flagged as
+       new surface atom types. All these molecule atoms will inherit the
+       surface properties from the site to which this molecule as bonded
+       to.  
+3  set
+!p set
+
+   Set various definitions
+
+3  lots
+!p lots "off"
+!p lots {"box" | "ellipsoid"},<lx>,<ly>,<lz>,<n>,{"yes" | "no"}
+!p lots {"box" | "ellipsoid"},<lx>,<ly>,<lz>,"all",{"yes" | "no"}
+
+   The program allows to Fourier transform large crystals by averaging
+   the scattering from smaller volumes selected at random. This allows
+   to avoid very long correlations which might occur if the complete
+   crystal scatters in phase. 
+
+   If this option is not wanted and the complete crystal should be 
+   transformed at once, this option can be turned off by the 
+   command 'lots off'. Otherwise the following parameters must be
+   specified: First the lot shape. The choices are "box" or 
+   "ellipsoid". Usually the first letter of the parameter is sufficient.
+   The following parameters <lx>,<ly> and <lz> describe the size of
+   the sub-volumes in unit cells. 
+   The parameter <n> specifies the number of such volumes to be averaged. 
+   If the number is chosen with the keyword "all", DISCUS will place
+   the origin of the lots onto each unit cell and the number of the lots
+   corresponds to the total number of unit cells in the crystal.
+   The last parameter can be "yes" or "no" and selects if periodic
+   boundary conditions should be applied.
+
+   The lot size should be slightly larger than the longest correlations
+   present in the model crystal studied. The number of lots to be
+   averaged should be set to a value that complete crystal will be
+   covered once on average. 
+
+!p WARNING:
+   If the command 'purge' is performed or a structure is read where the 
+   atoms are not listed in the DISCUS order this command should be set
+   to 'lots off'.
+3  set
+!p set "aver" [, <per>]
+!p set {"external"|"internal"}
+!p set {"exti:"|<par>}
+!p set {"mode:single" | "mode:init" | "mode:accumulate" | "mode:finish"}
+!p set {"symm:apply" | "symm:friedel" | "symm:ignore" }
+!p set {"technique:turbo" | "technique:nufft"}
+!p set {"filter:lanczos", "damp:"<r>, "width:"<npoints>, "scale:"<factoor>yy}
+
+!p set "aver" [, <per>]
+
+   The Fourier level of DISCUS allows to subtract the average structure
+   factor <F> by setting the parameter <per> to a value not equals zero. 
+   The value of <per> sets the percentage of the crystal to be used to 
+   calculate <F>. 
+
+   The average is calculated by putting <per> % of the crystals atoms 
+   into a single unit cell which is Fourier transformed and multiplied 
+   with the interference function of the lot shape.
+
+!p WARNING:
+   If the command 'purge' is performed or a structure is read where the 
+   atoms are not listed in the DISCUS order the average structure will
+   not be calculated correctly !
+
+!p set {"mode:single" | "mode:init" | "mode:accumulate" | "mode:finish"}
+
+   As default mode, DISCUS will calculate a single Fourier transform 
+   that can be written to an output file. 
+   As an alternative to the ==> 'lots' command, you can also perform a
+   simulation and calculate a diffraction pattern and then accumulate
+   several such calculations into the final pattern.
+   Prior to such a loop, use within the fourier menu the command
+   set mode:init
+   During the loop use 'set mode:accumulate'
+   After the loop go back to fourier and use:
+   set mode:finish
+   before you use the ==> 'output' menu to write the data.
+
+!p For a small to moderate crystal, the actual realization of the disorder
+   might not match the crystals symmetry very well. you can improve the
+   situation by applying the point group symmetry to the diffraction 
+   pattern with:
+   set symm:apply
+   This optional parameter can be combined with the 'mode:finish' parameter
+   and will apply both to a single as well as to an accumulated pattern.
+
+!p set "symm:apply"
+!p set "symm:friedel"
+!p set "symm:ignore"
+
+   If set to "apply" Discus will apply the point group symmetry to the
+   data calculated in reciprocal space. This will ensure that the calculated
+   diffraction pattern reflects the crystals point group symmetry. 
+   If the crystal is small, statistical fluctuation introduced for example
+   in the Monte-Carlo part may otherwise create a diffraction pattern that
+   will seem to reflect lower symmetry.
+
+   If set to "friedel", DISCUS will reduce the calculation time for the ==>
+   "technique:turbo" mode. Only half of reciprocal space is calculated, the
+   remainder is generated by the "-1" symmetry operation. For the "friedel"
+   technique to work, anonalous scattering must be off and the Fourier 
+   volume must consist of an odd number of pixels symmetrically around 
+   reciprocal origin.
+
+!p set {"external"|"internal"}
+
+   Usually DISCUS will assume that all atoms in the crystal represent
+   real atoms. In this case the internally tabulated atomic form factors
+   are used to calculate the Fourier transformation. You can explicitly
+   set this mode by typing "set internal".
+   As of version 3.4.2 DISCUS can handle extended objects such as 
+   cubes, cylinders, and spheres. Their Fourier transform is calculated
+   using the appropriate analytical expression. In order to activate
+   this state, you must set the Fourier to "external".
+
+!p set "exti:"<par>
+
+   Set an extinction correction parameter. 
+   The amplitudes are multiplied by
+      [ 1.0 + 0.001 * <par> * ampl**2 * lambda**3 / sin(2Theta) ] ** (-0.25)
+   This equation is taken from SHELXL.
+
+   Development note, currently the extinction correction is applied only
+   to output format "hklf4" and "list5"
+!p set {"technique:turbo"}
+!p set {"technique:nufft"}
+
+   DISCUS offers two techniques for the Fourier calculation. 
+   The "turbo" technique is based on the algorithm described in 
+   Butler and Welberry. Its acceleration is based on a tabulated 
+   cos/sine function and quick addressing of the corresponding 
+   Fourier parameters.
+   The "nufft" technique uses the Non-Uniform FFT. It is about two 
+   orders of magnitude faster than the "turbo" technique. Currently the
+   technique is restricted to a Fourier volume/plane/line that is parallel
+   to the three reciprocal base vectors:
+      abscicca parallel a*; ordinate parallel b*, top axis parallel c*.
+   Correspondingly the original crystal must consist of a block terminated
+   by the {100}; {010} and {001} facets. If the diffraction pattern should 
+   be calculated in a different orientation, use the transformation option
+   at the ==> 'output' menu or while reading the data in KUPLOT.
+   The "turbo" mode in combination with the ==> 'lots' option relies on the
+   crystal to consist of a block shaped crystal with identical atom numbers 
+   per unit cell. 
+   The "nufft" mode does not require all unit cells to have the same amount
+   of atoms per unit cell, this holds for the subtraction of the Bragg 
+   scattering as well.
+
+!p     {"filter:lanczos", "damp:"<r>, "width:"<npoints>, "scale:"<factor>}
+
+   The nufft techniques calculates the FFT based on all atoms of the crystal.
+   This will often give rise to high frequency oscillations that arise from
+   correlations between atoms at large distances. These distances are in 
+   most cases beyond the intended correlation length achieved for example  
+   in the ==> 'mmc' menu. To avoid these oscillations a Lanczos filter can
+   be used. 
+   The parameter "damp:" defines the dampening of points at larger distance.
+   A smaller value will reduce the influence of points further away.
+   The parameter "width:" determines how many neighboring points are included 
+   in the filter operation. 
+   The "scale:" parameter allows to create a new grid that is finer by the
+   <factor>, i.e. has <factor> times more data points. "scale" must be an
+   integer number >=1
+3  set
+!p set "accu",{"init"|"add"}
+!p set "excl",{none"|<value>}
+!p set "rsym",{appl"|"igno"}
+
+   Set defines various parameters.
+
+4  set "accu",{"init"|"add"}
+
+   Sets the mode for the accumulation of inverse Fourier transforms.
+
+!p "init"  
+   The electron density array is initialized, i.e. set to zero.
+
+!p "add"   
+   The next inverse Fourier transform is added to the previous value.
+   This way several inverse Fourier transforms will contribute to a single
+   layer in direct space, which is necessary to create a inverse Fourier
+   section rather than a projection onto the layer. See the manual for 
+   further details.
+
+   If you use DISCUS to calculate the input data for the inverse Fourier,
+   you MUST separate the loop that calculates the Fourier from the loop
+   that calculates the inverse Fourier!!! Both parts of the program use
+   the same variable to store the results and by mixing the loops, the
+   result will be unpredictable nonsense !
+
+4  set "rsym",{"appl"|"igno"}
+
+   Determines whether the space group symmetry is applied to all reflections.
+   If the second parameter is "appl", all symmetry elements are applied to
+   all reflections and the phases are transformed accordingly. This allows
+   you to read a set of unique reflections and calculate the inverse Fourier.
+3  set
+!p set <subcommand>
+
+   This command allows to define the wanted correlations and most other
+   parameters for the MC simulation. The help entry 'commands' contains
+   a list of valid subcommands for the 'set' command. Further help can
+   be found for the following subcommands:
+
+3  set
+!p set <subcommand>
+
+   This command allows to define the wanted correlations and most other
+   parameters for the MMC simulation. The help entry 'commands' contains
+   a list of valid subcommands for the 'set' command. Further help can
+   be found for the following subcommands:
+
+4  set
+!p set "abs:["<h>, <k>, <l>"]"
+!p set "ord:["<h>, <k>, <l>"]"
+!p set "zone:["<h>, <k>, <l>"]"
+!p set "ll:["<h>, <k>, <l>"]"
+!p set "lr:["<h>, <k>, <l>"]"
+!p set "ul:["<h>, <k>, <l>"]"
+!p set "tl:["<h>, <k>, <l>"]"
+!p set "npoints:["<h>, <k>, <l>"]"
+
+   Specified details of the intended transformation
+
+!p set "abs:["<h>, <k>, <l>"]"
+
+   Sets the new abscissa
+
+!p set "ord:["<h>, <k>, <l>"]"
+
+   Sets the new ordinate
+
+!p set "zone:["<h>, <k>, <l>"]"
+   Sets the new zone axis. The zone axis will be the "top" coordinate of the
+   transformed data. 
+
+!p set "ll:["<h>, <k>, <l>"]"
+!p set "lr:["<h>, <k>, <l>"]"
+!p set "ul:["<h>, <k>, <l>"]"
+!p set "tl:["<h>, <k>, <l>"]"
+
+   The combination of these four settings define the new 3D volume.
+   The new axes are the vectors from the lower left "ll" corner to:
+   abscissa :: lower right "lr"
+   ordinate :: upper left  "ul"
+   top axis :: top   left  "tl"
+   
+!p set "npoints:["<nx>, <ny>, <nz>"]"
+
+   Set the number of data points in the new transformed grid.
+
+3  value
+!p valu {  "int"  |  "amp"  |  "pha" [,"random"]  |  "real"  |  "imag" }
+!p
+!p valu { "S(Q)"  | "F(Q)" | "I(Q)"}
+!p
+!p valu { "f2aver"  | "faver2" }
+!p
+!p valu { "f2averb"  | "faver2b" }
+!p
+!p valu { "pdf" }
+!p
+!p valu { "3DPDF" } {, "dsmax:"<value> | "qmax:"<value> 
+!p                     "hklmax:["<h>,<k>,<l>"]"
+
+   Sets what value is written to the output file. The keyword given in
+   < > corresponds to the value of the average structure factor <F> whereas
+   the plain word stands for the resulting value of the Fourier transform
+   which can be F or F-<F> depending on the selected mode. The command
+   'value int' will save the resulting intensity whereas 'value <int>' will
+   give the intensity of the average structure. The allowed values are
+   summed up in the following list:
+
+!p "int" :   intensity I(hkl)
+!p "amp" :   modulus of structure factor |F(hkl)|
+!p "pha" :   phase angle in degrees
+!p           If the optional second parameter is given as "random",
+!p           the phases for integer HKL are written as calculated.
+!p           All other phases are assigned a random number between
+!p           -180 and +180 degrees.
+!p "real":   real part of structure factor
+!p "imag":   imaginary part of structure factor
+!p "pdf"     Powder PDF 
+!p "3DPDF"   3DPDF == generalized Patterson function
+!p           Exactly one optional parameter can be specified that
+!p           sets a limit in reciprocal space. All intensities further
+!p           outside are multiplied with zero. 
+!p           "dsmax"   : value is in 2*sin(Theta)/lambda
+!p           "qmax"    : value is in 2PI*2*sin(Theta)/lambda
+!p           "hklmax"  : value is length of reciprocal vector
+!p           WARNING, as the intensity is multiplied with zero, 
+!p              all further output is truncated as well!
+!p              To avoid, write 3D-PDF output last.
+!p           Defaults to no limit to be applied.
+!p "S(Q)":   Normalized total scattering function
+!p "F(Q)":   Reduced normalized total scattering function Q[S(Q)-1]
+!p "I(Q)":   Intensity divided by the number of atoms.
+!p "f2aver": Squared atomic form factors , averaged over all atoms
+!p "faver2": Average atomic form factor squared aver average
+!p "f2averb": Squared atomic form factors , averaged over all atoms 
+!p            Multiplied by averaged DebyeWaller term
+!p "faver2b": Average atomic form factor squared aver average
+!p            Multiplied by averaged DebyeWaller term
+   The last seven values are available for powder output only and require
+   a Q axis. 
+
+   The file name is not adapted automatically!
+3  set
+!p set "accu",{"init"|"add"}
+!p set "excl",{"none"|<value>}
+!p set "mode",{"normal"|"sharp"|"super"}
+!p set "origin",{"normal"|"subtract"}
+!p set "rsym",{"apply"|"ignore"}
+
+   Set defines various parameters.
+
+3  set
+!p set "subcommand"
+
+   This command allows to set most of the PDF parameters.  Some of
+   the commands are explained in the RMC section (-> rmc). The following
+   "subcommands" are valid:
+
+3  set
+!p set
+
+   Guide the perioditizer by setting:
+   The expected number of unit cells
+   The expected number of atoms per unit cell
+   The expected positions within the unit cell
+3  set
+!p set { <name> | <number> }, <type>,<col>,<size>
+!p set { <name> | <number> }, <type>,<r>,<g>,<b>,<size>
+
+   This command allows to set the marker type <type>, its color <col>
+   and size <size> for the given atom or molecule. In case of atoms, 
+   the input can be given by its name <name> or scattering type number 
+   <number>. For molecules only <number> as the molecule type is a valid 
+   input. The resulting file will contains the coordinates of the atom 
+   and type, color and size in a row. This file can be read by KUPLOT 
+   using the command
+
+!p    load cr,<file>
+
+   The possible values for <type> are:
+
+!p   0 : no marker       5 : filled square    10 : line (/)
+!p   1 : dot             6 : empty triangle   11 : line (\)
+!p   2 : empty circle    7 : cross (x)        12 : line (-)
+!p   3 : filled circle   8 : cross (+)        13 : vertical line
+!p   4 : empty square    9 : line (|)              from y-axis
+
+   The possible values for the colors <col> are:
+
+   The allowed color values <icol> are:
+
+!p   1 : red       5 : yellow        9 : dark blue      13 : cyan
+!p   2 : green     6 : black        10 : dark magenta   14 : dark cyan
+!p   3 : blue      7 : dark red     11 : dark yellow    15 : white (!)
+!p   4 : magenta   8 : dark green   12 : gray
+
+   The size of the markers <size> is given relative to the marker
+   size set in the plot program KUPLOT, i.e. a value of 1.0 will 
+   result in the full marker size whereas 0.5 will reduce the size
+   by 50%. 
+
+   If you are using 'gnuplot' as program type (-> 'prog') the settings
+   will be ignored.
+
+   If you are using the XBS program, the color can be represented 
+   as an RGB triplet. If you give one value only, it is interpreted
+   as gray shade in the range [0-1].
+3  set
+
+   Sets various parameters for powder diffraction. 
+
+4  lots
+!p save "lots",<name>
+
+   This command saves the current set of lot origins to the file
+   named <name>. These lot origins can be used as default in subsequent
+   refinement rather than creating a new set of random lots
+   (-> 'set lots,..').
+3  set
+!p set "subcommand"
+
+   This command allows to set most of the RMC parameters. The following
+   "subcommands" are valid:
+
+4  lots
+!p lots "off"
+!p lots {"box" | "ellipsoid"},<lx>,<ly>,<lz>,<n>,{"yes" | "no"},[<fname>]
+
+   This command allows to use the 'lot' option during the RMC refinement.
+   For details about the command and its parameters see the help file
+   entry for 'four lots'. 
+
+   The optional last parameter is a file name for a file containing a
+   predefined set of lot origins. This file can be created using
+   'save lots,..' after a RMC refinement was carried out. If no
+   file name <fname> is given, DISCUS creates a new random set of
+   lots for the RMC fit.
+
+   The advantage of using lots is the combination of a smooth calculated
+   diffraction pattern as average of the Fourier transform of small 
+   crystal volumes (lots). This forces RMC on a 'local' scale in real
+   space without the problem of large errors and noisy patterns as for
+   small crystal sizes.
+
+   It is important to subtract the average structure factor (-> set aver)
+   when using this mode even if "periodic boundary conditions" are
+   fulfilled, because the Fourier transform of the lots shape needs to
+   be subtracted as well as <F>. This can be done using the command
+   'set aver ..'.
+2  seed
+!p seed [ <value> ]
+
+   Reinitializes the pseudo random generator. The seed passed to the 
+   random generator is -abs(nint(value)). If the <value> is omitted,
+   the random generator will be passed the number of hundredth of 
+   seconds passed since midnight, essentially initializing the sequence
+   at a unknown fairly random point.
+3  set
+!p set "aver",<value>
+!p set "modulus" , { "off" | "on" }
+!p set "trans" , { "calculate" | "fixed" }
+!p set "aver:"<value>
+!p set {"modulus:off" | "modulus:on" }
+!p set {"trans:"calculate" | "trans:fixed" }
+!p set {atoms:off} | "atoms:on" | "atoms:strict" }
+
+!p set "aver",<value>
+!p set "aver:"<value>
+   If the value of <value> is not equal to zero, the average <F> is
+   subtracted from the actual structure factor F. 
+   Otherwise the average <F> is calculated using the whole crystal
+   and subtracted from the actual F.
+
+!p set "modulus" , { "off" | "on" }
+!p set {"modulus:off" | "modulus:on" }
+   If the modulus is set "off", each origin is calculated by adding
+   the corresponding translation vector to the previous origin. This
+   way the crystal grows along the average translation vector. The 
+   resulting average translation vector is the sum of all translation
+   vectors weighted by the corresponding probability as stored in
+   the correlation matrix.
+   If the modulus is set "on", each origin is calculated as above. The
+   origin is then expressed as multiples of the two modulo vectors and
+   the average translation. If any of the two multipliers corresponding
+   to the two modulo vectors is larger than |1|, the modulo vector is
+   subtracted from the origin. This has the effect that all origins are
+   no further than the modulo vectors from the average translation.
+   Even though all translation vectors might point in one direction,
+   you can restrict the crystal to any arbitrary direction by defining
+   the average vector ==> 'set trans', ==> 'aver'.
+
+!p set "trans" , { "calculate" | "fixed" }
+!p set {"trans:"calculate" | "trans:fixed" }
+   You have two choices to restrict the crystal growth once the 
+   modulus is set on.
+   The average translation can be fixed to the value given by
+   ==> 'aver' by setting the parameter of the 'set trans' command to
+   "fixed". Alternatively the average translation is computed using
+   the array of the translation vectors and the correlation matrix.
+
+!p set {atoms:off} | "atoms:on" | "atoms:strict" }
+   In adition to shifting the whole layer according to the modulus
+   vectors, DISCUS allows to shift individual atoms at the edge of the
+   crystal. 
+   DISCUS calculates the extend of the crystal. If individual atoms are
+   shifted outside the original dimensions, periodic boundary conditions
+   are applied for "set atoms:on". This will give a smoother edge of 
+   the crystal.
+   Due to rounding issues, a more stringent reshape operation is applied
+   with "set atoms:strict". In this case DISCUS will reduce the overall
+   dimensions of all layers in the final crystal by 2 unit cells, 
+   one at the lower, one at the upper edge. Atoms in these outer shell
+   are shifted using periodic boundary conditions or removed to restrict 
+   the crystal edges to the smaller number of unit cells. This ensures
+   a smooth edge.
+3  set
+!p set file:internal.filenname
+!p set qvec:[<qx>, <qy>, <qz>]
+!p set current:<number>
+
+3  set
+
+   Make various setting related to surfaces
+
+!p set distance, {"external" | "internal" | "all"} , <atom_list>, <distance>
+!p set distance, {"external" | "internal" | "all"} , {"default" | "off"}
+!p set original:[<atom_list>]
+!p set  replace:[<atom_list>]
+
+   The first two commands define the distances between those atoms in
+   <atom_list> and the specified surface. 
+   All atoms of the selected type that are closer
+   than <distance> to the specified surface are marked as "close". The
+   respective property can be used everywhere an atom type is selected.
+   ==> 'property' menu and the 'sel' / 'des' commands in various menus.
+
+   "external"
+   The surface created by the ==> 'boundary' command, see the 
+   ==> 'surface' menu and the main menu 'boundary' command.
+
+   "internal"
+   The surface is an internal surface between atoms that are inserted
+   through a ==> 'domain' and the host structure.
+
+   "all"
+   The distances apply to both surface type
+
+   <atom_list>
+   List of atoms for which the <distance> is to apply. The list can be
+   the "all" keyword or a list of atom names.
+
+   <distance>
+   Distance in Angstrom between an atom and the surface. If set to
+   zero, the flag is not set.
+
+   Instead of the atom list, the values can be set for all atoms to:
+
+   "default"
+   A default value of 2.55 Angstrom for all atoms.
+
+   "off"
+   A value of zero Angstrom. No surface property flag will be set.
+
+   set original:[<atom_list>]
+   set  replace:[<atom_list>]
+
+   The combination of these two optional parameters defines what 
+   DISCUS does at the surface. 
+   As default, we have original:[all], replace:[void]
+   This implies the normal behaviour that atoms outside the boundary
+   are replaced by VOID atoms, i.e. effectively removed. 
+   If the original<atom_list> is restricted and the replace:[<atom_list>]
+   contains atoms other than "VOID" DISCUS will act very differently.
+   In this case atoms outside the boundary and in the original:[] list
+   will be replaced by atoms from the replace:[<atom_list>].
+   This can be used to create an epitaxial core-shell structure.
+3  set
+!p set "deltahkl",<value>
+
+   Sets the value of deltahkl to <value>, as needed for ==> 'h2new' and
+   'h2old'. When DISCUS transforms a list of reflections, it checks, 
+   how close the transformed values are to integer values h,k,l. The 
+   allowed deviation from integer numbers is set by this command.
+3  seed
+!p seed [ <value> ]
+!p seed [ <value_a>, <value_b> ] , group:<no>
+
+   Reinitializes the pseudo random generator. The seed passed to the
+   random generator is -abs(nint(value)). If the <value> is omitted,
+   the random generator will be passed the number of hundredth of
+   seconds passed since midnight, essentially initializing the sequence
+   at a unknown fairly random point.
+
+   The seed may take more than one parameter, usually the compiler
+   takes 12 different seeds.
+
+   To overcome limited internal precision, a patch has been introduced
+   in version 5.17.0. 
+   As the random number generator takes seeds in the range from
+   1 to 99999999 the internal precision that calculates the value 
+   on the command line via the detour of a real valued number turned
+   out to be insufficient. To ensure that an eight digit seed number
+   is properly transfered to the seed initialization routine, split
+   the number into two groups of four digit integers as in:
+   12345678  => 1234, 5678, group:2
+   The optional parameter "group" tells the SUITE to group these two 
+   numbers together to the original intended eith digit no.
+3  set
+!p set <command>,..
+
+   This command allows to alter various program independent setting.
+   Allowed values for <command> are:
+
+3  seed
+!p seed [ <value> ]
+!p seed [ <value_a>, <value_b> ] , group:<no>
+
+   Reinitializes the pseudo random generator. The seed passed to the
+   random generator is -abs(nint(value)). If the <value> is omitted,
+   the random generator will be passed the number of hundredth of
+   seconds passed since midnight, essentially initializing the sequence
+   at a unknown fairly random point.
+
+   The seed may take more than one parameter, usually the compiler
+   takes 12 different seeds.
+
+   To overcome limited internal precision, a patch has been introduced
+   in version 5.17.0. 
+   As the random number generator takes seeds in the range from
+   1 to 99999999 the internal precision that calculates the value 
+   on the command line via the detour of a real valued number turned
+   out to be insufficient. To ensure that an eight digit seed number
+   is properly transfered to the seed initialization routine, split
+   the number into two groups of four digit integers as in:
+   12345678  => 1234, 5678, group:2
+   The optional parameter "group" tells the SUITE to group these two 
+   numbers together to the original intended eith digit no.
+3  set
+!p set <command>,..
+
+   This command allows to alter various program independent setting.
+   Allowed values for <command> are:
+
+3  set 
+!p set {"mode:planes" | "mode:rods" | "mode:volume", | "mode:bragg"}
+!p set {"sigma:"<value"]"}
+!p set {"abs:[",<h>,<k>,<l>, <maxh>, <maxk>, <maxl>"]"}
+!p set {"ord:[",<h>,<k>,<l>, <maxh>, <maxk>, <maxl>"]"}
+!p set {"normal:[",<u>,<v>,<w>, <steps>, <maxsteps>"]"}
+!p set {"rods:[",<h>,<k>,<l>, <nsteps>"]"}
+!p set {"lattice:"<Bravais>"]"}
+!p set {"zero:[",<ix>, <iy>, <iz>"]"}
+!p set ["output:"<file_name>}
+
+!p "mode:volume"
+
+   Reciprocal volume will be extracted from the data and placed into the next 
+   data set. 
+   Within this data set the "x", "y" and "z" axes will be parallel to 
+   a*; b* and c*. 
+
+!p "mode:planes"
+
+   Reciprocal planes will be extracted from the data and placed into the next 
+   data set. 
+   Within this data set the abscissa and ordinates within the planes will be the
+   "x" and "y" axes while the zone axis will be the "z" axis. Each plane will
+   have been integrated along the zone axis.
+
+!p "mode:rods"
+
+   Reciprocal rods will be extracted from the data and placed into the next
+   data set.
+   Within this data set the abscissa and ordinates from rod to rod will be the
+   "x" and "y" axes while the 'continuous' intensity along each rod will be the
+   "z" axis. Each rod will have been integrated within the plane normal to the
+   rod at a width set by "sigma:"
+
+!p "mode:bragg"
+
+   Integerated Bragg reflection instensities ae extracted.
+
+!p set {"abs:[",<h>,<k>,<l>, <maxh>, <maxk>, <maxl>"]"}
+
+   Set the abscissa increment vector with a plane and its maximum value.
+
+!p set {"ord:[",<h>,<k>,<l>, <maxh>, <maxk>, <maxl>"]"}
+
+   Set the ordinate increment vector with a plane and its maximum value.
+
+!p set {"normal:[",<u>,<v>,<w>, <steps>, <maxsteps>"]"}
+
+   Set the normal vector to a plane. Coordinates of this vector are in
+   direct space coordinates. 
+   Reciprocal points that fulfill [uvw]*[hkl] = N*steps +- sigma are 
+   considered to be part of the plane. 
+   All planes to [uvw]*[hkl] = +- maxsteps are extracted
+
+!p set {"rods:[",<dh>,<dk>,<dl>, <nsteps>"]"}
+!p set {"rods:[",<h>,<k>,<l>, <dh>,<dk>,<dl>, <nsteps>"]"}
+!p set {"rods:[",<dh>,<dk>,<dl>, <mh>,<mk>,<ml>"]"}
+
+   Set the rod direction in reciprocal space.  
+   The format "rods:[",<dh>,<dk>,<dl>, <nsteps>"]" is understood as steps along
+   the rods. Data up to +- [dh, dk, dl]*nstepsd will be extracted.
+
+   The  format "rods:[",<h>,<k>,<l>, <dh>,<dk>,<dl>, <nsteps>"]" is 
+   understood as rods parallel to [hkl] at steps [dh, dk, dl]. Vectors
+   [hkl] and [dh, dk, dl] must be parallel. 
+   Data up to +- [hkl]*nstepsd will be extracted.
+
+!p The format "rods:[",<dh>,<dk>,<dl>, <mh>,<mk>,<ml>"]" is understood as
+   steps along the rods. Data up to +- [mh, mk, ml] will be extracted.
+   The vectors [dh, dk, dl] and [mh, mk, ml] must be parallel.
+
+!p set {"zero:[",<ix>, <iy>, <iz>"]"}
+
+   By default reciprocal origin is assumed to be at the central pixel of the
+   input data file. This command allows to adapt the zero point.
+
+!p set ["output:"<file_name>}
+
+   The integrated Bragg reflections can be written into a file with 
+   16 columns:
+   No.,  1.00,   0.00,  Weight, observed pixels( x,y,z), Calculated pixels(x, y,z)
+   Calculated real valued (h, k, l) , Nominal integer (h,k,l)
+   This file predominantly serves to refine the orientation matrix. 
+   The weight is 1/integrated intensity.
+4  set
+!p set "abs:["<h>, <k>, <l>"]"
+!p set "ord:["<h>, <k>, <l>"]"
+!p set "zone:["<h>, <k>, <l>"]"
+!p set "ll:["<h>, <k>, <l>"]"
+!p set "lr:["<h>, <k>, <l>"]"
+!p set "ul:["<h>, <k>, <l>"]"
+!p set "tl:["<h>, <k>, <l>"]"
+!p set "npoints:["<h>, <k>, <l>"]"
+
+   Specified details of the intended transformation
+
+!p set "abs:["<h>, <k>, <l>"]"
+
+   Sets the new abscissa
+
+!p set "ord:["<h>, <k>, <l>"]"
+
+   Sets the new ordinate
+
+!p set "zone:["<h>, <k>, <l>"]"
+   Sets the new zone axis. The zone axis will be the "top" coordinate of the
+   transformed data. 
+
+!p set "ll:["<h>, <k>, <l>"]"
+!p set "lr:["<h>, <k>, <l>"]"
+!p set "ul:["<h>, <k>, <l>"]"
+!p set "tl:["<h>, <k>, <l>"]"
+
+   The combination of these four settings define the new 3D volume.
+   The new axes are the vectors from the lower left "ll" corner to:
+   abscissa :: lower right "lr"
+   ordinate :: upper left  "ul"
+   top axis :: top   left  "tl"
+   
+!p set "npoints:["<nx>, <ny>, <nz>"]"
+
+   Set the number of data points in the new transformed grid.
+
+3  seed
+!p seed [ <value> ]
+!p seed [ <value_a>, <value_b> ] , group:<no>
+
+   Reinitializes the pseudo random generator. The seed passed to the
+   random generator is -abs(nint(value)). If the <value> is omitted,
+   the random generator will be passed the number of hundredth of
+   seconds passed since midnight, essentially initializing the sequence
+   at a unknown fairly random point.
+
+   The seed may take more than one parameter, usually the compiler
+   takes 12 different seeds.
+
+   To overcome limited internal precision, a patch has been introduced
+   in version 5.17.0. 
+   As the random number generator takes seeds in the range from
+   1 to 99999999 the internal precision that calculates the value 
+   on the command line via the detour of a real valued number turned
+   out to be insufficient. To ensure that an eight digit seed number
+   is properly transfered to the seed initialization routine, split
+   the number into two groups of four digit integers as in:
+   12345678  => 1234, 5678, group:2
+   The optional parameter "group" tells the SUITE to group these two 
+   numbers together to the original intended eith digit no.
+3  set
+!p set <command>,..
+
+   This command allows to alter various program independent setting.
+   Allowed values for <command> are:
+
+2  set
+!p set cycle,<maxc>
+!p set conver, ["status:on" | "status:off"]
+!p set conver ["dchi:"<delta>] [,"pshift:"<max>] [,"conf:"<level>]
+!p            ["chisq:<value>] [,"lambda:"<max>]
+!p set relax  ["start:"<lamda_s>] [,"fail:"<lamda_f>] 
+!p            [,"success:"<lamda_g>]
+!p set log "on"| "off"
+!p
+
+   Several basic settings to fine tune the refinement. These can be
+   typed separately or combined on a single command line.
+
+3  seed
+!p seed [ <value> ]
+!p seed [ <value_a>, <value_b> ] , group:<no>
+
+   Reinitializes the pseudo random generator. The seed passed to the
+   random generator is -abs(nint(value)). If the <value> is omitted,
+   the random generator will be passed the number of hundredth of
+   seconds passed since midnight, essentially initializing the sequence
+   at a unknown fairly random point.
+
+   The seed may take more than one parameter, usually the compiler
+   takes 12 different seeds.
+
+   To overcome limited internal precision, a patch has been introduced
+   in version 5.17.0. 
+   As the random number generator takes seeds in the range from
+   1 to 99999999 the internal precision that calculates the value 
+   on the command line via the detour of a real valued number turned
+   out to be insufficient. To ensure that an eight digit seed number
+   is properly transfered to the seed initialization routine, split
+   the number into two groups of four digit integers as in:
+   12345678  => 1234, 5678, group:2
+   The optional parameter "group" tells the SUITE to group these two 
+   numbers together to the original intended eith digit no.
+3  set
+!p set <command>,..
+
+   This command allows to alter various program independent setting.
+   Allowed values for <command> are:
+
