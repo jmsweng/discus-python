@@ -34,6 +34,16 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def stage_lf(src: Path, dest: Path) -> None:
+    """Copy a text file with LF line endings. A Windows checkout with core.autocrlf=true has CRLF,
+    and DISCUS would read the carriage return as part of each command or atom line. The staged
+    copy then has the same bytes (and SHA-256) as the committed git blob."""
+    data = src.read_bytes()
+    if b"\0" in data[:4096]:
+        raise ValueError(f"{src} is not a text file")
+    dest.write_bytes(data.replace(b"\r\n", b"\n"))
+
+
 def to_wsl(path: Path) -> str:
     p = PureWindowsPath(str(path))
     if not p.drive:
@@ -103,10 +113,10 @@ def main(argv=None) -> int:
     for r in runs:
         d = base / r["id"]
         d.mkdir()
-        shutil.copy2(HERE / r["macro"], d / "run.mac")
+        stage_lf(HERE / r["macro"], d / "run.mac")
         input_hashes = {}
         for inp in r["inputs"]:
-            shutil.copy2(REPO / inp, d / Path(inp).name)
+            stage_lf(REPO / inp, d / Path(inp).name)
             input_hashes[inp] = sha256(d / Path(inp).name)
         t0 = time.time()
         try:
