@@ -177,3 +177,14 @@ def test_execute_does_not_warn_again(tmp_path):
     with warnings.catch_warnings():
         warnings.simplefilter("error", QmaxLimitWarning)
         runner.execute(prepared)
+
+
+def test_qmax_limit_warning_points_at_caller():
+    from dataclasses import replace
+    with pytest.warns(QmaxLimitWarning) as direct:
+        PDFConfig("input.cll", qmax=25)
+    base = PDFConfig("input.cll", qmax=7.5)
+    with pytest.warns(QmaxLimitWarning) as via_replace:
+        replace(base, qmax=25)
+    assert direct[0].filename == __file__
+    assert via_replace[0].filename == __file__

@@ -33,6 +33,25 @@ class QmaxLimitWarning(UserWarning):
     """qmax is above what DISCUS can use at this wavelength; the PDF is computed unchanged."""
 
 
+def _caller_stacklevel() -> int:
+    """stacklevel for a warning issued in PDFConfig.__post_init__ that points at the user's code.
+
+    Skips the dataclass-generated ``__init__`` and ``dataclasses.replace()`` frames, so the
+    warning is attributed to the line that created the config, however it was created.
+    """
+    import dataclasses
+    import sys
+    frame = sys._getframe(2)  # 0: this helper, 1: __post_init__, 2: its caller
+    level = 2
+    while frame is not None and (
+        frame.f_code.co_filename == dataclasses.__file__
+        or (frame.f_code.co_name == "__init__" and frame.f_code.co_filename.startswith("<"))
+    ):
+        frame = frame.f_back
+        level += 1
+    return level
+
+
 @dataclass(frozen=True)
 class PDFConfig:
     """1D powder PDF calculation from a DISCUS .cll unit cell.
@@ -82,7 +101,7 @@ class PDFConfig:
                 f"Qmax ≈ {ceiling:.1f} Å⁻¹. A shorter explicit wavelength raises the limit, but above Q ≈ 8 Å⁻¹ "
                 "the DISCUS result then depends on the wavelength by up to several percent "
                 "(see docs/VERIFIED_DISCUS_MACRO.md, 'Qmax limit and wavelength').",
-                QmaxLimitWarning, stacklevel=3)
+                QmaxLimitWarning, stacklevel=_caller_stacklevel())
         if Path(self.structure).suffix.lower() != ".cll":
             raise ValueError("MVP supports DISCUS .cll unit-cell files only")
 
