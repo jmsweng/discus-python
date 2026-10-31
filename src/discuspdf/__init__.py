@@ -77,3 +77,7 @@ __all__ += ["to_ase", "from_ase"]
 # DiffPy adapter (Package A, Feature A2).
 from .diffpy_io import to_diffpy, from_diffpy
 __all__ += ["to_diffpy", "from_diffpy"]
+
+# Structure editing operations (Package A, Feature A4).
+from .structure_ops import EditResult, repeat
+__all__ += ["EditResult", "repeat"]
