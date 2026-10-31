@@ -1,0 +1,94 @@
+{
+ "p2_aver100": {
+  "status": "complete",
+  "directory": "C:\\tmp\\b3live\\p2_aver100\\7533ff94be5c43feadb0a39015189d6a",
+  "p2_aver100_int.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 18283581.90227571
+  },
+  "p2_aver100_real.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 4056.5038779777014
+  },
+  "p2_aver100_imag.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 3386.132568359375
+  }
+ },
+ "p2_aver50_s8a": {
+  "status": "complete",
+  "directory": "C:\\tmp\\b3live\\p2_aver50_s8a\\7ee0530bb4e2476bb74ddcdf3f3c4eab",
+  "p2_aver50_s8a_int.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 18283581.90227571
+  },
+  "p2_aver50_s8a_real.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 4056.5038779777014
+  },
+  "p2_aver50_s8a_imag.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 3386.132568359375
+  }
+ },
+ "p3_box4_n64_s8a": {
+  "status": "complete",
+  "directory": "C:\\tmp\\b3live\\p3_box4_n64_s8a\\9a06c896bdd04e239fb4ba3a70562ab0",
+  "p3_box4_n64_s8a_int.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 751823353.3879546
+  }
+ },
+ "p3_box4_all_y_aver100": {
+  "status": "complete",
+  "directory": "C:\\tmp\\b3live\\p3_box4_all_y_aver100\\462dcd3e9f3d47b8bda9b0db1e8e5eda",
+  "p3_box4_all_y_aver100_int.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 9240659.235922603
+  }
+ },
+ "p5_symm_ignore": {
+  "status": "complete",
+  "directory": "C:\\tmp\\b3live\\p5_symm_ignore\\91922f6434574c7ab49f79b919dcb2e6",
+  "p5_symm_ignore_int.h5": {
+   "identical_to_evidence": true,
+   "max_abs_diff": 0.0,
+   "max": 24559763.12195257
+  }
+ },
+ "hhl_plane": {
+  "status": "produced_unverified",
+  "directory": "C:\\tmp\\b3live\\hhl_plane\\ca5a1f34e58a460bba942ef443440d62",
+  "rel_diff_vs_hk0_diagonal": 9.667895968962298e-08,
+  "increment_columns": [
+   [
+    0.1,
+    0.1,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.1
+   ],
+   [
+    0.0,
+    0.0,
+    0.0
+   ]
+  ]
+ },
+ "engine_error": {
+  "status": "failed",
+  "engine_error": "***MAC ***"
+ },
+ "finished_utc": "2026-10-31T20:12:24+00:00"
+}
