@@ -90,7 +90,8 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Scope: commensurate grids, one undisplaced site per cell, B ignored. Open: displacement disorder / nonzero B, multi-site cells, non-commensurate grids (Gate 1 residual), loading into `ScatteringVolume`.*
 - [x] **B9 / Feature 9:** Python controls and tests for **verified** DISCUS LOTS averaging, including lot size, sampling, seed and normalization. `Lots` + 8-value `Seed` in `FourierConfig`; normalisation (scaled to the whole crystal), lot counts and seed reproducibility observed in the probes and reproduced live.
   - *Open: `value 3DPDF` with LOTS, LOTS combined with partial `set aver`, model-size dependence beyond one 16³ crystal.*
-- [ ] **B18 / Feature 18:** Mantid MDHisto/NeXus reciprocal data import/export with projection matrix, uncertainties, masks and frame verification.
+- [x] **B18 / Feature 18:** Mantid MDHisto/NeXus reciprocal data import/export with projection matrix, uncertainties, masks and frame verification. [`src/discuspdf/mantid_io.py`](../src/discuspdf/mantid_io.py) · [`tests/test_mantid_io.py`](../tests/test_mantid_io.py) · [`docs/MANTID_IO.md`](../docs/MANTID_IO.md); fixtures written by Mantid 7.0.0, our files loaded and re-saved by Mantid with no differences.
+  - *Open: MDEventWorkspace files, Q_lab/Q_sample frames (refused), applying Mantid's UB orientation to Q, SaveMD version 1.*
 - [x] **B19 / Feature 19:** Versioned xarray/HDF5/Zarr persistence with validated schema and scientific provenance. HDF5 schema `discuspdf.ScatteringVolume` v1 with per-array SHA-256 and per-version readers; see [`docs/SCATTERING_DATA.md`](../docs/SCATTERING_DATA.md).
   - *Open items: Zarr (not needed yet); first real schema migration when v2 exists.*
 - [ ] **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. *A basic 2D FFT slice plot already exists.*

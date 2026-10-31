@@ -111,6 +111,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.FourierConfig` writes DISCUS 6.23.01 `fourier`/`output` macro blocks for a `ReciprocalGrid` with `set aver` (Bragg subtraction) and LOTS, using only probe-verified commands. See [docs/FOURIER_CONTROLS.md](docs/FOURIER_CONTROLS.md).
 
+## Mantid MDHisto files
+
+`discuspdf.read_mantid_mdhisto` / `write_mantid_mdhisto` convert between Mantid `SaveMD` (v2) MDHistoWorkspace files in the HKL frame and `ScatteringVolume`, including projections (`[H,H,0]`-style axes, `W_MATRIX`), errors² and masks. Checked against files written by Mantid 7.0.0, and Mantid loads the files we write. See [docs/MANTID_IO.md](docs/MANTID_IO.md).
+
 ## Interoperability (CIF, ASE, DiffPy)
 
 `discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
