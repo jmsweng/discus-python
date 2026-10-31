@@ -57,7 +57,7 @@ Copied from `docs/DISCUS_FORMATS.md` "Decisions":
 
 - **Fixtures:** `tests/fixtures/discus_6_23_01/` (gaas.cll, gaas_111.stru, gaas_222.stru, p1_2x2x2_a4.stru).
 - **Probe logs:** `tests/fixtures/discus_6_23_01/evidence/` (Q1–Q14, smoke).
-- **Live evidence:** `tests/fixtures/discus_6_23_01/live_evidence/20261031T0403Z/` (7 passing-run logs + `MANIFEST.sha256`, 157 419 bytes total).
+- **Live evidence:** `tests/fixtures/discus_6_23_01/live_evidence/20261031T0403Z/` (7 passing-run logs + `MANIFEST.sha256`, 157 419 bytes total). **Superseded in part:** this run predates the A3-6c correction of the live-test crystals (L2 used unit-cell-sized supercell frames and a 32-atom Ga-only "GaAs") and of the B assertion (see below). A new run with the corrected tests must be committed as an additional folder; it is pending on the owner's DISCUS machine.
 
 ## 7. Caveats / not done
 

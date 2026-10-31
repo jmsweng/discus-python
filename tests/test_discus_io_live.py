@@ -179,24 +179,29 @@ def test_live_python_written_stru_loads_and_roundtrips(case_id, builder):
     diff = np.abs(s2_unit - s_unit)
     assert diff.max() < tol, f"Cartesian mismatch {diff.max():.3e} A >= {tol:.3e} A"
 
-    # Biso: DISCUS defaults missing B to 1.0 (Q1), not 0.0.
-    # If s.b_iso is None, we wrote 0.0, but DISCUS reads it as 1.0.
-    # If s.b_iso is set, DISCUS preserves it.
-    if s.b_iso is None:
-        # DISCUS defaults to 1.0 when B is 0.0 in the file.
-        assert np.allclose(s2.structure.b_iso, 1.0, atol=2e-6)
-    else:
-        assert np.allclose(s2.structure.b_iso, s.b_iso, atol=2e-6)
+    # Biso: the writer always writes B explicitly (None -> 0.0), and DISCUS
+    # must keep exactly what was written.  If this fails, DISCUS changes B on
+    # `read stru` / `save` and the writer policy must be revisited (report it).
+    expected_b = np.zeros(N) if s.b_iso is None else s.b_iso
+    assert np.allclose(s2.structure.b_iso, expected_b, atol=2e-6), (
+        f"Biso written {sorted(set(np.round(expected_b, 6)))} but DISCUS saved "
+        f"{sorted(set(np.round(s2.structure.b_iso, 6)))}"
+    )
+    from tests.discus_live import evidence_note
+    with open(os.path.join(workdir, f"{fname}_out.stru"), encoding="ascii") as fh:
+        evidence_note("test_live_python_written_stru_loads_and_roundtrips",
+                      f"--- saved {fname}_out.stru (first 12 lines) ---\n" + "".join(fh.readlines()[:12]))
 
     evidence_log("test_live_python_written_stru_loads_and_roundtrips", macro, None, result)
 
 
 def _build_cubic_4x4x4() -> Structure:
-    """Simple cubic a=4 Å, 4×4×4, m=1, two species with seeded RNG, b_iso=None."""
+    """Simple cubic, unit cell 4 Å, 4×4×4 (supercell frame 16 Å), m=1, seeded species, b_iso=None."""
     import numpy as np
     rng = np.random.default_rng(42)
-    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
     n = (4, 4, 4)
+    # Structure.lattice is the whole supercell frame: unit cell x n.
+    lat = Lattice.from_parameters(4.0 * n[0], 4.0 * n[1], 4.0 * n[2], 90.0, 90.0, 90.0)
     N = 64
     species = np.array(
         ["CU" if rng.random() < 0.5 else "AG" for _ in range(N)],
@@ -220,20 +225,19 @@ def _build_cubic_4x4x4() -> Structure:
         cell_index=cell_index,
         supercell=n,
         pbc=(True, True, True),
-        min_separation=None,
     )
 
 
 def _build_gaas_p1_2x2x2() -> Structure:
-    """GaAs P1, 8 atoms per cell explicit, 2×2×2, m=8, triclinic-distorted.
+    """GaAs P1, 8 atoms per cell explicit, 2×2×2 (64 atoms: 32 Ga + 32 As), triclinic-distorted.
 
-    The supercell is (2,2,2) with 8 atoms per unit cell, so N=32 and
-    m = N / prod(n) = 32 / 8 = 4.  The rows are in DISCUS cell-major order:
-    row r → cell r//m, slot r%m.
+    Unit cell (5.65, 5.70, 5.60, 89, 91, 88); ``Structure.lattice`` is the
+    supercell frame (unit cell x 2).  Rows are in DISCUS cell-major order,
+    x fastest: row r -> cell r // 8, slot r % 8.
     """
     import numpy as np
-    lat = Lattice.from_parameters(5.65, 5.70, 5.60, 89.0, 91.0, 88.0)
-    # 8 atoms per cell (P1 GaAs: 4 GA + 4 AS in the conventional cell)
+    n = (2, 2, 2)
+    lat = Lattice.from_parameters(5.65 * n[0], 5.70 * n[1], 5.60 * n[2], 89.0, 91.0, 88.0)
     unit_frac = np.array(
         [
             [0.0, 0.0, 0.0],
@@ -246,34 +250,21 @@ def _build_gaas_p1_2x2x2() -> Structure:
             [0.75, 0.25, 0.75],
         ]
     )
-    unit_species = np.array(
-        ["GA", "GA", "GA", "GA", "AS", "AS", "AS", "AS"],
-        dtype=object,
-    )
-    n = (2, 2, 2)
-    m = 4  # N / prod(n) = 32 / 8 = 4
-    N = 32
-    species = np.empty(N, dtype=object)
-    frac = np.empty((N, 3))
-    cell_index = np.zeros((N, 3), dtype=np.int64)
-    for r in range(N):
-        cell_num = r // m
-        slot = r % m
-        iz = cell_num // 4
-        rem = cell_num % 4
-        iy = rem // 2
-        ix = rem % 2
-        cell_index[r] = (ix, iy, iz)
-        species[r] = unit_species[slot]
-        frac[r] = (unit_frac[slot] + np.array([ix, iy, iz])) / np.array(n)
+    unit_species = np.array(["GA"] * 4 + ["AS"] * 4, dtype=object)
+    m = len(unit_frac)
+    N = m * n[0] * n[1] * n[2]
+    cell_num = np.arange(N) // m
+    slot = np.arange(N) % m
+    cell_index = np.stack(
+        [cell_num % n[0], (cell_num // n[0]) % n[1], cell_num // (n[0] * n[1])], axis=1
+    ).astype(np.int64)
     return Structure(
-        lat, species, frac,
+        lat, unit_species[slot], (unit_frac[slot] + cell_index) / np.array(n, dtype=float),
         model="configuration",
         b_iso=np.full(N, 0.35),
         cell_index=cell_index,
         supercell=n,
         pbc=(True, True, True),
-        min_separation=None,
     )
 
 
@@ -306,7 +297,6 @@ def test_live_python_written_cll_expands_as_expected():
         b_iso=np.full(8, 1.0),
         supercell=(1, 1, 1),
         pbc=(True, True, True),
-        min_separation=None,
     )
     write_cll(os.path.join(workdir, "gaas_p1.cll"), s)
 
@@ -427,7 +417,6 @@ def test_live_species_names():
         cell_index=np.zeros((4, 3), dtype=np.int64),
         supercell=(1, 1, 1),
         pbc=(True, True, True),
-        min_separation=None,
     )
     fname = "live_species.stru"
     write_stru(os.path.join(workdir, fname), s)

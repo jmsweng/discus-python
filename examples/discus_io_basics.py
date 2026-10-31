@@ -32,7 +32,11 @@ for i in range(s.structure.n_atoms):
 
 # 2. Build a 2×2×2 P1 GaAs Structure (8 atoms per cell: 4 Ga + 4 As).
 print("\n=== Build 2×2×2 P1 GaAs ===")
-lat = Lattice.from_parameters(5.6537, 5.6537, 5.6537, 90.0, 90.0, 90.0)
+A_CELL = 5.6537
+n = (2, 2, 2)
+# Structure.lattice is the WHOLE periodic frame: the 2x2x2 supercell is 2 * a long.
+lat_unit = Lattice.from_parameters(A_CELL, A_CELL, A_CELL, 90.0, 90.0, 90.0)
+lat = Lattice.from_parameters(A_CELL * n[0], A_CELL * n[1], A_CELL * n[2], 90.0, 90.0, 90.0)
 # 8 atoms per unit cell: the four fcc positions for Ga and the same shifted
 # by (1/4, 1/4, 1/4) for As.
 unit_frac = np.array(
@@ -51,7 +55,6 @@ unit_species = np.array(
     ["GA", "GA", "GA", "GA", "AS", "AS", "AS", "AS"],
     dtype=object,
 )
-n = (2, 2, 2)
 m = len(unit_frac)  # atoms per unit cell (8)
 N = m * n[0] * n[1] * n[2]  # 64
 # cell-major, x fastest (vectorised)
@@ -74,25 +77,22 @@ s2 = Structure(
 print(f"atoms: {s2.n_atoms}")
 from collections import Counter
 print(f"species: {dict(Counter(s2.species))}")
-# Neighbour check: in the P1 8-atom cell the Ga (and As) sit on the fcc
-# sites, so the nearest-neighbour distance is a/sqrt(2) = 3.9978 A and every
-# atom has 4 neighbours at that distance (a Ga-As pair is closer, at
-# a*sqrt(3)/4 = 2.4480 A, but same-species neighbours are 3.9978 A apart).
-# (The 4-neighbour / 2.4480 A result is for the F-43m conventional cell in
-# gaas_222.stru, which the live tests check.)
+# Neighbour check: in zinc blende every atom has 4 neighbours of the other
+# species at a*sqrt(3)/4 = 2.4481 A.  The example fails loudly if that is wrong.
 D = s2.distance_matrix()
-np.fill_diagonal(D, 99.0)
-nn = (D < 1.3).sum(axis=1)
-print(f"nearest-neighbour check: min distance {D.min():.4f} A "
-      f"(expected {5.6537 / 2 ** 0.5:.4f}), "
-      f"neighbours at that distance per atom: {sorted(set(nn.tolist()))}")
+np.fill_diagonal(D, np.inf)
+nn = (D < 2.6).sum(axis=1)
+assert abs(D.min() - A_CELL * 3 ** 0.5 / 4) < 1e-4, D.min()
+assert set(nn.tolist()) == {4}, sorted(set(nn.tolist()))
+print(f"nearest-neighbour check: min distance {D.min():.4f} A, "
+      f"neighbours per atom: {sorted(set(nn.tolist()))}")
 
 # 3. Write .cll (unit cell) and .stru (supercell) into a temporary directory.
 print("\n=== Write .cll and .stru ===")
 with tempfile.TemporaryDirectory() as tmpdir:
     # Write the unit cell as .cll (8 atoms, supercell=(1,1,1)).
     unit_cell = Structure(
-        lat, unit_species, unit_frac,
+        lat_unit, unit_species, unit_frac,
         model="configuration",
         b_iso=np.full(8, 0.35),
         supercell=(1, 1, 1),
@@ -102,7 +102,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     cll_path = Path(tmpdir) / "gaas.cll"
     write_cll(cll_path, unit_cell)
 
-    # Write the supercell as .stru (32 atoms, supercell=(2,2,2)).
+    # Write the supercell as .stru (64 atoms, supercell=(2,2,2)).
     stru_path = Path(tmpdir) / "gaas.stru"
     write_stru(stru_path, s2)
 
@@ -120,7 +120,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     # 64-atom centred gaas_222 fixture is read with supercell="infer".
     s222 = read_stru("tests/fixtures/discus_6_23_01/gaas_222.stru", supercell="infer")
     print(f"gaas_222.stru (supercell='infer'): {s222.structure.n_atoms} atoms, "
-          f"supercell {tuple(s222.structure.supercell)}")
+          f"supercell {tuple(int(v) for v in s222.structure.supercell)}")
 
     # 5. Print the first 6 lines of each written file.
     print("\n--- gaas.cll (first 6 lines) ---")

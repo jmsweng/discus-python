@@ -168,3 +168,13 @@ def evidence_log(
     lines.append(result.stdout)
     with open(log_path, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
+
+
+def evidence_note(test_name: str, text: str) -> None:
+    """Append free text (e.g. the head of a DISCUS-saved file) to the test's evidence log."""
+    evidence_dir = os.environ.get("DISCUS_LIVE_EVIDENCE")
+    if not evidence_dir:
+        return
+    Path(evidence_dir).mkdir(parents=True, exist_ok=True)
+    with open(Path(evidence_dir) / f"{test_name}.log", "a", encoding="utf-8") as f:
+        f.write(text.rstrip("\n") + "\n")

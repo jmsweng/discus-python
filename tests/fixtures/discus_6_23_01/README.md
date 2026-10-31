@@ -29,5 +29,9 @@ output. The macros/inputs that produced them are in
 
 ## Integrity
 
-`MANIFEST.sha256` lists the SHA-256 of every file in this directory (format
-`<hash>  <name>`). Recompute with `Get-FileHash -Algorithm SHA256` and compare.
+`MANIFEST.sha256` lists the SHA-256 of every fixture and probe-log file in this directory
+(format `<lowercase hash>  <relative/path>`, verifiable with `sha256sum -c`). Each
+`live_evidence/<stamp>/` folder has its own manifest.
+
+Hashes are of the committed bytes (LF). On Windows with `core.autocrlf=true` the working-tree
+copies differ; verify with `git show HEAD:<path>` instead.
