@@ -1,0 +1,15 @@
+discus
+read
+  stru gate2_copy.stru
+eval n[1]
+eval n[2]
+eval n[3]
+eval n[4]
+read
+  stru gate2_noncell.stru
+eval n[1]
+eval n[2]
+eval n[3]
+eval n[4]
+exit
+exit

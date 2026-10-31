@@ -1,0 +1,7 @@
+discus
+read
+  cell q1_xyz.cll,1,1,1
+eval n[1]
+save stru,q1_xyz.stru
+exit
+exit

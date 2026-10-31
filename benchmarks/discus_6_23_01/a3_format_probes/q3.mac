@@ -1,0 +1,11 @@
+discus
+read
+  cell gaas.cll,2,2,2
+eval n[1]
+save gaas_222.stru
+read
+  cell gaas.cll,1,1,1
+eval n[1]
+save gaas_111.stru
+exit
+exit
