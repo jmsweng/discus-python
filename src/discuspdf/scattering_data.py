@@ -158,6 +158,60 @@ class ScatteringVolume:
         return cls(ReciprocalGrid.from_discus_volume(volume), volume.values, units, bragg=volume.with_bragg,
                    provenance=prov)
 
+    @classmethod
+    def from_discus_file(cls, path, *, config=None, units: str | None = None) -> "ScatteringVolume":
+        """Read a DISCUS 6.23.01 ``form nexus`` reciprocal-space file, including **planes and lines**.
+
+        Unlike :func:`~discuspdf.discus_output.read_discus_volume` (volumes only), the grid is built with
+        :class:`ReciprocalGrid`, which ignores the step vector of a one-point axis (DISCUS writes zeros
+        there, or ``tl − ll`` if given). The file must be hkl / reciprocal / basecell-fractional and its
+        content ``intensity``, ``real part`` or ``imaginary part`` (all observed in 6.23.01).
+
+        With ``config`` (the :class:`~discuspdf.fourier_macro.FourierConfig` that wrote the file), the
+        file's grid, Bragg label and content are checked against it and the configuration (seed,
+        ``set aver``, lots, labels) is stored under ``provenance['fourier_config']``."""
+        import h5py
+        from .discus_output import _GROUP, _REQUIRED, _text
+        from .lattice import Lattice
+        p = Path(path)
+        if not p.is_file() or not h5py.is_hdf5(p):
+            raise ValueError(f"not an HDF5 file: {p}")
+        with h5py.File(p, "r") as f:
+            if _GROUP not in f:
+                raise ValueError(f"{p.name}: no {_GROUP} group; not DISCUS common/nexus output")
+            g = f[_GROUP]
+            missing = [k for k in _REQUIRED if k not in g]
+            if missing:
+                raise ValueError(f"{p.name}: missing datasets {missing}")
+            raw = {k: g[k][()] for k in g}
+        meta = {k: _text(v) for k, v in raw.items() if np.ndim(v) == 0}
+        want = {"audit_conform_dict_name": "Disorder unified data", "coordinate_unit": "basecell_fractional",
+                "data_type_axes": "hkl", "data_type_reciprocal": "reciprocal"}
+        for key, value in want.items():
+            if meta.get(key) != value:
+                raise ValueError(f"{p.name}: {key}={meta.get(key)!r}, expected {value!r}")
+        content = meta["data_type_content"]
+        if content not in _DISCUS_CONTENT.values():
+            raise ValueError(f"{p.name}: content {content!r} is not a reciprocal-space value this reader knows")
+        bragg = meta["data_type_with_bragg"]
+        if bragg not in ("bragg_present", "bragg_subtracted"):
+            raise ValueError(f"{p.name}: unknown data_type_with_bragg={bragg!r}")
+        values = np.asarray(raw["data_values"], dtype=float)
+        if values.ndim != 3 or tuple(np.asarray(raw["data_dimension"]).tolist()) != values.shape:
+            raise ValueError(f"{p.name}: data_dimension {raw['data_dimension']} != array shape {values.shape}")
+        if tuple(np.asarray(raw["data_axes"]).tolist()) != (1, 2, 3):
+            raise ValueError(f"{p.name}: data_axes={raw['data_axes']}; only (1,2,3) was verified")
+        lattice = Lattice.from_parameters(*np.asarray(raw["unit_cell_lengths"], float),
+                                          *np.asarray(raw["unit_cell_angles"], float))
+        grid = ReciprocalGrid(lattice, np.asarray(raw["data_corner"], float),
+                              np.asarray(raw["data_increment_vector"], float).T, values.shape)
+        prov: dict[str, Any] = {"source": "DISCUS common/NeXus", "reader": "ScatteringVolume.from_discus_file",
+                                "path": str(p), "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+                                "content": content, "discus_metadata": {k: meta[k] for k in sorted(meta)}}
+        if config is not None:
+            prov["fourier_config"] = _check_against_config(config, p.name, grid, bragg, content)
+        return cls(grid, values, units or f"DISCUS {content} (whole crystal)", bragg=bragg, provenance=prov)
+
     # -- derived volumes --------------------------------------------------------
     def with_mask(self, mask, reason: str) -> "ScatteringVolume":
         """New volume whose mask is the union of the current mask and ``mask``; ``reason`` is recorded."""
@@ -368,6 +422,38 @@ class ScatteringVolume:
                 raise ValueError(f"{p.name}: schema version {version} is not supported "
                                  f"(this code reads {sorted(_READERS)})")
             return _READERS[version](cls, f, a, p)
+
+
+# DISCUS 6.23.01 'output value' -> data_type_content written in the file (observed in the B probes).
+_DISCUS_CONTENT = {"int": "intensity", "real": "real part", "imag": "imaginary part"}
+
+
+def _check_against_config(config, name: str, grid: ReciprocalGrid, bragg: str, content: str) -> dict:
+    """Refuse a file that the given FourierConfig cannot have written; return the config as a dict."""
+    from .fourier_macro import FourierConfig
+    if not isinstance(config, FourierConfig):
+        raise TypeError("config must be a FourierConfig")
+    values = {v for v, n in config.outputs if n == name}
+    if not values:
+        raise ValueError(f"{name} is not one of this configuration's outputs {[n for _, n in config.outputs]}")
+    value = values.pop()
+    if _DISCUS_CONTENT.get(value) != content:
+        raise ValueError(f"{name}: file content {content!r} but the configuration wrote 'value {value}'")
+    if bragg != config.bragg:
+        raise ValueError(f"{name}: file says {bragg!r}, configuration (set aver,{config.aver_percent:g}) "
+                         f"implies {config.bragg!r}")
+    cg = config.grid
+    if cg.shape != grid.shape:
+        raise ValueError(f"{name}: grid shape {grid.shape} != configured {cg.shape}")
+    # Corners are written to the macro with 6 significant digits.
+    scale = max(1.0, float(np.max(np.abs(cg.corner))), float(np.max(np.abs(cg.axis_vectors))))
+    V_file, V_cfg = grid.axis_vectors, cg.axis_vectors
+    for k in grid.active_axes:
+        if not np.allclose(V_file[k], V_cfg[k], rtol=0, atol=1e-6 * scale):
+            raise ValueError(f"{name}: step of axis {k} {V_file[k].tolist()} != configured {V_cfg[k].tolist()}")
+    if not np.allclose(grid.corner, cg.corner, rtol=0, atol=1e-6 * scale):
+        raise ValueError(f"{name}: corner {grid.corner.tolist()} != configured {cg.corner.tolist()}")
+    return config.to_dict()
 
 
 def _read_v1(cls, f, a, p: Path) -> ScatteringVolume:

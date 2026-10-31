@@ -92,5 +92,5 @@ checkout has CRLF) and `fourier_config.json` (config + structure, hashed in `inp
 
 Displacements and nonzero B (Bragg subtraction then also changes off-Bragg intensity),
 multi-site cells, `set aver` on non-commensurate grids (Gate 1's 1.8 % residual), `set mode:accumulate`,
-`value 3DPDF` with LOTS, `nufft`, neutron/electron radiation. Loading a run into `ScatteringVolume`
-(PR #16) with the config's Bragg label and seed in provenance is a follow-up once #16 is merged.
+`value 3DPDF` with LOTS, `nufft`, neutron/electron radiation. Loading a run: `job.load_scattering_volume()`
+(see [SCATTERING_DATA.md](SCATTERING_DATA.md)) checks the output against the staged config.
