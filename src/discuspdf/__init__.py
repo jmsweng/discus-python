@@ -38,6 +38,10 @@ __all__ += ["ScatteringVolume", "mask_near_bragg"]
 from .fourier_macro import FourierConfig, Lots, Seed, StructureSource, prepare_fourier_run
 __all__ += ["FourierConfig", "Lots", "Seed", "StructureSource", "prepare_fourier_run"]
 
+# Physically labelled slices, isosurfaces and VTK export (Package B, Feature 20).
+from .viz import SampledVolume, plot_slice, plot_isosurfaces, isosurface, write_vtk, read_vtk
+__all__ += ["SampledVolume", "plot_slice", "plot_isosurfaces", "isosurface", "write_vtk", "read_vtk"]
+
 # Editable Structure model (Package A, Feature A1).
 from .structure import Structure
 __all__ += ["Structure"]
