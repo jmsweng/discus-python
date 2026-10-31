@@ -82,7 +82,8 @@ The existing DISCUS engine may implement some of these physical methods already.
 
 ### Package B — [Reciprocal-space grids and data](02_reciprocal_space_and_data.md)
 
-- [ ] **B6 / Feature 6:** Flexible reciprocal-space grid objects for HKL/oblique planes or volumes with validated Q transforms. *Existing FFT supports only centered Cartesian-Q grids.*
+- [x] **B6 / Feature 6:** Flexible reciprocal-space grid objects for HKL/oblique planes or volumes with validated Q transforms. [`src/discuspdf/reciprocal_grid.py`](../src/discuspdf/reciprocal_grid.py) · [`tests/test_reciprocal_grid.py`](../tests/test_reciprocal_grid.py) · [`docs/RECIPROCAL_GRID.md`](../docs/RECIPROCAL_GRID.md); checked against textbook d-spacings and the real C3/C4 DISCUS grids.
+  - *Open items: DISCUS plane/line output metadata (engine probe); transform for skewed volumes; `DiscusVolume` onto `Lattice`/`ReciprocalGrid`.*
 - [ ] **B7 / Feature 7:** Labeled `xarray` scattering data, physical coordinates, uncertainties, masks, lattice and provenance; integration with existing `ReciprocalVolume`.
 - [ ] **B8 / Feature 8:** Python control of **verified** average-structure/Bragg separation plus benchmarked diffuse output. *Manual preprocessing labels exist, but are not proof of correction.*
 - [ ] **B9 / Feature 9:** Python controls and tests for **verified** DISCUS LOTS averaging, including lot size, sampling, seed and normalization.

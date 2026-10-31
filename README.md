@@ -99,6 +99,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf` reads and writes DISCUS_SUITE 6.23.01 `.cll` (unit-cell source) and `.stru` (saved structure) files. See [docs/DISCUS_IO.md](docs/DISCUS_IO.md) and `examples/discus_io_basics.py`.
 
+## Reciprocal-space grids
+
+`discuspdf.ReciprocalGrid` describes regular reciprocal-space volumes, oblique planes and lines in hkl on a `Lattice`, with Cartesian Q, DISCUS `ll/lr/ul/tl` corners and a report of which 3D transform is exact for the grid. See [docs/RECIPROCAL_GRID.md](docs/RECIPROCAL_GRID.md).
+
 ## Interoperability (CIF, ASE, DiffPy)
 
 `discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
