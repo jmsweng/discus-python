@@ -107,6 +107,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.ScatteringVolume` holds reciprocal-space values on a `ReciprocalGrid` with variance, an explicit mask, units, Bragg treatment, corrections and provenance; it converts to/from xarray and has a versioned HDF5 format. See [docs/SCATTERING_DATA.md](docs/SCATTERING_DATA.md).
 
+## DISCUS Fourier controls
+
+`discuspdf.FourierConfig` writes DISCUS 6.23.01 `fourier`/`output` macro blocks for a `ReciprocalGrid` with `set aver` (Bragg subtraction) and LOTS, using only probe-verified commands. See [docs/FOURIER_CONTROLS.md](docs/FOURIER_CONTROLS.md).
+
 ## Interoperability (CIF, ASE, DiffPy)
 
 `discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:

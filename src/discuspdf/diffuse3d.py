@@ -32,7 +32,12 @@ import numpy as np
 # "xdpyinfo: unable to open display" or "pgxwin_server: cannot connect" is
 # harmless for headless macro runs and must NOT be treated as fatal.
 _ENGINE_ERROR_PATTERN = re.compile(
-    r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)",
+    r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)"
+    # DISCUS error lines carry a tag such as ***APPL***, ***FOUR***, ***MAC *** (the start-up banner
+    # is a row of bare asterisks and does not match).
+    r"|\*\*\*(?:[A-Z]{3,4} ?)\*\*\*"
+    # DISCUS 6.23.01 nufft: FINUFFT reports 'setpts error (ier=4)', exits 0 and writes zeros.
+    r"|\bFINUFFT\b[^\n]*\berror\b",
 )
 
 
@@ -262,6 +267,9 @@ class Diffuse3DRunner:
             if native_nexus:
                 from .discus_output import read_discus_volume
                 volume = read_discus_volume(output)
+                if not np.any(volume.values):
+                    # DISCUS 6.23.01 nufft failure mode: exit 0, valid file, every value zero.
+                    raise ValueError("every data value is zero; DISCUS wrote an empty result")
                 report = {
                     "valid_hdf5": True,
                     "native_nexus": True,

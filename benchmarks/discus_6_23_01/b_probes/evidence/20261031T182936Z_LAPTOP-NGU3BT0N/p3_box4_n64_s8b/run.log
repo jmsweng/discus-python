@@ -1,0 +1,428 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\bprobe\20261031T182936Z_LAPTOP-NGU3BT0N\p3_box4_n64_s8b\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mrun.mac
+ suite>  
+ suite> discus
+ discus> seed 11,22,33,44,55,66,77,88
+ discus> read
+ discus/read> stru gate2_block.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    4.00000    4.00000    4.00000   90.00000   90.00000   90.00000    64.0000    
+
+ Metric Tensor     :
+      16.00000      0.00000      0.00000
+       0.00000     16.00000      0.00000
+       0.00000      0.00000     16.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.25000    0.25000    0.25000   90.00000   90.00000   90.00000   0.156250E-01
+
+ Reciprocal metric tensor     : 
+       0.06250     -0.00000     -0.00000
+      -0.00000      0.06250     -0.00000
+      -0.00000     -0.00000      0.06250
+
+ discus> eval n[1]
+ Value of n[1] =    4096.00000000    
+ discus> eval n[2]
+ Value of n[2] =    2.00000000000    
+ discus> eval n[3]
+ Value of n[3] =    1.00000000000    
+ discus> fourier
+ discus/fourier> xray
+ discus/fourier> wvle moa1
+ discus/fourier> ll -2,-2,-2
+ discus/fourier> lr 1.875,-2,-2
+ discus/fourier> ul -2,1.875,-2
+ discus/fourier> tl -2,-2,1.875
+ discus/fourier> na 32
+ discus/fourier> no 32
+ discus/fourier> nt 32
+ discus/fourier> abs h
+ discus/fourier> ord k
+ discus/fourier> top l
+ discus/fourier> temp ignore
+ discus/fourier> disp off
+ discus/fourier> lots box,4,4,4,64,y
+ discus/fourier> set technique:turbo
+ discus/fourier> set aver,0.0
+ discus/fourier> show
+ Fourier technique    : turbo Fourier
+ Fourier calculated by: atom form factors taken from: Waasmeier & Kirfel         
+   Fourier volume     :   64 box shaped lots
+   Lot size           :   4 x   4 x   4 unit cells (periodic boundaries = T)
+   Radiation          : X-ray   , wavelength = MOA1 =  0.7093 A
+   Temp. factors      : ignored
+   Anomalous scat.    : ignored
+   Symmetry averaging : Friedel pairs merged
+   Exctinction Param. : No extinction correction applied
+   Filter function    : Not applied 
+   Intensity scale    :     1.0000
+
+ Reciprocal layer     : 
+   lower left  corner :     -2.0000    -2.0000    -2.0000
+   lower right corner :      1.8750    -2.0000    -2.0000
+   upper left  corner :     -2.0000     1.8750    -2.0000
+   top   left  corner :     -2.0000    -2.0000     1.8750
+
+   hor. increment     :      0.1250     0.0000     0.0000   ->    0.0312 A**-1
+   vert. increment    :      0.0000     0.1250     0.0000   ->    0.0312 A**-1
+   top   increment    :      0.0000     0.0000     0.1250   ->    0.0312 A**-1
+   # of points        :     32 x   32 x   32  (h,k,l)
+   Angle Ratio Aver v/h     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver h/t     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver t/v     90.0000 degrees        1.0000     1.0000
+ discus/fourier> run
+ Computing complex exponent table ...
+ Computing sin(theta)/lambda table ...
+ Computing formfactor lookup table ...
+
+ Lot #    1/  64 : starting at unit cell (  8   2   4 )
+                   Atom typ = AU         (#        27 )
+                   Atom typ = CU         (#        37 )
+
+ Lot #    2/  64 : starting at unit cell ( 10   1  12 )
+                   Atom typ = AU         (#        28 )
+                   Atom typ = CU         (#        36 )
+
+ Lot #    3/  64 : starting at unit cell (  3   7  10 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #    4/  64 : starting at unit cell (  2   5  16 )
+                   Atom typ = AU         (#        30 )
+                   Atom typ = CU         (#        34 )
+
+ Lot #    5/  64 : starting at unit cell ( 10   7   9 )
+                   Atom typ = AU         (#        26 )
+                   Atom typ = CU         (#        38 )
+
+ Lot #    6/  64 : starting at unit cell ( 11   4  12 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #    7/  64 : starting at unit cell ( 13  10   8 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #    8/  64 : starting at unit cell ( 11  12  11 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #    9/  64 : starting at unit cell (  2   9  13 )
+                   Atom typ = AU         (#        26 )
+                   Atom typ = CU         (#        38 )
+
+ Lot #   10/  64 : starting at unit cell (  4   1   5 )
+                   Atom typ = AU         (#        36 )
+                   Atom typ = CU         (#        28 )
+
+ Lot #   11/  64 : starting at unit cell (  5   4   2 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   12/  64 : starting at unit cell (  4  12  12 )
+                   Atom typ = AU         (#        31 )
+                   Atom typ = CU         (#        33 )
+
+ Lot #   13/  64 : starting at unit cell ( 15  10   2 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   14/  64 : starting at unit cell (  4   9  12 )
+                   Atom typ = AU         (#        20 )
+                   Atom typ = CU         (#        44 )
+
+ Lot #   15/  64 : starting at unit cell (  4  13   6 )
+                   Atom typ = AU         (#        34 )
+                   Atom typ = CU         (#        30 )
+
+ Lot #   16/  64 : starting at unit cell (  1  11   3 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   17/  64 : starting at unit cell (  1   9  16 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   18/  64 : starting at unit cell (  2  12   6 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   19/  64 : starting at unit cell (  4  11  11 )
+                   Atom typ = AU         (#        26 )
+                   Atom typ = CU         (#        38 )
+
+ Lot #   20/  64 : starting at unit cell ( 13  10   7 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   21/  64 : starting at unit cell (  1  13   9 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   22/  64 : starting at unit cell ( 12  10   3 )
+                   Atom typ = AU         (#        28 )
+                   Atom typ = CU         (#        36 )
+
+ Lot #   23/  64 : starting at unit cell ( 11   2   3 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   24/  64 : starting at unit cell ( 13   4   6 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   25/  64 : starting at unit cell (  8  10   7 )
+                   Atom typ = AU         (#        35 )
+                   Atom typ = CU         (#        29 )
+
+ Lot #   26/  64 : starting at unit cell (  8  16   7 )
+                   Atom typ = AU         (#        36 )
+                   Atom typ = CU         (#        28 )
+
+ Lot #   27/  64 : starting at unit cell ( 13  11  14 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   28/  64 : starting at unit cell (  9   6  12 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   29/  64 : starting at unit cell ( 12   5   6 )
+                   Atom typ = AU         (#        26 )
+                   Atom typ = CU         (#        38 )
+
+ Lot #   30/  64 : starting at unit cell (  7   9  16 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   31/  64 : starting at unit cell ( 14  11  16 )
+                   Atom typ = AU         (#        36 )
+                   Atom typ = CU         (#        28 )
+
+ Lot #   32/  64 : starting at unit cell ( 14  16   9 )
+                   Atom typ = AU         (#        25 )
+                   Atom typ = CU         (#        39 )
+
+ Lot #   33/  64 : starting at unit cell (  7  10   5 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   34/  64 : starting at unit cell ( 16   2   4 )
+                   Atom typ = AU         (#        31 )
+                   Atom typ = CU         (#        33 )
+
+ Lot #   35/  64 : starting at unit cell (  7   1  16 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   36/  64 : starting at unit cell (  9   9   5 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   37/  64 : starting at unit cell ( 11  12  12 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   38/  64 : starting at unit cell (  9  12  10 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   39/  64 : starting at unit cell (  4   4   1 )
+                   Atom typ = AU         (#        35 )
+                   Atom typ = CU         (#        29 )
+
+ Lot #   40/  64 : starting at unit cell ( 10  14  11 )
+                   Atom typ = AU         (#        33 )
+                   Atom typ = CU         (#        31 )
+
+ Lot #   41/  64 : starting at unit cell (  2   9   9 )
+                   Atom typ = AU         (#        26 )
+                   Atom typ = CU         (#        38 )
+
+ Lot #   42/  64 : starting at unit cell ( 12   9  12 )
+                   Atom typ = AU         (#        30 )
+                   Atom typ = CU         (#        34 )
+
+ Lot #   43/  64 : starting at unit cell (  3   2  16 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   44/  64 : starting at unit cell (  7  11   1 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   45/  64 : starting at unit cell (  6   3  15 )
+                   Atom typ = AU         (#        38 )
+                   Atom typ = CU         (#        26 )
+
+ Lot #   46/  64 : starting at unit cell (  2   2  11 )
+                   Atom typ = AU         (#        29 )
+                   Atom typ = CU         (#        35 )
+
+ Lot #   47/  64 : starting at unit cell (  9  16   1 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   48/  64 : starting at unit cell (  2  12   7 )
+                   Atom typ = AU         (#        33 )
+                   Atom typ = CU         (#        31 )
+
+ Lot #   49/  64 : starting at unit cell ( 13  16   6 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   50/  64 : starting at unit cell (  8   7   8 )
+                   Atom typ = AU         (#        30 )
+                   Atom typ = CU         (#        34 )
+
+ Lot #   51/  64 : starting at unit cell (  6  15  14 )
+                   Atom typ = AU         (#        34 )
+                   Atom typ = CU         (#        30 )
+
+ Lot #   52/  64 : starting at unit cell (  3  10  14 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   53/  64 : starting at unit cell ( 15   3   1 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   54/  64 : starting at unit cell (  7   5   7 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   55/  64 : starting at unit cell (  4  14   3 )
+                   Atom typ = AU         (#        36 )
+                   Atom typ = CU         (#        28 )
+
+ Lot #   56/  64 : starting at unit cell (  3   8  10 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   57/  64 : starting at unit cell (  1  15  14 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   58/  64 : starting at unit cell (  4  10   5 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   59/  64 : starting at unit cell (  3  14  11 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   60/  64 : starting at unit cell (  7   8   1 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   61/  64 : starting at unit cell (  1  16  13 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   62/  64 : starting at unit cell (  5   5  12 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   63/  64 : starting at unit cell (  7   9   1 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ Lot #   64/  64 : starting at unit cell (  3   2   7 )
+                   Atom typ = AU         (#        32 )
+                   Atom typ = CU         (#        32 )
+
+ 
+ Bragg scat.     :  0.281302E+09  ->  0.751823E+09
+ Diffuse scat.   :   44707.8      ->  0.322916E+09
+      Average    :  0.831998E+07  +-  0.261338E+08
+
+ Elapsed time    :  0.546002     sec
+ discus/fourier> exit
+ discus> output
+ discus/output> value int
+ discus/output> form nexus
+ discus/output> outf p3_box4_n64_s8b_int.h5
+ discus/output> run
+
+      Partial dump of unified data 
+
+   Crystal Meta information
+audit_conform_dict_name    Disorder unified data
+audit_conform_dict_version 0.0.0
+audit_creation_date        2026-10-31
+audit_creation_method      6.23.01
+audit_author_name          DISCUS
+
+ Unit cell params     4.000000    4.000000    4.000000
+ Unit cell angles    90.000000   90.000000   90.000000
+ Symmetry H_M     P 1                             
+ Symmetry Origin      1
+ Symmetry abc     abc
+ Symmetry n MAT       1
+ Symmetry 1 fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry 1 scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry 1 lst      0.000000   0.000000   1.000000   0.000000
+ Symmetry N fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry N scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry N lst      0.000000   0.000000   1.000000   0.000000
+
+ Data experiment  calculated                      
+ Data with  bragg bragg_present                   
+ Data symmetrized none                            
+ Data number                                      
+ Data axes        hkl                             
+ Data radiation   xray                            
+ Data dimensions     32   32   32
+ Data abs,ord,top     1    2    3
+ Data style       single_diffraction              
+ Data content     intensity                       
+ Data symbol      MOA1            
+ Data length         0.709260   0.709260   0.000000
+
+Axes coordinates: basecell_fractional             
+
+ Data corner        -2.000000  -2.000000  -2.000000
+
+ Data abscissa       0.125000   0.000000   0.000000
+ Data ordinate       0.000000   0.125000   0.000000
+ Data top_axis       0.000000   0.000000   0.125000
+
+  DATA_VALUES   281302142.22196823        124385256.38595755     
+  DATA_MINMAX   44707.784238377673        751823353.38795459     
+
+ discus/output> exit
+ discus> exit
+ suite> exit
+
+--- STDERR ---
+xdpyinfo:  unable to open display "".

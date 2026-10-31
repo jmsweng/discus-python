@@ -1,0 +1,470 @@
+{
+ "discus_version": "6.23.01",
+ "runs": [
+  {
+   "id": "p1a_hk0",
+   "group": "p1a",
+   "note": "hk0 plane, nt=1, tl=ll",
+   "inputs": [
+    "tests/fixtures/discus_6_23_01/gaas.cll"
+   ],
+   "outputs": [
+    "p1a_hk0_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p1a_hk0.mac"
+  },
+  {
+   "id": "p1b_h00",
+   "group": "p1b",
+   "note": "h00 line, no=nt=1",
+   "inputs": [
+    "tests/fixtures/discus_6_23_01/gaas.cll"
+   ],
+   "outputs": [
+    "p1b_h00_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p1b_h00.mac"
+  },
+  {
+   "id": "p1c_hhl",
+   "group": "p1c",
+   "note": "oblique hhl plane, nt=1",
+   "inputs": [
+    "tests/fixtures/discus_6_23_01/gaas.cll"
+   ],
+   "outputs": [
+    "p1c_hhl_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p1c_hhl.mac"
+  },
+  {
+   "id": "p1d_tloff",
+   "group": "p1d",
+   "note": "hk0 plane, nt=1 but tl != ll",
+   "inputs": [
+    "tests/fixtures/discus_6_23_01/gaas.cll"
+   ],
+   "outputs": [
+    "p1d_tloff_int.h5"
+   ],
+   "expect": "either",
+   "macro": "macros/p1d_tloff.mac"
+  },
+  {
+   "id": "p1e_h0l",
+   "group": "p1e",
+   "note": "h0l plane, middle axis inactive (no=1)",
+   "inputs": [
+    "tests/fixtures/discus_6_23_01/gaas.cll"
+   ],
+   "outputs": [
+    "p1e_h0l_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p1e_h0l.mac"
+  },
+  {
+   "id": "p2_aver0",
+   "group": "p2",
+   "note": "set aver 0",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru"
+   ],
+   "outputs": [
+    "p2_aver0_int.h5",
+    "p2_aver0_real.h5",
+    "p2_aver0_imag.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p2_aver0.mac"
+  },
+  {
+   "id": "p2_aver100",
+   "group": "p2",
+   "note": "set aver 100",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru"
+   ],
+   "outputs": [
+    "p2_aver100_int.h5",
+    "p2_aver100_real.h5",
+    "p2_aver100_imag.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p2_aver100.mac"
+  },
+  {
+   "id": "p2_aver50_s8a",
+   "group": "p2",
+   "note": "set aver 50, 8-value seed A",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru"
+   ],
+   "outputs": [
+    "p2_aver50_s8a_int.h5",
+    "p2_aver50_s8a_real.h5",
+    "p2_aver50_s8a_imag.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p2_aver50_s8a.mac"
+  },
+  {
+   "id": "p2_aver50_s8b",
+   "group": "p2",
+   "note": "set aver 50, 8-value seed A again",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru"
+   ],
+   "outputs": [
+    "p2_aver50_s8b_int.h5",
+    "p2_aver50_s8b_real.h5",
+    "p2_aver50_s8b_imag.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p2_aver50_s8b.mac"
+  },
+  {
+   "id": "p2_aver50_s8c",
+   "group": "p2",
+   "note": "set aver 50, 8-value seed B",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru"
+   ],
+   "outputs": [
+    "p2_aver50_s8c_int.h5",
+    "p2_aver50_s8c_real.h5",
+    "p2_aver50_s8c_imag.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p2_aver50_s8c.mac"
+  },
+  {
+   "id": "p2_aver50_s1a",
+   "group": "p2",
+   "note": "set aver 50, single-value seed",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru"
+   ],
+   "outputs": [
+    "p2_aver50_s1a_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p2_aver50_s1a.mac"
+  },
+  {
+   "id": "p2_aver50_s1b",
+   "group": "p2",
+   "note": "set aver 50, single-value seed again",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru"
+   ],
+   "outputs": [
+    "p2_aver50_s1b_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p2_aver50_s1b.mac"
+  },
+  {
+   "id": "p3_off",
+   "group": "p3",
+   "note": "lots off (reference)",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_off_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_off.mac"
+  },
+  {
+   "id": "p3_box4_all_y",
+   "group": "p3",
+   "note": "lots box 4x4x4, all, periodic",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box4_all_y_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_box4_all_y.mac"
+  },
+  {
+   "id": "p3_box4_all_n",
+   "group": "p3",
+   "note": "lots box 4x4x4, all, not periodic",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box4_all_n_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_box4_all_n.mac"
+  },
+  {
+   "id": "p3_box4_n64_s8a",
+   "group": "p3",
+   "note": "lots box 4x4x4, 64 random lots, seed A",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box4_n64_s8a_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_box4_n64_s8a.mac"
+  },
+  {
+   "id": "p3_box4_n64_s8b",
+   "group": "p3",
+   "note": "lots box 4x4x4, 64 random lots, seed A again",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box4_n64_s8b_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_box4_n64_s8b.mac"
+  },
+  {
+   "id": "p3_box4_n64_s8c",
+   "group": "p3",
+   "note": "lots box 4x4x4, 64 random lots, seed B",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box4_n64_s8c_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_box4_n64_s8c.mac"
+  },
+  {
+   "id": "p3_ell4_all_y",
+   "group": "p3",
+   "note": "lots ellipsoid 4x4x4, all, periodic",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_ell4_all_y_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_ell4_all_y.mac"
+  },
+  {
+   "id": "p3_box4_all_y_aver100",
+   "group": "p3",
+   "note": "lots box 4x4x4, all, periodic, set aver 100",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box4_all_y_aver100_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_box4_all_y_aver100.mac"
+  },
+  {
+   "id": "p3_box16_n2_y",
+   "group": "p3",
+   "note": "lots box 16x16x16 (whole crystal), 2 lots, periodic",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box16_n2_y_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p3_box16_n2_y.mac"
+  },
+  {
+   "id": "p3_box4_amp",
+   "group": "p3",
+   "note": "lots box 4x4x4, 8 lots, output value amp",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box4_amp_amp.h5"
+   ],
+   "expect": "either",
+   "macro": "macros/p3_box4_amp.mac"
+  },
+  {
+   "id": "p3_box17_err",
+   "group": "p3",
+   "note": "lots box 17x17x17 (larger than crystal)",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p3_box17_err_int.h5"
+   ],
+   "expect": "error",
+   "macro": "macros/p3_box17_err.mac"
+  },
+  {
+   "id": "p4_turbo_g32_a0",
+   "group": "p4",
+   "note": "technique turbo, grid g32, aver 0",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_turbo_g32_a0_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_turbo_g32_a0.mac"
+  },
+  {
+   "id": "p4_nufft_g32_a0",
+   "group": "p4",
+   "note": "technique nufft, grid g32, aver 0",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_nufft_g32_a0_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_nufft_g32_a0.mac"
+  },
+  {
+   "id": "p4_turbo_g32_a100",
+   "group": "p4",
+   "note": "technique turbo, grid g32, aver 100",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_turbo_g32_a100_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_turbo_g32_a100.mac"
+  },
+  {
+   "id": "p4_nufft_g32_a100",
+   "group": "p4",
+   "note": "technique nufft, grid g32, aver 100",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_nufft_g32_a100_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_nufft_g32_a100.mac"
+  },
+  {
+   "id": "p4_turbo_gnc_a0",
+   "group": "p4",
+   "note": "technique turbo, grid gnc, aver 0",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_turbo_gnc_a0_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_turbo_gnc_a0.mac"
+  },
+  {
+   "id": "p4_nufft_gnc_a0",
+   "group": "p4",
+   "note": "technique nufft, grid gnc, aver 0",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_nufft_gnc_a0_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_nufft_gnc_a0.mac"
+  },
+  {
+   "id": "p4_turbo_gnc_a100",
+   "group": "p4",
+   "note": "technique turbo, grid gnc, aver 100",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_turbo_gnc_a100_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_turbo_gnc_a100.mac"
+  },
+  {
+   "id": "p4_nufft_gnc_a100",
+   "group": "p4",
+   "note": "technique nufft, grid gnc, aver 100",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p4_nufft_gnc_a100_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p4_nufft_gnc_a100.mac"
+  },
+  {
+   "id": "p5_default",
+   "group": "p5",
+   "note": "odd grid, set aver 100, default symm",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p5_default_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p5_default.mac"
+  },
+  {
+   "id": "p5_symm_ignore",
+   "group": "p5",
+   "note": "odd grid, set aver 100, set symm:ignore",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p5_symm_ignore_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p5_symm_ignore.mac"
+  },
+  {
+   "id": "p5_symm_friedel",
+   "group": "p5",
+   "note": "odd grid, set aver 100, set symm:friedel",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p5_symm_friedel_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p5_symm_friedel.mac"
+  },
+  {
+   "id": "p5_symm_apply",
+   "group": "p5",
+   "note": "odd grid, set aver 100, set symm:apply",
+   "inputs": [
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru"
+   ],
+   "outputs": [
+    "p5_symm_apply_int.h5"
+   ],
+   "expect": "ok",
+   "macro": "macros/p5_symm_apply.mac"
+  }
+ ]
+}
