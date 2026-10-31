@@ -53,7 +53,8 @@ def test_roundtrip_mixed():
     from discuspdf.ase_io import to_ase, from_ase
 
     s = read_cif(FIXTURES / "ga07in03as_mixed.cif").structure
-    atoms = to_ase(s)
+    with pytest.warns(InteropWarning, match="dp_"):
+        atoms = to_ase(s)
     s2 = from_ase(atoms)
 
     assert s2.isclose(s, rtol=1e-8, atol=1e-12)
@@ -94,7 +95,8 @@ def test_roundtrip_b_iso_none_and_per_atom():
     # Per-atom B (the mixed fixture has B values from U).
     s_b = read_cif(FIXTURES / "ga07in03as_mixed.cif").structure
     assert s_b.b_iso is not None
-    atoms = to_ase(s_b)
+    with pytest.warns(InteropWarning, match="dp_"):
+        atoms = to_ase(s_b)
     s2 = from_ase(atoms)
     assert s2.b_iso is not None
     assert np.allclose(s2.b_iso, s_b.b_iso, atol=1e-6)

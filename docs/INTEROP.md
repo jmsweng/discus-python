@@ -14,6 +14,8 @@ pip install 'discus-python[interop]' # all three
 `import discuspdf` works without any of them; the adapters raise a helpful
 `ImportError` naming the extra when the library is missing.
 
+Tested with gemmi 0.7.5, ase 3.29.0, diffpy.structure 3.2.3 (CI) and 3.5.0 (local).
+
 ## Quick start
 
 ### CIF (gemmi)

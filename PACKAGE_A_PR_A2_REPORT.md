@@ -1,170 +1,107 @@
-# Package A · PR A-2 Report — CIF, ASE and DiffPy interoperability (Feature A2)
+# Package A · PR A-2 Report — Editable `Structure` model (Feature A1)
 
 ## 1. Base / head / PR / environment
 
-- **Base:** `a6e303f` (`origin/main`, contains `Lattice`, `Structure`, `discus_io`)
-- **Head:** `a5941cd` (branch `feat/interop-adapters`, 13 commits)
-- **PR:** [Draft PR #15](https://github.com/jmsweng/discus-python/pull/15)
-- **Measured on:** Windows 10, Python 3.14.7, gemmi 0.7.5, ase 3.29.0, diffpy.structure 3.5.0.
-  CI (GitHub Actions, ubuntu-latest, Python 3.10) installs gemmi 0.7.5, ase 3.29.0,
-  diffpy.structure **3.2.3** (see section 6 for the version difference that mattered).
+- **Base:** `d4b60ad` (`main`, PR #10 merged) · **Head at measurement:** `6872dff`
+- **PR:** [Draft PR #11](https://github.com/jmsweng/discus-python/pull/11) · **Branch:** `feat/structure-model`
+- **Measured on:** Windows 10, Python 3.14.7, NumPy 2.5.4 (numbers in sections 5–6 come from this machine
+  unless marked "cloud").
 
 ## 2. What this PR delivers
 
-- **CIF reader/writer** (`src/discuspdf/cif_io.py`, gemmi-based): parses CIF text,
-  expands the asymmetric unit by the space group (symop loop → space-group symbol →
-  assumed P1), wraps coordinates to [0, 1), merges periodic images within 1e-4,
-  checks total occupancy ≤ 1 + 1e-6, rejects modulated structures; `write_cif` emits
-  P1 CIFs with `_discuspdf_*` tags for exact round-trip (model, supercell, site
-  labels, atom ids, cell indices), written atomically and verified by re-parsing.
-- **ASE adapter** (`src/discuspdf/ase_io.py`): `to_ase` stores the full DISCUS state
-  in `atoms.arrays` (`dp_*`) and `atoms.info` (`dp_model`, `dp_supercell`); `from_ase`
-  restores it exactly (path A) or, for a foreign `Atoms` object, requires `model=`
-  and reports losses (path B). `to_ase` never raises for a loss (design rule 2).
-- **DiffPy adapter** (`src/discuspdf/diffpy_io.py`): `to_diffpy` / `from_diffpy`
-  preserve fractional coordinates, lattice parameters and distances/angles; the
-  model is not stored (pass it to `from_diffpy`); anisotropic atoms are a loss
-  (isotropic equivalent kept).
-- **Shared helpers** (`src/discuspdf/interop.py`): `InteropError` / `InteropWarning`,
-  `LossReport` (raise-or-warn policy), `u_to_b` / `b_to_u` (`B = 8π²·U`; gemmi has
-  no `u_to_b`), `element_from_type_symbol` (first 100 elements).
-- **Atomic writes** (`src/discuspdf/_safe_write.py`): shared by `write_cif` and
-  `discus_io.write_cll` / `write_stru` (the only change to `discus_io.py`).
-- **Extras** (`pyproject.toml`): `cif` (gemmi), `ase`, `diffpy`, `interop` (all three).
-  `import discuspdf` works without them; the adapters raise a helpful `ImportError`.
-- **Tests**: `tests/test_cif_io.py` (28), `tests/test_ase_io.py` (16),
-  `tests/test_diffpy_io.py` (15) — 59 interop tests, all green with the extras and
-  cleanly skipped without them.
-- **Fixtures**: `tests/fixtures/interop/` (5 synthetic CIFs + the real COD GaAs CIF
-  9008845 + probe evidence logs + `MANIFEST.sha256`).
-- **Docs / example / notebook**: `docs/INTEROP.md`, `docs/INTEROP_FACTS.md` (probe
-  findings P1–P14), `examples/interop_basics.py`, `notebooks/06_interop.ipynb`
-  (executed, outputs committed), `README.md` section, `todo/TASKS.md` A2 ticked.
+- `discuspdf.Structure`: an immutable structure value (per-atom NumPy arrays + `Lattice`) with an
+  explicit `model`: `"average"` (CIF-like site-occupancy model; mixed sites share
+  `(site_label, cell_index)`, occupancy sum ≤ 1) or `"configuration"` (realised arrangement; all
+  occupancies 1, at most one atom per site). No implicit conversion between them.
+- Validation on construction, on every edit and on `concat`: shapes, finiteness, species and
+  site-label strings, `pbc` booleans, occupancies, B factors, site consistency and a 0.1 Å overlap
+  check (cell list; never skipped automatically; `min_separation=None` opts out).
+- Identity: `ids=` always means `atom_id`; ids change only through `renumbered()`; no method sorts rows.
+- Distances (`distance`, `displacement`, vectorised `distance_matrix`) for fully periodic or fully
+  non-periodic structures; mixed PBC is stored but distances raise `NotImplementedError`.
+- `Lattice.minimum_image` (from PR #10) made faster with identical output (see section 6).
+- Docs `docs/STRUCTURE.md`, `examples/structure_basics.py`, `notebooks/04_structure_basics.ipynb`.
 
-## 3. Design decisions (overseer rulings, verbatim from `00_START_HERE.md`)
+## 3. Design decisions
 
-| Decision | Ruling |
+| Decision | Choice |
 |---|---|
-| Symmetry source | symop loop → space-group symbol → assumed P1 (recorded in `defaults_applied`) |
-| gemmi unit-cell sites | `get_all_unit_cell_sites()` returns UNWRAPPED fractions; the reader wraps to [0,1) and merges periodic images within 1e-4 |
-| Quotes | `gemmi.cif.as_string` strips CIF quotes; never ad-hoc `.strip("'")` |
-| B ↔ U | `B = 8π²·U` (gemmi has no `u_to_b`); CIF reading prefers `_atom_site_B_iso_or_equiv` over U |
-| DiffPy lattice | `from_diffpy` takes the lattice from `cell_parms()` (never `.base` — different orientation); fractional `xyz` used directly |
-| DiffPy anisotropy | `atom.anisotropy` True → `Uisoequiv` is the correct lattice-weighted equivalent (0.012 cubic, 0.012912 triclinic for diag(0.013, 0.012, 0.011)); kept as `b_iso`, anisotropy is a loss |
-| ASE foreign atoms | `info['occupancy']` is never interpreted (the atom→key mapping is not recoverable from `Atoms`); occupancies assumed 1.0, `model=` required |
-| `to_diffpy` losses | atom_id not 0..N-1, non-trivial cell_index/supercell, pbc not all True, species charges. **Model is NOT a loss** (A2-3b ruling): DiffPy has no model concept, but `from_diffpy(..., model=)` makes the user state it, so nothing is lost silently |
-| `to_ase` | never raises for a loss; warns at most (partial occupancy / mixed site) |
-| Loss policy | `allow_loss=False` → `InteropError` listing every loss; `allow_loss=True` → one `InteropWarning` |
+| Value semantics | Immutable; arrays read-only; edits return new, fully re-validated structures |
+| Models | Required `model` keyword; `"average"` vs `"configuration"`; no implicit sampling (A4) |
+| Overlap rule | Configuration: all pairs in different sites; average: only if the two sites' occupancy sums exceed 1 |
+| Overlap method | Periodic cell list (bins ≥ cutoff thick per lattice direction; ≤ 4 bins per atom); nearest rounded image when every axis has ≥ 3 bins, else `Lattice.minimum_image` |
+| `concat` | Validating; requires matching lattice, model, `supercell`, `pbc`, and `b_iso` on both or neither |
+| `_subset` (`select`/`remove`) | Skips re-validation: a subset of a valid structure is valid |
+| `isclose` | Exact on species, labels, ids, cell_index, supercell, pbc, model; tolerances on lattice, frac, occupancy, b_iso |
+| `distance_matrix` | Vectorised, chunked; capped at 5 000 atoms (neighbour lists are Package C) |
 
-## 4. Tolerances (predeclared)
+## 4. Review history
 
-| Quantity | Tolerance |
-|---|---|
-| lattice parameters | rtol 1e-8 |
-| fractional coordinates (CIF round trip) | atol 1e-9 (10-decimal file precision) |
-| fractional coordinates (ASE, DiffPy, in memory) | atol 1e-12 |
-| occupancy | atol 1e-9 |
-| B factor | atol 1e-6 |
-| distances | atol 1e-6 Å |
-| species, site labels, atom ids, cell indices, row order | exact |
+Overseer review of head `04d1034` found five blockers and four should-fix items; all are resolved:
+
+| Item | Problem | Fixed in |
+|---|---|---|
+| B1 | Batched `minimum_image` returned wrong (longer) images in non-cubic cells; one-sided test missed it | `ea2088f`, `01584c6` (per-row tie resolution; two-sided and batch-vs-single tests) |
+| B2 | Edits skipped the overlap check | `d85ccec` |
+| B3 | `concat` bypassed validation | `d85ccec` |
+| B4 | `ids=` treated as row numbers | `01584c6` |
+| B5 | Overlap check ~O(n^2.5) and silently skipped ≥ 20 000 atoms; per-pair `distance_matrix` | 2b-1 commit (cell list; vectorised `distance_matrix`) |
+| S1–S3 | `isclose` too loose; `site_label`/`pbc` unvalidated; unreadable messages | `01584c6` |
+| Found in review | `_check_site_consistency` checked the wrong rows when a mixed site did not sort first | `d85ccec` (+ regression test) |
 
 ## 5. Tests
 
-| Command (extras venv) | Result |
+| Command | Result |
 |---|---|
-| `pytest tests/test_cif_io.py tests/test_ase_io.py tests/test_diffpy_io.py` | **59 passed** in 3.34 s |
-| `pytest` (full suite) | 28 failed, 366 passed, 11 skipped in 187.90 s |
-| base venv (no extras): `pytest tests/test_cif_io.py tests/test_ase_io.py tests/test_diffpy_io.py` | 6 passed, 53 skipped |
+| `pytest tests/test_lattice.py tests/test_structure.py` | 87 passed in 103.93s (0:01:43) (failures: none) |
+| `pytest` (full suite) | 28 failed, 230 passed, 2 skipped in 186.53s (0:03:06) |
 
-Full-suite failures on this machine (28) are in `test_gate2_prereg.py`,
-`test_gate3_prereg.py`, `test_native_3d_integration.py`, `test_regenerate_evidence.py`
-— the known Windows environment-specific failures (CRLF checkouts / symlinks in the
-evidence and probe tests). **The failure-name set is identical to `origin/main`
-(28 = 28, zero new failures)** — verified by running the full suite in a
-`git worktree` of `origin/main` (`a6e303f`) with the same extras venv.
+Full-suite failures on this machine are in: `tests/test_gate2_prereg.py`, `tests/test_gate3_prereg.py`, `tests/test_native_3d_integration.py`, `tests/test_regenerate_evidence.py`. On native Windows these are the
+known environment-specific failures (CRLF checkouts and symlinks in the evidence/probe tests); they
+occur identically on `main` and do not involve the files changed here. Standard CI (Linux) is green.
 
-Mutation checks (A2-2/A2-3, verbatim from the A2-3 review):
+Independent checks run by the overseer (cloud):
+- `minimum_image` output identical to `main` (`d4b60ad`) on 6 × 60 000 displacements incl. constructed
+  ties; 0 mismatches against an independent brute-force + tie-rule oracle (5 cells × 3 seeds).
+- Cell-list overlap check identical to a brute-force all-pairs, all-images check in 960 random cases
+  (594 with an overlap) across 6 cells incl. strongly skewed and smaller-than-cutoff cells.
 
-| Mutation | Change | Tests failing |
+## 6. Performance (this machine)
+
+| Operation | Size | Time |
 |---|---|---|
-| M1 | CIF reader: skip symmetry expansion (return listed sites only) | 9 (incl. `test_gaas_expands_to_8`) |
-| M2 | CIF reader: do not wrap to [0,1) | 5 (incl. `test_negative_coords_wrapped`) |
-| M3 | `write_cif`: drop `_discuspdf_*` tags | 6 (incl. `test_cif_roundtrip_supercell`) |
-| M4 | `to_ase`: drop `dp_*` arrays | 7 (incl. `test_ase_roundtrip_supercell`) |
-| M5 | `from_ase` path B: skip the loss checks | 5 (incl. `test_ase_foreign_partial_occupancy_raises`) |
-| M6 | `to_diffpy`: drop the supercell loss | 4 (incl. `test_to_diffpy_supercell_is_loss`) |
-| N7 (A2-3b) | `to_diffpy`: put the "model" loss back | 7 (incl. `test_to_diffpy_plain_structure_no_loss`) |
+| Construct + validate GaAs 4×4×4 configuration | 512 atoms | 0.02 s |
+| Construct + validate GaAs 8×8×8 | 4 096 atoms | 0.03 s |
+| Construct + validate GaAs 16×16×16 | 32 768 atoms | 0.26 s |
+| Construct + validate GaAs 20×20×20 | 64 000 atoms | 0.58 s |
+| Construct + validate random configuration | 100 000 atoms | 0.77 s |
+| `distance_matrix` | 2 000 atoms | 3.85 s |
+| `Lattice.minimum_image`, γ = 20° cell | 400 000 displacements | 2.94 s |
 
-## 6. CI and the diffpy version difference
+For comparison (cloud runner): before the fixes, the 512-atom case took 16 s and the 4 096-atom case
+was estimated at ~40 min; `minimum_image` on 4×10⁵ displacements went from 18.3 s to 2.8 s.
 
-The workflow (`.github/workflows/python-tests.yml`) installs `.[dev,notebook,interop]`
-and runs `python -m pytest -q` (no separate notebook-execution step; the notebook is
-executed locally and its outputs are committed, matching the other notebooks).
+## 7. Caveats / not done
 
-CI (Python 3.10) resolves `diffpy.structure` to **3.2.3** (its `requires_python` is
-`<3.13`), while the local venv (Python 3.14) gets **3.5.0**. `Lattice.cell_parms`
-does not exist in 3.2.3, so the first CI run failed with
-`AttributeError: 'Lattice' object has no attribute 'cell_parms'` in `from_diffpy`
-and `test_cif_diffpy_cross_check`. Fixed in A2-4b/A2-4c by reading the individual
-attributes (`lat.a, lat.b, lat.c, lat.alpha, lat.beta, lat.gamma`), present in all
-versions (3.2.3 has the deprecated `abcABG()` and the single-letter properties;
-3.5.0 has `cell_parms()`). After the fix the CI check-run is **green**
-(`unit-tests` completed/success on head `a5941cd`).
+- Mixed-PBC (slab) distances and overlap checks are not implemented (`NotImplementedError`).
+- Magnetic moments (Package D11) and anisotropic ADPs are not represented.
+- No CIF/ASE/DiffPy (A2), `.cll`/`.stru` I/O (A3) or supercell/disorder editing (A4) yet.
+- `distance_matrix` is O(M²) by design and capped at 5 000 atoms.
 
-## 7. Probe facts (A2-1/A2-1b, `docs/INTEROP_FACTS.md`)
-
-| Fact | Value |
-|---|---|
-| gemmi `read_small_structure` on the COD GaAs CIF | block `9008845`, space group `F -4 3 m` (No. 216); 2 listed sites (Ga 0,0,0; As 0.25,0.25,0.25); `get_all_unit_cell_sites()` → 8 sites, 4 of them outside [0,1) (gemmi does NOT wrap) |
-| gemmi on the 5 synthetic CIFs | P-1: 2→4 sites; mixed F-43m: 3→12; aniso P1: U11/U22/U33 read directly; disorder groups read; total occupancy > 1 NOT rejected by gemmi |
-| ASE on the COD GaAs CIF | 8 atoms (asymmetric unit expanded); cell matches; `info` has `spacegroup` + `unit_cell`, no `occupancy` key; no U/B in `arrays` |
-| ASE on the mixed fixture | 8 atoms (In dropped from `species`); `info['occupancy']` keys are **listed-site indices**, and the atom-index → key mapping is **not recoverable** from `Atoms` (P4/P10) |
-| ASE cell validation | the `Atoms` constructor does NOT reject singular or left-handed cells; `from_ase` therefore checks `det > 0` itself |
-| diffpy on the COD GaAs CIF | 8 atoms; space group No. 216, 96 sym matrices; U/B default 0.0 |
-| diffpy anisotropic Uisoequiv | with `anisotropy=True`: 0.012 (cubic) / 0.012912 (triclinic) for diag(0.013, 0.012, 0.011) — the correct isotropic equivalent (P14) |
-| B ↔ U | `8π²·0.01 = 0.7895683520871487`; gemmi has no `u_to_b` (P12) |
-| gemmi `as_string` | strips CIF single-quotes; identity on unquoted values (P13) |
-| Conflicts with the fixed design | **None** |
-
-## 8. Limitations / not done
-
-- Anisotropic ADPs are a loss in every adapter (isotropic equivalent kept, if any).
-- Disorder groups and magnetic moments are reported as losses on CIF reading.
-- Total occupancy > 1 at a position is rejected (`InteropError`).
-- Mixed pbc (not all True) is a loss on CIF writing (the reader assumes all periodic).
-- ASE `info['occupancy']` is never interpreted (overseer ruling).
-- DiffPy: orientation is not preserved; site labels, atom ids, cell indices,
-  supercell and pbc are not stored; the model must be passed to `from_diffpy`.
-- The element table covers the first 100 elements; unknown type symbols raise
-  `InteropError`.
-- No notebook-execution step in CI (notebooks are executed locally and their
-  outputs committed, as for the existing notebooks).
-
-## 9. Changed files (vs `main`)
+## 8. Changed files (vs `main`)
 
 ```
- .github/workflows/python-tests.yml                |    2 +-
-  benchmarks/interop_probes/p10_ase_deep.py         |   75 ++
-  ... (14 probe scripts, p1–p14)
-  docs/INTEROP.md                                   |  171 ++++
-  docs/INTEROP_FACTS.md                             |  152 ++++
-  examples/interop_basics.py                        |  100 +++
-  notebooks/06_interop.ipynb                        |  333 +++++++
-  pyproject.toml                                    |    4 +
-  src/discuspdf/__init__.py                         |   23 +
-  src/discuspdf/_safe_write.py                      |   49 ++
-  src/discuspdf/ase_io.py                           |  246 +++++
-  src/discuspdf/cif_io.py                           |  980 ++++++++++++++++++++
-  src/discuspdf/diffpy_io.py                        |  155 ++++
-  src/discuspdf/discus_io.py                        |   68 +-   (only the _safe_write import + writer refactor)
-  src/discuspdf/interop.py                          |  102 +++
-  tests/fixtures/interop/*                          |  (6 CIFs + 14 evidence logs + manifest + README)
-  tests/test_ase_io.py                              |  393 ++++++++
-  tests/test_cif_io.py                              | 1000 +++++++++++++++++++++
-  tests/test_diffpy_io.py                           |  430 +++++++++
-  README.md / todo/TASKS.md                         |  (interop section + A2 tick)
-  52 files changed, 5086 insertions(+), 52 deletions(-)
+PACKAGE_A_PR_A2_REPORT.md           |  107 ++++
+ README.md                           |    4 +
+ docs/STRUCTURE.md                   |  124 +++++
+ examples/structure_basics.py        |   64 +++
+ notebooks/04_structure_basics.ipynb |  316 +++++++++++
+ src/discuspdf/__init__.py           |    4 +
+ src/discuspdf/_elements.py          |   68 +++
+ src/discuspdf/lattice.py            |   51 +-
+ src/discuspdf/structure.py          | 1005 +++++++++++++++++++++++++++++++++++
+ tests/test_lattice.py               |   97 +++-
+ tests/test_structure.py             |  942 ++++++++++++++++++++++++++++++++
+ todo/TASKS.md                       |    3 +-
+ 12 files changed, 2765 insertions(+), 20 deletions(-)
 ```
-
-`src/discuspdf/structure.py` and `src/discuspdf/lattice.py` are **unchanged** vs
-`main` (verified with `git diff --stat origin/main`).
