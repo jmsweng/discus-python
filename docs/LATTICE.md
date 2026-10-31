@@ -61,8 +61,8 @@ an exact bounded search:
 
 ## Not yet (later PRs)
 
-- `Structure` (A1), CIF/ASE/DiffPy interop (A2), DISCUS `.cll`/`.stru` I/O (A3),
-  supercells and atom manipulation (A4).
+- `Structure` (A1), CIF/ASE/DiffPy interop (A2), supercells and atom manipulation (A4).
+- DISCUS `.cll`/`.stru` I/O is available in [docs/DISCUS_IO.md](DISCUS_IO.md).
 - Consolidating `DiscusVolume` / `discus_output` onto `Lattice` (separate PR, with Gate 2/3
   evidence parity).
 
