@@ -1,24 +1,5 @@
-﻿=== P1: NumPy RNG ===
-numpy.__version__ = 2.5.4 default_rng(1234).choice(np.arange(10), size=4, replace=False) = [7 3 8 6] default_rng(1234).normal(0,1,(2,3)) = [[-1.60383681  0.06409991  0.7408913 ]  [ 0.15261919  0.86374389  2.91309922]] default_rng(1234).random(3) = [0.97669977 0.38019574 0.92324623] 
-
-=== P2: Structure outside [0,1) ===
-Original: n_atoms=8, frac range=[0.0000, 0.7500] frac_shifted range=[-0.3000, 1.9500] with_frac accepted: n_atoms=8, frac range=[-0.3000, 1.9500] frac_neg[0] = [-0.01 -0.01 -0.01] with_frac(-0.01) accepted: n_atoms=8, frac[0]=[-0.01 -0.01 -0.01] wrapped() frac range=[0.0500, 0.9500] distance_matrix shape=(8, 8), min=0.0000 
-
-=== P3: Cell-index/supercell semantics ===
-lattice.parameters = (11.3074, 11.3074, 11.3074, 90.0, 90.0, 90.0) supercell = [2 2 2] n_atoms = 64 cell_index[:20] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0]] frac min = [0. 0. 0.] frac max = [0.875 0.875 0.875] atom_id[:20] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] 
-
-=== P4: Overlap check cost ===
-4096-atom structure: (45.2296, 45.2296, 45.2296, 90.0, 90.0, 90.0) 4096 atoms: 0.036 s 64000-atom structure: (113.074, 113.074, 113.074, 90.0, 90.0, 90.0) 64000 atoms: 0.520 s 
-
-=== P5: DISCUS I/O ordering ===
-4x4x4 supercell: n_atoms=512, supercell=[4 4 4] cell_index[:8] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]] cell_index[8:16] = [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]] format_stru raised: DiscusFormatError: rows are not in DISCUS order; the writer never reorders (row 8 is in cell 0,0,1, expected cell 1)  DISCUS-ordered structure: n_atoms=512 cell_index[:8] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]] cell_index[8:16] = [[1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]] format_stru accepted (DISCUS-ordered) Round trip equal: False   frac diff max: 0.00e+00   species equal: True   site_label equal: False   cell_index equal: True   supercell equal: [ True  True  True]   atom_id equal: True Displaced 0.05 ┼ round trip equal: False Displaced 0.4 ┼ round trip equal: False  format_cll raised: ValueError: a .cll is a unit cell; use write_stru for supercells 
-
-=== P6: Structure.sites() ===
-n_atoms=8, model=average n_sites=8 Order of sites (is it order of first appearance, or sorted?):   [0] site_label='As_1', cell_index=(0, 0, 0), members=[np.int64(4)], total_occupancy=1.0000   [1] site_label='As_2', cell_index=(0, 0, 0), members=[np.int64(5)], total_occupancy=1.0000   [2] site_label='As_3', cell_index=(0, 0, 0), members=[np.int64(6)], total_occupancy=1.0000   [3] site_label='As_4', cell_index=(0, 0, 0), members=[np.int64(7)], total_occupancy=1.0000   [4] site_label='Ga_1', cell_index=(0, 0, 0), members=[np.int64(0)], total_occupancy=1.0000   [5] site_label='Ga_2', cell_index=(0, 0, 0), members=[np.int64(1)], total_occupancy=1.0000   [6] site_label='Ga_3', cell_index=(0, 0, 0), members=[np.int64(2)], total_occupancy=1.0000   [7] site_label='Ga_4', cell_index=(0, 0, 0), members=[np.int64(3)], total_occupancy=1.0000  First appearance order: [('Ga_1', (np.int64(0), np.int64(0), np.int64(0))), ('Ga_2', (np.int64(0), np.int64(0), np.int64(0))), ('Ga_3', (np.int64(0), np.int64(0), np.int64(0))), ('Ga_4', (np.int64(0), np.int64(0), np.int64(0))), ('As_1', (np.int64(0), np.int64(0), np.int64(0))), ('As_2', (np.int64(0), np.int64(0), np.int64(0))), ('As_3', (np.int64(0), np.int64(0), np.int64(0))), ('As_4', (np.int64(0), np.int64(0), np.int64(0)))] sites() order:         [('As_1', (0, 0, 0)), ('As_2', (0, 0, 0)), ('As_3', (0, 0, 0)), ('As_4', (0, 0, 0)), ('Ga_1', (0, 0, 0)), ('Ga_2', (0, 0, 0)), ('Ga_3', (0, 0, 0)), ('Ga_4', (0, 0, 0))] Same order: False 
-
-=== P7: Lattice scaling ===
-Original lattice.parameters = (5.0, 5.0, 5.0, 90.0, 90.0, 90.0) Original lattice.matrix = [[5.000000e+00 0.000000e+00 0.000000e+00]  [3.061617e-16 5.000000e+00 0.000000e+00]  [3.061617e-16 3.061617e-16 5.000000e+00]]  Scaled matrix (rows * [2,3,4]): [[1.00000000e+01 0.00000000e+00 0.00000000e+00]  [9.18485099e-16 1.50000000e+01 0.00000000e+00]  [1.22464680e-15 1.22464680e-15 2.00000000e+01]]  Scaled lattice.parameters = (10.0, 15.0, 20.0, 90.0, 90.0, 90.0) Scaled lattice.matrix = [[1.00000000e+01 0.00000000e+00 0.00000000e+00]  [9.18485099e-16 1.50000000e+01 0.00000000e+00]  [1.22464680e-15 1.22464680e-15 2.00000000e+01]]  Check: a=10.0000 (expect 10), b=15.0000 (expect 15), c=20.0000 (expect 20) Check: alpha=90.0000 (expect 90), beta=90.0000 (expect 90), gamma=90.0000 (expect 90) 
-
-
-=== P5b: DISCUS I/O with displaced atoms ===
-4x4x4 DISCUS-ordered GaAs: n_atoms=512 sigma=0.05: round trip ok, max |df| = 1.25e-07 sigma=0.4: round trip ok, max |df| = 1.25e-07 sigma=1.0: DiscusFormatError: <string>:0: atom order does not match ncell cell-major order (row 91, slot 3, axis 0): '' sigma=2.0: DiscusFormatError: <string>:0: atom order does not match ncell cell-major order (row 1, slot 1, axis 0): '' single atom +3.0 ┼: DiscusFormatError: <string>:0: atom order does not match ncell cell-major order (row 0, slot 0, axis 0): ''
+numpy.__version__ = 2.5.4
+default_rng(1234).choice(np.arange(10), size=4, replace=False) = [7 3 8 6]
+default_rng(1234).normal(0,1,(2,3)) = [[-1.60383681  0.06409991  0.7408913 ]
+ [ 0.15261919  0.86374389  2.91309922]]
+default_rng(1234).random(3) = [0.97669977 0.38019574 0.92324623]

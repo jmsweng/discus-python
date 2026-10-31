@@ -1,0 +1,20 @@
+4x4x4 supercell: n_atoms=512, supercell=[4 4 4]
+cell_index[:8] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+cell_index[8:16] = [[0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1], [0, 0, 1]]
+format_stru raised: DiscusFormatError: rows are not in DISCUS order; the writer never reorders (row 8 is in cell 0,0,1, expected cell 1)
+
+DISCUS-ordered structure: n_atoms=512
+cell_index[:8] = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+cell_index[8:16] = [[1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
+format_stru accepted (DISCUS-ordered)
+Round trip equal: False
+  frac diff max: 0.00e+00
+  species equal: True
+  site_label equal: False
+  cell_index equal: True
+  supercell equal: [ True  True  True]
+  atom_id equal: True
+Displaced 0.05 Å round trip equal: False
+Displaced 0.4 Å round trip equal: False
+
+format_cll raised: ValueError: a .cll is a unit cell; use write_stru for supercells

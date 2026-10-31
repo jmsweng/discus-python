@@ -1,0 +1,6 @@
+4x4x4 DISCUS-ordered GaAs: n_atoms=512
+sigma=0.05: round trip ok, max |df| = 1.25e-07
+sigma=0.4: round trip ok, max |df| = 1.25e-07
+sigma=1.0: DiscusFormatError: <string>:0: atom order does not match ncell cell-major order (row 91, slot 3, axis 0): ''
+sigma=2.0: DiscusFormatError: <string>:0: atom order does not match ncell cell-major order (row 1, slot 1, axis 0): ''
+single atom +3.0 Å: DiscusFormatError: <string>:0: atom order does not match ncell cell-major order (row 0, slot 0, axis 0): ''
