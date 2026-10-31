@@ -30,6 +30,10 @@ __all__ += ["Lattice"]
 from .reciprocal_grid import ReciprocalGrid, FFTCompatibility
 __all__ += ["ReciprocalGrid", "FFTCompatibility"]
 
+# Labelled scattering data, xarray adapter and versioned HDF5 (Package B, Features 7 and 19).
+from .scattering_data import ScatteringVolume, mask_near_bragg
+__all__ += ["ScatteringVolume", "mask_near_bragg"]
+
 # Editable Structure model (Package A, Feature A1).
 from .structure import Structure
 __all__ += ["Structure"]
