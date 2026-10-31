@@ -30,6 +30,10 @@ __all__ += ["Lattice"]
 from .reciprocal_grid import ReciprocalGrid, FFTCompatibility
 __all__ += ["ReciprocalGrid", "FFTCompatibility"]
 
+# DISCUS 6.23.01 Fourier macro writer: Bragg subtraction and LOTS (Package B, Features 8 and 9).
+from .fourier_macro import FourierConfig, Lots, Seed, StructureSource, prepare_fourier_run
+__all__ += ["FourierConfig", "Lots", "Seed", "StructureSource", "prepare_fourier_run"]
+
 # Editable Structure model (Package A, Feature A1).
 from .structure import Structure
 __all__ += ["Structure"]

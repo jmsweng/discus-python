@@ -48,6 +48,8 @@ the data were seen. Analysis was done by the reviewer in the cloud, not on the e
 
 - `value int` = |`value real` + i·`value imag`|² to 6e-11 (aver 0) and 3e-8 (aver 100): DISCUS
   subtracts **amplitudes** and the real/imag outputs are `F − ⟨F⟩`.
+  `value real/imag` are stored in float64 datasets but rounded to single precision (relative
+  ≤ 1.2e-7 per voxel, within the float32 bound everywhere); `value int` is double precision.
 - ⟨F⟩ = F(aver 0) − F(aver 100): max |⟨F⟩| off Bragg 1.5e-11 (|F| up to 2.2e5); on Bragg ⟨F⟩ equals F
   exactly (one undisplaced site per cell). So `aver 100` leaves the off-Bragg intensity unchanged
   (relative 5.8e-15) and sets the 64 Bragg voxels to exactly 0.
