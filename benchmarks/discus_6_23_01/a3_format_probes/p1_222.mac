@@ -1,0 +1,7 @@
+discus
+read
+  cell p1_1atom.cll,2,2,2
+eval n[1]
+save p1_2x2x2_a4.stru
+exit
+exit

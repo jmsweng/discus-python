@@ -74,7 +74,8 @@ The existing DISCUS engine may implement some of these physical methods already.
 - [x] **A1 / Feature 1:** Editable, validated `Structure` (atomic species, sites, fractional/cartesian positions, occupancy, cell, PBC and supercell metadata). [`src/discuspdf/structure.py`](../src/discuspdf/structure.py); [PR A-2](https://github.com/jmsweng/discus-python/pull/11) · [`tests/test_structure.py`](../tests/test_structure.py).
   - *Open items: magnetic moments (Package D11), anisotropic ADPs, mixed-PBC distances.*
 - [ ] **A2 / Feature 2:** CIF, ASE and optional DiffPy imports/exports with occupancy/PBC fidelity and round-trip tests.
-- [ ] **A3 / Feature 3:** Real-format, version-aware DISCUS `.cll` / `.stru` import/export and round-trip tests. *Current wrapper stages existing `.cll` but does not parse or author structures.*
+- [x] **A3 / Feature 3:** Real-format, version-aware DISCUS `.cll` / `.stru` import/export and round-trip tests. [`src/discuspdf/discus_io.py`](../src/discuspdf/discus_io.py); [PR A3](https://github.com/jmsweng/discus-python/pull/12) · [`tests/test_discus_io_cll.py`](../tests/test_discus_io_cll.py), [`tests/test_discus_io_stru.py`](../tests/test_discus_io_stru.py).
+  - *Not done: symmetry expansion of `.cll`, occupancy < 1 in `.stru`, molecule/property columns, CIF/ASE (next PR).*
 - [ ] **A4 / Feature 4:** Atom selection, supercell generation, substitution and reproducible displacement/disorder editing.
 - [x] **A5 / Feature 5:** General direct/reciprocal lattice metrics, validated fractional↔Cartesian conversions, triclinic Q and PBC distance utilities. [`src/discuspdf/lattice.py`](../src/discuspdf/lattice.py); [PR #10](https://github.com/jmsweng/discus-python/pull/10) · [`tests/test_lattice.py`](../tests/test_lattice.py).
   - *Consolidate `DiscusVolume` / `discus_output` onto `Lattice` (separate PR, with Gate 2/3 evidence parity).*

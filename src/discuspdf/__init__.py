@@ -29,3 +29,24 @@ __all__ += ["Lattice"]
 # Editable Structure model (Package A, Feature A1).
 from .structure import Structure
 __all__ += ["Structure"]
+
+# DISCUS 6.23.01 .cll / .stru interchange (Package A, Feature A3).
+from .discus_io import (
+    DiscusFormatError,
+    DiscusCell,
+    DiscusStru,
+    detect_discus_kind,
+    read_cll,
+    parse_cll,
+    format_cll,
+    write_cll,
+    read_stru,
+    parse_stru,
+    format_stru,
+    write_stru,
+)
+__all__ += [
+    "DiscusFormatError", "DiscusCell", "DiscusStru", "detect_discus_kind",
+    "read_cll", "parse_cll", "format_cll", "write_cll",
+    "read_stru", "parse_stru", "format_stru", "write_stru",
+]

@@ -1,0 +1,80 @@
+--- saved live_zero_b.stru_out.stru (first 12 lines) ---
+title live zero b test
+spcgr P 1             , setting:abc
+cell    4.000000,  4.000000,  4.000000, 90.000000, 90.000000, 90.000000
+format numbers,XYZBPMMOS
+atoms      x,              y,              z,             Biso,    Property,  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl
+GA        -1.000000,      -1.000000,      -1.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA        -1.000000,      -0.500000,      -0.500000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+=== test_live_zero_b_is_replaced_by_discus @ 2026-10-31T13:12:37Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_zero_b.stru
+eval n[1]
+save live_zero_b.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_zero_b.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    4.00000    4.00000    4.00000   90.00000   90.00000   90.00000    64.0000    
+
+ Metric Tensor     :
+      16.00000      0.00000      0.00000
+       0.00000     16.00000      0.00000
+       0.00000      0.00000     16.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.25000    0.25000    0.25000   90.00000   90.00000   90.00000   0.156250E-01
+
+ Reciprocal metric tensor     : 
+       0.06250     -0.00000     -0.00000
+      -0.00000      0.06250     -0.00000
+      -0.00000     -0.00000      0.06250
+
+ discus> eval n[1]
+ Value of n[1] =    2.00000000000    
+ discus> save live_zero_b.stru_out.stru
+ discus> exit
+ suite> exit
+

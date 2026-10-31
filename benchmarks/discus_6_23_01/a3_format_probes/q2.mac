@@ -1,0 +1,9 @@
+discus
+read
+  cell gaas.cll,2,2,2
+eval n[1]
+read
+  cell gaas.cll,1,1,1
+eval n[1]
+exit
+exit

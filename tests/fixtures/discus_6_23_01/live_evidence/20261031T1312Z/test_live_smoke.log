@@ -1,0 +1,70 @@
+=== test_live_smoke @ 2026-10-31T13:12:32Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  cell gaas.cll,2,2,2
+eval n[1]
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> cell gaas.cll,2,2,2
+ F -4 3 m          216
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    5.65370    5.65370    5.65370   90.00000   90.00000   90.00000    180.717    
+
+ Metric Tensor     :
+      31.96432      0.00000      0.00000
+       0.00000     31.96432      0.00000
+       0.00000      0.00000     31.96432
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.17688    0.17688    0.17688   90.00000   90.00000   90.00000   0.553352E-02
+
+ Reciprocal metric tensor     : 
+       0.03128     -0.00000     -0.00000
+      -0.00000      0.03128     -0.00000
+      -0.00000     -0.00000      0.03128
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> exit
+ suite> exit
+

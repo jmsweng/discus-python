@@ -1,0 +1,15 @@
+discus
+read
+  stru gaas_222.stru
+eval n[1]
+read
+  cell gaas_222.stru,1,1,1
+eval n[1]
+read
+  stru C1_frozen.stru
+eval n[1]
+read
+  cell C1_frozen.stru,1,1,1
+eval n[1]
+exit
+exit

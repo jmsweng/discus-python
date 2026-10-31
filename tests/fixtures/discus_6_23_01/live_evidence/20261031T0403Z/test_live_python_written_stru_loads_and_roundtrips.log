@@ -1,0 +1,1152 @@
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:00:02Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:00:03Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:00:41Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:00:42Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:07Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:07Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:24Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:24Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:42Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:42Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:59Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:01:59Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:03:02Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:03:02Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:03:21Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Metric Tensor     :
+       1.00000      0.00000      0.00000
+       0.00000      1.00000      0.00000
+       0.00000      0.00000      1.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    1.00000    1.00000    1.00000   90.00000   90.00000   90.00000    1.00000    
+
+ Reciprocal metric tensor     : 
+       1.00000     -0.00000     -0.00000
+      -0.00000      1.00000     -0.00000
+      -0.00000     -0.00000      1.00000
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T04:03:21Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    2.82500    2.85000    2.80000   89.00000   91.00000   88.00000    22.5227    
+
+ Metric Tensor     :
+       7.98063      0.28098     -0.13805
+       0.28098      8.12250      0.13927
+      -0.13805      0.13927      7.84000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.35426    0.35115    0.35726   91.03569   88.96431   92.01808   0.443997E-01
+
+ Reciprocal metric tensor     : 
+       0.12550     -0.00438      0.00229
+      -0.00438      0.12331     -0.00227
+       0.00229     -0.00227      0.12763
+
+ discus> eval n[1]
+ Value of n[1] =    32.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+

@@ -1,0 +1,11 @@
+discus
+read
+  cell q1_xyz.cll,1,1,1
+eval n[1]
+save q10_cellout.stru
+read
+  stru q10_short.stru
+eval n[1]
+save q10_short_out.stru
+exit
+exit

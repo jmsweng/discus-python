@@ -110,8 +110,8 @@ and leaves `cell_index` unchanged. Wrapping changes coordinates but not physics.
 ## Not yet (later PRs)
 
 * CIF, ASE or DiffPy adapters (A2).
-* `.cll`/`.stru` reading or writing (A3).
 * `repeat`, substitution, random/directional displacements, occupancy sampling (A4).
+* `.cll`/`.stru` reading or writing is available in [docs/DISCUS_IO.md](DISCUS_IO.md).
 * Neighbour lists and correlations (Package C).
 * Magnetic moments (Package D11), anisotropic ADPs, mixed-PBC distances.
 

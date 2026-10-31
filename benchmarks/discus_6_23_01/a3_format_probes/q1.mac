@@ -1,0 +1,15 @@
+discus
+read
+  cell q1_xyz.cll,1,1,1
+eval n[1]
+save q1_xyz.stru
+read
+  cell q1_xyzB.cll,1,1,1
+eval n[1]
+save q1_xyzB.stru
+read
+  cell q1_xyzBocc.cll,1,1,1
+eval n[1]
+save q1_xyzBocc.stru
+exit
+exit

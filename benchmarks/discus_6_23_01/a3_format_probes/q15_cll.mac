@@ -1,0 +1,7 @@
+discus
+read
+  cell q15.cll,1,1,1
+eval n[1]
+save q15_cll_out.stru
+exit
+exit

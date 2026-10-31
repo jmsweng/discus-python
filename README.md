@@ -95,6 +95,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.Structure` is an immutable atomic-structure value type (per-atom NumPy arrays + `Lattice`). Supports `"average"` (site-occupancy) and `"configuration"` (realised) models. See [docs/STRUCTURE.md](docs/STRUCTURE.md) and `examples/structure_basics.py`.
 
+## DISCUS file I/O
+
+`discuspdf` reads and writes DISCUS_SUITE 6.23.01 `.cll` (unit-cell source) and `.stru` (saved structure) files. See [docs/DISCUS_IO.md](docs/DISCUS_IO.md) and `examples/discus_io_basics.py`.
+
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.

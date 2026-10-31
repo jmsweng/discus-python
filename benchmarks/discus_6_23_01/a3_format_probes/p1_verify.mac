@@ -1,0 +1,9 @@
+discus
+read
+  stru p1_2x2x2_a4.stru
+eval n[1]
+eval n[2]
+eval n[3]
+eval n[4]
+exit
+exit

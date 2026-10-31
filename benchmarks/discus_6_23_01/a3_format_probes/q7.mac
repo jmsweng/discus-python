@@ -1,0 +1,30 @@
+discus
+read
+  stru q7_v1.stru
+eval n[1]
+read
+  stru q7_v2.stru
+eval n[1]
+read
+  stru q7_v3.stru
+eval n[1]
+read
+  stru q7_v4.stru
+eval n[1]
+read
+  stru q7_v5.stru
+eval n[1]
+read
+  stru q7_v6.stru
+eval n[1]
+read
+  stru q7_v7.stru
+eval n[1]
+read
+  stru q7_v8.stru
+eval n[1]
+read
+  stru q7_v9.stru
+eval n[1]
+exit
+exit

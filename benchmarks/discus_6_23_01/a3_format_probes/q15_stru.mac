@@ -1,0 +1,7 @@
+discus
+read
+  stru q15.stru
+eval n[1]
+save q15_stru_out.stru
+exit
+exit

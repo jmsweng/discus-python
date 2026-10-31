@@ -1,0 +1,170 @@
+--- saved live_cubic_4x4x4.stru_out.stru (first 12 lines) ---
+title discuspdf structure
+spcgr P 1             , setting:abc
+cell    4.000000,  4.000000,  4.000000, 90.000000, 90.000000, 90.000000
+format numbers,XYZBPMMOS
+atoms      x,              y,              z,             Biso,    Property,  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl
+AG         0.000000,       0.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+CU         1.000000,       0.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AG         2.000000,       0.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AG         3.000000,       0.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+CU         0.000000,       1.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AG         1.000000,       1.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AG         2.000000,       1.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T13:12:33Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_cubic_4x4x4.stru
+eval n[1]
+save live_cubic_4x4x4.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_cubic_4x4x4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    4.00000    4.00000    4.00000   90.00000   90.00000   90.00000    64.0000    
+
+ Metric Tensor     :
+      16.00000      0.00000      0.00000
+       0.00000     16.00000      0.00000
+       0.00000      0.00000     16.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.25000    0.25000    0.25000   90.00000   90.00000   90.00000   0.156250E-01
+
+ Reciprocal metric tensor     : 
+       0.06250     -0.00000     -0.00000
+      -0.00000      0.06250     -0.00000
+      -0.00000     -0.00000      0.06250
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_cubic_4x4x4.stru_out.stru
+ discus> exit
+ suite> exit
+
+--- saved live_gaas_p1_2x2x2.stru_out.stru (first 12 lines) ---
+title discuspdf structure
+spcgr P 1             , setting:abc
+cell    5.650000,  5.700000,  5.600000, 89.000000, 91.000000, 88.000000
+format numbers,XYZBPMMOS
+atoms      x,              y,              z,             Biso,    Property,  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl
+GA         0.000000,       0.000000,       0.000000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         0.500000,       0.500000,       0.000000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         0.000000,       0.500000,       0.500000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         0.500000,       0.000000,       0.500000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         0.250000,       0.250000,       0.250000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         0.750000,       0.750000,       0.250000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         0.250000,       0.750000,       0.750000,      0.350000,       1,       0,       0,   1.000000, _,   0,   0,   0
+=== test_live_python_written_stru_loads_and_roundtrips @ 2026-10-31T13:12:33Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_gaas_p1_2x2x2.stru
+eval n[1]
+save live_gaas_p1_2x2x2.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_gaas_p1_2x2x2.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    5.65000    5.70000    5.60000   89.00000   91.00000   88.00000    180.181    
+
+ Metric Tensor     :
+      31.92250      1.12394     -0.55219
+       1.12394     32.49000      0.55708
+      -0.55219      0.55708     31.36000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.17713    0.17557    0.17863   91.03569   88.96431   92.01808   0.554997E-02
+
+ Reciprocal metric tensor     : 
+       0.03137     -0.00110      0.00057
+      -0.00110      0.03083     -0.00057
+       0.00057     -0.00057      0.03191
+
+ discus> eval n[1]
+ Value of n[1] =    64.0000000000    
+ discus> save live_gaas_p1_2x2x2.stru_out.stru
+ discus> exit
+ suite> exit
+

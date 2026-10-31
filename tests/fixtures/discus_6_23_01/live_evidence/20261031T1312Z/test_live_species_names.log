@@ -1,0 +1,72 @@
+=== test_live_species_names @ 2026-10-31T13:12:35Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\tmp\a3live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru live_species.stru
+eval n[1]
+save live_species.stru_out.stru
+exit
+exit
+
+--- files ---
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\a3live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru live_species.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    4.00000    4.00000    4.00000   90.00000   90.00000   90.00000    64.0000    
+
+ Metric Tensor     :
+      16.00000      0.00000      0.00000
+       0.00000     16.00000      0.00000
+       0.00000      0.00000     16.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.25000    0.25000    0.25000   90.00000   90.00000   90.00000   0.156250E-01
+
+ Reciprocal metric tensor     : 
+       0.06250     -0.00000     -0.00000
+      -0.00000      0.06250     -0.00000
+      -0.00000     -0.00000      0.06250
+
+ discus> eval n[1]
+ Value of n[1] =    4.00000000000    
+ discus> save live_species.stru_out.stru
+ discus> exit
+ suite> exit
+

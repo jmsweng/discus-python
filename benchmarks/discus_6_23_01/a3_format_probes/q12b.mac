@@ -1,0 +1,7 @@
+discus
+read
+  stru gaas_111_sci.stru
+eval n[1]
+save q12_sci_out.stru
+exit
+exit

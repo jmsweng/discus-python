@@ -1,0 +1,9 @@
+A3 environment summary
+======================
+Python version: 3.14 (project venv: .\.venv\Scripts\python.exe)
+OS: Windows 10 (native PowerShell)
+WSL distro: Ubuntu-22.04 (Running, version 2)
+DISCUS: /usr/local/bin/discus_suite, banner "D I S C U S - S U I T E  Version 6.23.01"
+Manual: /usr/local/share/suite.hlp (1314838 bytes)
+pytest: 87 passed in 111.55s (tests/test_lattice.py tests/test_structure.py)
+Smoke test: read cell gaas.cll,2,2,2 -> eval n[1] = 64.0000000000 (PASS)

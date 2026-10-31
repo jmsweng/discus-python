@@ -1,0 +1,11 @@
+discus
+read
+  stru corr_model.stru
+eval n[1]
+save corr_model_out.stru
+read
+  stru corr_model_mod.stru
+eval n[1]
+save corr_model_mod_out.stru
+exit
+exit

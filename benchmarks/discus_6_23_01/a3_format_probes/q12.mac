@@ -1,0 +1,15 @@
+discus
+read
+  stru gaas_111_dec10.stru
+eval n[1]
+save q12_dec10_out.stru
+read
+  stru gaas_111_sci.stru
+eval n[1]
+save q12_sci_out.stru
+read
+  stru gaas_111_plus.stru
+eval n[1]
+save q12_plus_out.stru
+exit
+exit
