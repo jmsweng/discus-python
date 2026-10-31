@@ -804,9 +804,23 @@ def format_stru(obj, *, title: str | None = None, spacegroup: str | None = None)
         y = structure.frac[i, 1] * n[1]
         z = structure.frac[i, 2] * n[2]
         b_val = 0.0 if b_iso is None else float(b_iso[i])
+        # DISCUS writes atom lines with fixed-width columns (verified from
+        # gaas_222.stru): name(4) + 5sp + x(10) + , + y(15) + , + z(15) + ,
+        # + Biso(14) + , + Property(8) + , + MoleNo(8) + , + MoleAt(8) + ,
+        # + Occ(11) + , + St(2) + , + Sh(4) + , + Sk(4) + , + Sl(4).
         lines.append(
-            f"{structure.species[i]:<4} {x:.{d}f}, {y:.{d}f}, {z:.{d}f}, "
-            f"{b_val:.{d}f},       1,       0,       0,   1.000000, _,   0,   0,   0"
+            f"{structure.species[i]:<4}     {x:>10.{d}f},"
+            f"{y:>15.{d}f},"
+            f"{z:>15.{d}f},"
+            f"{b_val:>14.6f},"
+            f"{'1':>8},"
+            f"{'0':>8},"
+            f"{'0':>8},"
+            f"{'1.000000':>11},"
+            f"{'_':>2},"
+            f"{'0':>4},"
+            f"{'0':>4},"
+            f"{'0':>4}"
         )
     return "\n".join(lines) + "\n"
 
