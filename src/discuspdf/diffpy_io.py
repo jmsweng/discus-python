@@ -42,9 +42,10 @@ def to_diffpy(structure: Structure, *, allow_loss: bool = False):
     Cartesian frame); fractional coordinates, lattice parameters and all
     distances/angles are.
 
+    The model is not stored; pass it again to :func:`from_diffpy`.
+
     Losses (design rule 1): atom_id not 0..N-1, non-trivial cell_index/
-    supercell, pbc not all True, model (DiffPy has none), and species
-    charges.
+    supercell, pbc not all True, and species charges.
     """
     diffpy = _import_diffpy()
 
@@ -82,9 +83,6 @@ def to_diffpy(structure: Structure, *, allow_loss: bool = False):
 
     if structure.pbc != (True, True, True):
         losses.add("pbc not all True")
-
-    # DiffPy has no model concept.
-    losses.add("model is not representable in DiffPy")
 
     # Species charges: any species whose type symbol differs from the bare
     # element symbol carries a charge (or number) suffix.

@@ -41,7 +41,7 @@ def test_roundtrip_gaas():
     s = read_cif(FIXTURES / "gaas_cod_9008845.cif").structure
     assert s.b_iso is None
 
-    ds = to_diffpy(s, allow_loss=True)
+    ds = to_diffpy(s)
     s2 = from_diffpy(ds, model=s.model)
 
     assert s2.isclose(s, rtol=1e-8, atol=1e-12)
@@ -62,7 +62,7 @@ def test_roundtrip_mixed():
     s = read_cif(FIXTURES / "ga07in03as_mixed.cif").structure
     assert s.b_iso is not None
 
-    ds = to_diffpy(s, allow_loss=True)
+    ds = to_diffpy(s)
     s2 = from_diffpy(ds, model=s.model)
 
     assert s2.isclose(s, rtol=1e-8, atol=1e-12)
@@ -81,7 +81,7 @@ def test_roundtrip_triclinic():
     from discuspdf.diffpy_io import to_diffpy, from_diffpy
 
     s = read_cif(FIXTURES / "triclinic_p1bar.cif").structure
-    ds = to_diffpy(s, allow_loss=True)
+    ds = to_diffpy(s)
     s2 = from_diffpy(ds, model=s.model)
 
     assert s2.isclose(s, rtol=1e-8, atol=1e-12)
@@ -99,17 +99,99 @@ def test_roundtrip_b_iso_none_and_per_atom():
     # b_iso=None (the real CIF has U=0 → b_iso=None).
     s_none = read_cif(FIXTURES / "gaas_cod_9008845.cif").structure
     assert s_none.b_iso is None
-    ds = to_diffpy(s_none, allow_loss=True)
+    ds = to_diffpy(s_none)
     s2 = from_diffpy(ds, model=s_none.model)
     assert s2.b_iso is None
 
     # Per-atom B (the mixed fixture has B values from U).
     s_b = read_cif(FIXTURES / "ga07in03as_mixed.cif").structure
     assert s_b.b_iso is not None
-    ds = to_diffpy(s_b, allow_loss=True)
+    ds = to_diffpy(s_b)
     s2 = from_diffpy(ds, model=s_b.model)
     assert s2.b_iso is not None
     assert np.allclose(s2.b_iso, s_b.b_iso, atol=1e-6)
+
+
+def test_to_diffpy_plain_structure_no_loss():
+    """A plain structure (cell_index 0, supercell 1,1,1, pbc all True, no
+    charges) converts to DiffPy with NO loss: to_diffpy(s) succeeds without
+    allow_loss and without any warning, and from_diffpy reproduces the
+    structure."""
+    diffpy = pytest.importorskip("diffpy.structure")
+    gemmi = pytest.importorskip("gemmi")
+    import warnings
+    from discuspdf.cif_io import read_cif
+    from discuspdf.diffpy_io import to_diffpy, from_diffpy
+
+    s = read_cif(FIXTURES / "gaas_cod_9008845.cif").structure
+    # Plain: cell_index 0, supercell (1,1,1), pbc all True, no charges.
+    assert not np.any(s.cell_index != 0)
+    assert tuple(s.supercell) == (1, 1, 1)
+    assert s.pbc == (True, True, True)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        ds = to_diffpy(s)  # no allow_loss, no warning allowed
+
+    s2 = from_diffpy(ds, model=s.model)
+    assert np.allclose(s2.frac, s.frac, atol=1e-12)
+    assert list(s2.species) == list(s.species)
+    assert np.allclose(s2.occupancy, s.occupancy, atol=1e-9)
+    assert np.allclose(s2.lattice.parameters, s.lattice.parameters, rtol=1e-8)
+    # b_iso is None in the CIF (U=0) and must stay None.
+    assert s2.b_iso is None
+
+
+def test_to_diffpy_supercell_is_loss():
+    """A configuration supercell (non-trivial supercell) is a loss:
+    to_diffpy raises InteropError naming cell_index/supercell by default,
+    and succeeds with allow_loss=True (one InteropWarning)."""
+    diffpy = pytest.importorskip("diffpy.structure")
+    gemmi = pytest.importorskip("gemmi")
+    import warnings
+    from discuspdf.cif_io import read_cif
+    from discuspdf.diffpy_io import to_diffpy
+    from discuspdf.lattice import Lattice
+    from discuspdf.structure import Structure
+    from discuspdf.interop import InteropError, InteropWarning
+
+    s = read_cif(FIXTURES / "gaas_cod_9008845.cif").structure
+    # Build a 2x2x2 configuration supercell (non-trivial supercell).
+    a, b, c, alpha, beta, gamma = s.lattice.parameters
+    super_lattice = Lattice.from_parameters(a * 2, b * 2, c * 2, alpha, beta, gamma)
+    new_frac = []
+    new_species = []
+    for dx in range(2):
+        for dy in range(2):
+            for dz in range(2):
+                for i in range(s.n_atoms):
+                    new_frac.append(
+                        [s.frac[i, 0] / 2 + dx / 2,
+                         s.frac[i, 1] / 2 + dy / 2,
+                         s.frac[i, 2] / 2 + dz / 2]
+                    )
+                    new_species.append(s.species[i])
+    supercell = Structure(
+        super_lattice,
+        np.array(new_species, dtype=object),
+        np.array(new_frac),
+        model="configuration",
+        supercell=(2, 2, 2),
+        pbc=(True, True, True),
+        min_separation=0.1,
+    )
+    assert tuple(supercell.supercell) == (2, 2, 2)
+
+    # Default: raise, naming cell_index/supercell.
+    with pytest.raises(InteropError, match="cell_index/supercell"):
+        to_diffpy(supercell)
+
+    # allow_loss=True: one InteropWarning and it proceeds.
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        with pytest.warns(InteropWarning):
+            ds = to_diffpy(supercell, allow_loss=True)
+    assert len(ds) == supercell.n_atoms
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +209,7 @@ def test_diffpy_distance_invariance():
     from discuspdf.diffpy_io import to_diffpy, from_diffpy
 
     s = read_cif(FIXTURES / "gaas_cod_9008845.cif").structure
-    ds = to_diffpy(s, allow_loss=True)
+    ds = to_diffpy(s)
     s2 = from_diffpy(ds, model=s.model)
 
     # Independent (N, N) distance computation from the round-tripped
@@ -323,7 +405,7 @@ def test_cif_diffpy_cross_check():
     from discuspdf.diffpy_io import to_diffpy
 
     s = read_cif(FIXTURES / "gaas_cod_9008845.cif").structure
-    ds = to_diffpy(s, allow_loss=True)
+    ds = to_diffpy(s)
 
     assert np.allclose(
         ds.lattice.cell_parms(), s.lattice.parameters, rtol=1e-8
