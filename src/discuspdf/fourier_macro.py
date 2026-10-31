@@ -256,7 +256,8 @@ class FourierConfig:
             return
         cells = np.asarray(crystal_cells, int)
         if np.any(np.asarray(self.lots.size) > cells):
-            raise ValueError(f"lot size {self.lots.size} exceeds the crystal {tuple(cells)} (DISCUS error -101)")
+            raise ValueError(f"lot size {self.lots.size} exceeds the crystal {tuple(int(n) for n in cells)} "
+                             "(DISCUS error -101)")
 
     def fourier_lines(self) -> list[str]:
         c = self.grid.discus_corners()
