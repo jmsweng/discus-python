@@ -772,7 +772,7 @@ def test_b_iso_none_becomes_explicit_default(tmp_path):
 
 
 # -- 2. writer rejects B below the DISCUS representable floor ---------------
-@pytest.mark.parametrize("bad_b", [0.0, 1e-6, 5e-4, -0.1])
+@pytest.mark.parametrize("bad_b", [0.0, 1e-6, 5e-4])
 def test_writer_rejects_unrepresentable_b(tmp_path, bad_b):
     s = _stru_two_atom(np.array([bad_b, 0.35]))
     with pytest.raises(DiscusFormatError) as exc:
@@ -788,6 +788,30 @@ def test_writer_rejects_unrepresentable_b(tmp_path, bad_b):
     assert not out.exists()
     leftovers = [p.name for p in tmp_path.iterdir() if p.name.endswith(".tmp")]
     assert leftovers == []
+
+
+# -- 2b. the writer's B check rejects a negative B directly ------------------
+def test_validate_b_for_write_rejects_negative():
+    from discuspdf.discus_io import _validate_b_for_write
+    with pytest.raises(DiscusFormatError) as exc:
+        _validate_b_for_write(np.array([-0.1, 1.0]), 2)
+    msg = str(exc.value)
+    assert "DISCUS" in msg
+    assert "0.001" in msg
+
+
+# -- 2c. Structure itself still rejects a negative B -------------------------
+def test_structure_still_rejects_negative_b():
+    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
+    with pytest.raises(ValueError, match="b_iso"):
+        Structure(
+            lat,
+            np.array(["Cu"], dtype=object),
+            np.array([[0.0, 0.0, 0.0]]),
+            model="configuration",
+            b_iso=np.array([-1.0]),
+            min_separation=None,
+        )
 
 
 # -- 3. small-but-safe B round-trips -----------------------------------------

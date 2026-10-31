@@ -10,8 +10,8 @@
 ## 2. What is delivered
 
 - `src/discuspdf/discus_io.py`: `.cll` and `.stru` reader/writer for DISCUS_SUITE 6.23.01.
-- `tests/test_discus_io_cll.py`: 22 offline tests for `.cll` parsing and writing.
-- `tests/test_discus_io_stru.py`: 34 offline tests for `.stru` parsing and writing (15 original + 19 from A3-6a).
+- `tests/test_discus_io_cll.py`: 24 offline tests for `.cll` parsing and writing (22 + `test_validate_b_for_write_rejects_negative` + `test_structure_still_rejects_negative_b`).
+- `tests/test_discus_io_stru.py`: 36 offline tests for `.stru` parsing and writing (15 original + 19 from A3-6a + `test_validate_b_for_write_rejects_negative` + `test_structure_still_rejects_negative_b`).
 - `tests/test_discus_io_live.py`: 7 opt-in live tests (L0–L5) against the real DISCUS engine, with physics (neighbour) checks added in A3-6b.
 - `tests/discus_live.py`: helper for running DISCUS macros via WSL.
 - `docs/DISCUS_FORMATS.md`: verified facts and 7 design decisions.
@@ -43,7 +43,7 @@ Copied from `docs/DISCUS_FORMATS.md` "Decisions":
 5. **Telling a `.cll` from a `.stru`** — `.cll` has no `format`/`ncell` and ≤ 4 numeric columns; `.stru` has `format` and 12 columns.
 6. **Species name policy** — written verbatim (no upper-casing); DISCUS upper-cases on save; >4 chars rejected on read and write.
 7. **Columns droppable only with `allow_loss=True`** — `Property`, `MoleNo`, `MoleAt`, `Occ`, `St`, `Sh`, `Sk`; `Biso` is never droppable.
-8. **B-factor policy (Q15)** — the writer always writes B explicitly (`1.0` when `b_iso` is `None`); B < `DISCUS_MIN_B = 0.001` Å² is rejected on write. The reader maps B = 0.0 in a file to 1.0 (`defaults_applied`), rejects 0 < B < 0.001, and rejects negative B.
+8. **B-factor policy (Q15)** — the writer always writes B explicitly (`1.0` when `b_iso` is `None`); B < `DISCUS_MIN_B = 0.001` Å² is rejected on write. The reader maps B = 0.0 in a file to 1.0 (`defaults_applied`), rejects 0 < B < 0.001, and rejects negative B. `Structure` is unchanged (restored to its original PR #11 behaviour): a negative B is impossible at construction (`Structure` rejects `b_iso < 0` with a `ValueError`); the writer's `_validate_b_for_write` check is defence in depth and is now tested directly (`test_validate_b_for_write_rejects_negative`), not through a `Structure`.
 
    Q15 probe (B in the input file → what ends up in the saved `.stru`):
 
@@ -59,19 +59,23 @@ Copied from `docs/DISCUS_FORMATS.md` "Decisions":
 
 ## 5. Tests
 
-- **Offline:** 75 tests (`.cll` + `.stru`), all passing.
+- **Offline:** 164 passed, 9 skipped across `tests/test_lattice.py tests/test_structure.py tests/test_discus_io_cll.py tests/test_discus_io_stru.py tests/test_discus_io_live.py` (live skipped).
 - **Live:** 9 tests, all passing with `DISCUS_LIVE=1` (~5 s); all skipped without the env var.
 - **Mutation (A3-3):** 5 breaks caught (ncell count, occupancy, order, ncell line, `/n` → `*n`).
 - **Mutation (A3-4):** 3 breaks caught (B default, ncell line, order check).
 - **Mutation (A3-6a):** 4 breaks caught — (a) `min_separation=None` back → `test_overlap_check_is_active`; (b) span guard removed → `test_no_ncell_policy`; (c) `infer` → `round(−lo)` → `test_no_ncell_policy`; (d) order check skips `m=1` → new `test_order_check_runs_for_m1`.
 - **Mutation (A3-6b):** 3 breaks caught — (a) `format_stru` writes supercell lengths → L2 + `test_roundtrip_gaas_222`; (b) `format_stru` writes `frac` unscaled → L2 + `test_roundtrip_gaas_222`; (c) `infer` off by 2 → L1/L3 + `test_no_ncell_policy`/`test_gaas_222_is_zinc_blende`.
 - **Mutation (A3-9):** 4 breaks caught — (a) writer accepts B=0.0 → `test_writer_rejects_unrepresentable_b[0.0]`; (b) writer writes None as 0.0 → `test_b_iso_none_becomes_explicit_default`; (c) reader keeps B=0.0 as 0.0 → `test_reader_maps_zero_b_to_discus_default`; (d) `DISCUS_MIN_B=0.0` → `test_writer_rejects_unrepresentable_b` + `test_reader_rejects_tiny_b`.
+- **Mutation (A3-10):** 2 breaks caught — (a) `_validate_b_for_write` lets B = 0.0 through → `test_writer_rejects_unrepresentable_b[0.0]` (both files); (b) `_validate_b_for_write` no longer rejects negative values → `test_validate_b_for_write_rejects_negative` (both files).
 
 ## 6. Evidence
 
 - **Fixtures:** `tests/fixtures/discus_6_23_01/` (gaas.cll, gaas_111.stru, gaas_222.stru, p1_2x2x2_a4.stru).
 - **Probe logs:** `tests/fixtures/discus_6_23_01/evidence/` (Q1–Q15, smoke).
-- **Live evidence:** `tests/fixtures/discus_6_23_01/live_evidence/20261031T514Z/` (9 passing-run logs + `MANIFEST.sha256`), from the corrected live tests. The older folder `20261031T0403Z/` (7 passing-run logs + `MANIFEST.sha256`, 157 419 bytes total) is from before the A3-6c/A3-9 corrections (L2 used unit-cell-sized supercell frames and a 32-atom Ga-only "GaAs"; the B assertion predated the Q15 policy) and is superseded by `20261031T514Z`.
+- **Live evidence:** `tests/fixtures/discus_6_23_01/live_evidence/`:
+  - `20261031T0403Z/` — before the A3-6c/A3-9 corrections (L2 used unit-cell-sized supercell frames and a 32-atom Ga-only "GaAs"; the B assertion predated the Q15 policy) (7 passing-run logs + `MANIFEST.sha256`, 157 419 bytes total).
+  - `20261031T0514Z/` — after the A3-9 B policy (the renamed former `20261031T514Z`; 9 passing-run logs + `MANIFEST.sha256`), from the corrected live tests.
+  - `20261031T1312Z/` — the new one from A3-10 (9 passing-run logs + `MANIFEST.sha256`, 30 638 bytes total), which now also records the saved B values (the head of the DISCUS-saved file) in `test_live_b_values_survive` and `test_live_zero_b_is_replaced_by_discus`.
 
 ## 7. Caveats / not done
 

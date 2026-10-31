@@ -489,6 +489,10 @@ def test_live_b_values_survive():
     assert np.allclose(s2.structure.b_iso, b_iso, atol=1e-6), (
         f"Biso written {list(b_iso)} but DISCUS saved {list(s2.structure.b_iso)}"
     )
+    from tests.discus_live import evidence_note
+    with open(os.path.join(workdir, f"{fname}_out.stru"), encoding="ascii") as fh:
+        evidence_note("test_live_b_values_survive",
+                      f"--- saved {fname}_out.stru (first 12 lines) ---\n" + "".join(fh.readlines()[:12]))
     evidence_log("test_live_b_values_survive", macro, None, result)
 
     # Path 2: .cll (read cell,1,1,1 → save → read back).  P1: no expansion.
@@ -510,6 +514,9 @@ def test_live_b_values_survive():
     assert np.allclose(s3.structure.b_iso, b_iso, atol=1e-6), (
         f"Biso written {list(b_iso)} but DISCUS saved {list(s3.structure.b_iso)}"
     )
+    with open(os.path.join(workdir, f"{cfname}_out.stru"), encoding="ascii") as fh:
+        evidence_note("test_live_b_values_survive",
+                      f"--- saved {cfname}_out.stru (first 12 lines) ---\n" + "".join(fh.readlines()[:12]))
     evidence_log("test_live_b_values_survive", macro, None, result)
 
 
@@ -565,4 +572,8 @@ def test_live_zero_b_is_replaced_by_discus():
         f"DISCUS saved Biso {list(s2.structure.b_iso)}, expected [1.0, 0.35] "
         "(0.0 must be replaced by the DISCUS default 1.0)"
     )
+    from tests.discus_live import evidence_note
+    with open(os.path.join(workdir, f"{fname}_out.stru"), encoding="ascii") as fh:
+        evidence_note("test_live_zero_b_is_replaced_by_discus",
+                      f"--- saved {fname}_out.stru (first 12 lines) ---\n" + "".join(fh.readlines()[:12]))
     evidence_log("test_live_zero_b_is_replaced_by_discus", macro, None, result)

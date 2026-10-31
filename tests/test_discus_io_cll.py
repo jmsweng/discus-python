@@ -117,7 +117,7 @@ def test_b_iso_none_becomes_explicit_default(tmp_path):
 
 
 # -- 4b. writer rejects B below the DISCUS representable floor --------------
-@pytest.mark.parametrize("bad_b", [0.0, 1e-6, 5e-4, -0.1])
+@pytest.mark.parametrize("bad_b", [0.0, 1e-6, 5e-4])
 def test_writer_rejects_unrepresentable_b(tmp_path, bad_b):
     lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
     s = Structure(
@@ -143,7 +143,31 @@ def test_writer_rejects_unrepresentable_b(tmp_path, bad_b):
     assert leftovers == []
 
 
-# -- 4c. small-but-safe B round-trips ---------------------------------------
+# -- 4c. the writer's B check rejects a negative B directly -----------------
+def test_validate_b_for_write_rejects_negative():
+    from discuspdf.discus_io import _validate_b_for_write
+    with pytest.raises(DiscusFormatError) as exc:
+        _validate_b_for_write(np.array([-0.1, 1.0]), 2)
+    msg = str(exc.value)
+    assert "DISCUS" in msg
+    assert "0.001" in msg
+
+
+# -- 4d. Structure itself still rejects a negative B ------------------------
+def test_structure_still_rejects_negative_b():
+    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
+    with pytest.raises(ValueError, match="b_iso"):
+        Structure(
+            lat,
+            np.array(["Cu"], dtype=object),
+            np.array([[0.0, 0.0, 0.0]]),
+            model="configuration",
+            b_iso=np.array([-1.0]),
+            min_separation=None,
+        )
+
+
+# -- 4d. small-but-safe B round-trips ---------------------------------------
 @pytest.mark.parametrize("good_b", [0.001, 0.35, 2.0])
 def test_small_but_safe_b_roundtrips(tmp_path, good_b):
     lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90.0, 90.0, 90.0)
@@ -162,7 +186,7 @@ def test_small_but_safe_b_roundtrips(tmp_path, good_b):
     assert "b_iso" not in c.defaults_applied
 
 
-# -- 4d. reader maps a 0 B to the DISCUS default ----------------------------
+# -- 4e. reader maps a 0 B to the DISCUS default ----------------------------
 def test_reader_maps_zero_b_to_discus_default():
     text = (
         "title t\n"
@@ -177,7 +201,7 @@ def test_reader_maps_zero_b_to_discus_default():
     assert "b_iso" in c.defaults_applied
 
 
-# -- 4e. reader rejects a tiny (0, 0.001) B ---------------------------------
+# -- 4f. reader rejects a tiny (0, 0.001) B ---------------------------------
 def test_reader_rejects_tiny_b():
     text = (
         "title t\n"
