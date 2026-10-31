@@ -87,7 +87,7 @@ All evidence files are in `tests/fixtures/interop/evidence/`.
 |------|--------------|-----------------|
 | A CIF string with `_discuspdf_model`, `_discuspdf_site_label`, `_discuspdf_atom_id` columns is written and re-read by gemmi with all columns and data items intact | `P9.log` | `model: average` / `dp_site_labels: ['Ga1_1', 'As1_1']` / `dp_atom_ids: ['0', '1']` |
 | Labels like `Ga1_1` are NOT quoted in the written CIF and are read back as plain strings by gemmi | `P9.log` | `labels: ['Ga1_1', 'As1_1']` |
-| `find_value` returns quoted strings with literal quotes (e.g. `"'P 1'"`); `gemmi.cif.as_string` on a plain `str` is the identity (does NOT strip quotes) — quote-stripping must be done manually | `P9.log` | `sg raw: "'P 1'"` / `sg as_string: 'P 1'` |
+| `find_value` returns quoted strings with literal quotes (e.g. `"'P 1'"`); `gemmi.cif.as_string` DOES strip the quotes (see P13) | `P9.log` / `P13.log` | `sg raw: "'P 1'"` / `as_string: 'P 1'` |
 | ASE reads the same CIF without error; `_discuspdf_*` columns are ignored (not in `arrays`); `info['occupancy']` is produced | `P9.log` | `n_atoms: 2` / `species: ['Ga', 'As']` / `arrays keys: ['numbers', 'positions', 'spacegroup_kinds']` |
 
 ## P10: ASE deep inspection
@@ -109,7 +109,7 @@ All evidence files are in `tests/fixtures/interop/evidence/`.
 | `Lattice.cell_parms` is the replacement for the deprecated `abcABG` (returns `(4.1, 5.3, 6.2, 78.0, 84.0, 101.0)`) | `P11.log` | `cell_parms: (4.1, 5.3, 6.2, 78.0, 84.0, 101.0)` |
 | `Atom(atype="O2-")`: `.element` = `"O2-"` (charges preserved); there is no `.atype` attribute | `P11.log` | `element='O2-'` |
 | `Atom(...).Uisoequiv` default is 0.0 | `P11.log` | `Uisoequiv default: 0.0` |
-| `Uisoequiv` of an atom with U11=0.013, U22=0.012, U33=0.011 is 0.011 (= U33, NOT the mean (U11+U22+U33)/3=0.012) | `P11.log` | `Uisoequiv with U11=0.013 U22=0.012 U33=0.011: 0.011` |
+| `Uisoequiv` with `anisotropy=False` and U11/U22/U33 set: the last assignment wins (isotropic tensor overwrite), NOT a meaningful equivalent — see P14 for the correct anisotropic case | `P11.log` | `Uisoequiv with U11=0.013 U22=0.012 U33=0.011: 0.011` (anisotropy was False) |
 | Iteration order preserves the order atoms were passed to the `Structure` constructor; `.xyz` is a `numpy.ndarray` | `P11.log` | `iteration order: ['O2-', 'Ga']` / `xyz type: <class 'numpy.ndarray'>` |
 
 ## P12: B/U conversion
@@ -120,18 +120,33 @@ All evidence files are in `tests/fixtures/interop/evidence/`.
 | The conversion is `B = 8π²·U`: `8π²·0.01 = 0.7895683520871487`, `8π²·0.008 = 0.6316546816697189` | `P12.log` | `8*pi^2*0.01 = 0.7895683520871487` / `8*pi^2*0.008 = 0.6316546816697189` |
 | The only B-related function in gemmi is `binrfactor` (unrelated to U→B conversion) | `P12.log` | `gemmi B-related functions: ['binrfactor']` |
 
+## P13: gemmi.cif.as_string quote-stripping (corrected)
+
+| Fact | Evidence file | Verbatim excerpt |
+|------|--------------|-----------------|
+| `gemmi.cif.as_string` DOES strip CIF single-quotes: `as_string(b.find_value('_symmetry_space_group_name_H-M'))` → `'F -4 3 m'` from `"'F -4 3 m'"` | `P13.log` | `find_value raw: "'F -4 3 m'"` / `as_string: 'F -4 3 m'` |
+| Works on quoted values from `find_values` (loop items) too | `P13.log` | `find_values[0] raw: 'Ga'` / `as_string: 'Ga'` (identity on unquoted) |
+| `as_string` is the identity on unquoted values; strips quotes on quoted values. Never use ad-hoc `.strip("'")`. | `P13.log` | `Summary: as_string strips CIF single-quotes; identity on unquoted values.` |
+
+## P14: DiffPy Uisoequiv with anisotropy (corrected)
+
+| Fact | Evidence file | Verbatim excerpt |
+|------|--------------|-----------------|
+| With `anisotropy=True` and U11=0.013, U22=0.012, U33=0.011 on a **cubic** lattice: `Uisoequiv` = 0.012 (the correct isotropic equivalent) | `P14.log` | `cubic, anisotropy=True, …: Uisoequiv=0.012` |
+| Same tensor on a **triclinic** lattice (4.1/5.3/6.2/78/84/101): `Uisoequiv` = 0.012911887014119466 | `P14.log` | `triclinic, anisotropy=True, …: Uisoequiv=0.012911887014119466` |
+| Isotropic case: `anisotropy=False`, `Uisoequiv=0.012` set directly → `anisotropy` stays False, and the diagonal U11=U22=U33=0.012 | `P14.log` | `isotropic, anisotropy=False, Uisoequiv=0.012, U11=0.012 U22=0.012 U33=0.012` |
+| The earlier P11 finding ("Uisoequiv = U33 = 0.011") was a probe artefact: setting U11/U22/U33 on an atom whose `anisotropy` is False just overwrites an isotropic tensor, so the last assignment wins. With `anisotropy=True`, `Uisoequiv` is the correct lattice-weighted isotropic equivalent. | `P14.log` | (see the three numbers above) |
+
+## Overseer rulings (verbatim)
+
+Copied from `00_START_HERE.md`, "Amendments after A2-1b (overseer, 2026-10-31)":
+
+- **ASE foreign atoms:** `info['occupancy']` is never interpreted (see rule 4 above).
+- **gemmi** `get_all_unit_cell_sites()` returns UNWRAPPED fractions (e.g. -0.25); the reader wraps to [0,1) and merges periodic images within 1e-4 (as already specified).
+- **Quotes:** `gemmi.cif.as_string(value)` removes CIF quotes (checked by the overseer: `as_string("'F -4 3 m'") == 'F -4 3 m'`, also for values from `find_values`). Never use ad-hoc `.strip("'")`.
+- **DiffPy:** `from_diffpy` takes the lattice from `lattice.cell_parms()` → `Lattice.from_parameters`, never from `Lattice.base`; fractional `xyz` are used directly. Anisotropic atoms: `atom.anisotropy` is True; `Uisoequiv` is then correct (overseer: diag(0.013,0.012,0.011) → 0.012 cubic, 0.012912 triclinic) and is used for `b_iso`; the anisotropy is a loss. `to_diffpy` leaves `anisotropy` False and sets `Uisoequiv`.
+- **B ↔ U:** gemmi has no `u_to_b`; `interop.u_to_b` is our own `8π²·U`.
+
 ## Conflicts with the fixed design
 
-- **None.** All previously reported "conflicts" have been resolved by the overseer's rulings:
-  - ASE "drops species" / "over-one atom dropped": not conflicts; properties of `ase.io.read`. Our CIF reader uses gemmi.
-  - diffpy does not reject total occupancy > 1: not a conflict; enforced by us.
-  - diffpy normalises `F -4 3 m` to `F -4 2 3`: irrelevant; `from_diffpy` returns only a `Structure`. `CifImport.spacegroup` is the file's symbol (quotes stripped).
-  - ASE returns Cartesian positions: agreed; use `get_scaled_positions()`.
-  - `gemmi.cif.as_string` on a plain `str` is the identity (does not strip quotes): the ruling says to use `as_string` for every string read; in practice, quote-stripping must be done manually (e.g. `value.strip("'")`) because `find_value`/`find_values`/`find_loop` return plain `str`, not `Value` objects.
-
-## Open questions for the overseer
-
-1. **Atom-index ↔ key mapping in `info['occupancy']`:** The keys are listed-site indices, but `Atoms` provides no array mapping atom index → listed-site index. For the mixed fixture, both key `'0'` (Ga1) and key `'1'` (In1) refer to the same 4 atom positions (0–3). If `from_ase` needs to expand a listed site into one row per symbol, it cannot determine which atom indices belong to which key from `Atoms` alone. **Can the mapping be recovered from `spacegroup_kinds` or some other ASE internal?** If not, `from_ase` must treat `info['occupancy']` as applying to the *listed* sites (not the expanded atoms) and use the `dp_*` arrays for exact round-trip.
-2. **`gemmi.cif.as_string` on plain `str`:** The ruling says to strip quotes with `as_string`, but `as_string` on a plain `str` is the identity. The actual quote-stripping must be done with `value.strip("'")`. Should the facts record this as a correction to the ruling, or is there a gemmi API that returns a `Value` object (not a `str`) from which `as_string` would strip quotes?
-3. **DiffPy `Uisoequiv` with anisotropic tensor:** `Uisoequiv` returns `U33` (0.011), NOT the mean `(U11+U22+U33)/3` (0.012). The design's Q3 ruling says "use DiffPy's `Uisoequiv` for `b_iso` and list the anisotropic ADPs as a loss." Should we use `Uisoequiv` as-is (which is `U33` in this case), or is this a bug in diffpy that we should work around?
-4. **`Lattice.base` orientation:** `Lattice.base` is in a different orientation from `Lattice.from_parameters(...).matrix` (max abs diff = 1.44 for the triclinic cell). The design says "Orientation is not preserved (DiffPy defines its own Cartesian frame)." Should `from_diffpy` use `Lattice.base` for the cell matrix, or `Lattice.cell_parms` → `Lattice.from_parameters`?
+- **None.**
