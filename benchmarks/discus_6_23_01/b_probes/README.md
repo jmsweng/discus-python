@@ -28,6 +28,7 @@ the probe is about the technique.
   `evidence/<stamp>/` with logs, HDF5 outputs, `runs_status.json`, `help_sections_b.txt` and
   `MANIFEST.sha256`. Inputs are not copied into the evidence (they are tracked); their hashes are.
 - `summarize_b_probes.py <evidence dir>` — read-only HDF5/log summary: `summary.json`, `SUMMARY.md`.
+- `check_evidence.py <evidence dir>` — read-only pre-commit check (manifest, completeness, sizes, no input copies).
 
 ## Running (owner's machine, PowerShell, repository root)
 
