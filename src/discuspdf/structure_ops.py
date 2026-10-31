@@ -128,3 +128,204 @@ def repeat(structure: Structure, reps, *, min_separation: float | None = 0.1) ->
         seed=None,
         info={"reps": (nx, ny, nz), "stride": stride},
     )
+
+
+def substitute(
+    structure: Structure,
+    *,
+    old: str,
+    new: str,
+    seed: int,
+    fraction: float | None = None,
+    count: int | None = None,
+    site: str | None = None,
+    new_b_iso: float | None = None,
+) -> EditResult:
+    """Substitute some atoms of species ``old`` with species ``new``.
+
+    Only ``model="configuration"``.  Exactly one of ``fraction`` / ``count``.
+    """
+    if structure.model != "configuration":
+        raise ValueError("substitute requires model='configuration'; use sample_configuration first")
+
+    if (fraction is None) == (count is None):
+        raise ValueError("exactly one of fraction or count must be given")
+    if fraction is not None:
+        if not (0.0 <= fraction <= 1.0):
+            raise ValueError(f"fraction must be in [0, 1], got {fraction}")
+    if count is not None:
+        if count < 0:
+            raise ValueError(f"count must be >= 0, got {count}")
+
+    # Validate new species (like Structure does).
+    if not isinstance(new, str) or not new:
+        raise ValueError(f"new species must be a non-empty string, got {new!r}")
+    if len(new) > 8:
+        raise ValueError(f"new species exceeds 8 characters: {new!r}")
+    if any(c.isspace() for c in new):
+        raise ValueError(f"new species contains whitespace: {new!r}")
+
+    # Candidates.
+    mask = structure.species == old
+    if site is not None:
+        mask &= structure.site_label == site
+    candidate_rows = np.where(mask)[0]
+    if len(candidate_rows) == 0:
+        raise ValueError(f"no atoms with species={old!r}" + (f" and site={site!r}" if site else ""))
+
+    # Number to change.
+    if count is not None:
+        n = count
+    else:
+        n = int(np.floor(fraction * len(candidate_rows) + 0.5))
+    if n > len(candidate_rows):
+        raise ValueError(f"n={n} exceeds number of candidates ({len(candidate_rows)})")
+
+    # Choose rows.
+    chosen = np.sort(np.random.default_rng(seed).choice(candidate_rows, size=n, replace=False))
+
+    # Build new arrays.
+    species_new = structure.species.copy()
+    species_new[chosen] = new
+
+    b_iso_new = None
+    if new_b_iso is not None:
+        if structure.b_iso is None:
+            raise ValueError("new_b_iso requires the structure to have b_iso")
+        b_iso_new = structure.b_iso.copy()
+        b_iso_new[chosen] = new_b_iso
+
+    new_struct = structure.replace(species=species_new, b_iso=b_iso_new)
+
+    ids = np.sort(structure.atom_id[chosen])
+
+    return EditResult(
+        structure=new_struct,
+        ids=ids,
+        seed=seed,
+        info={
+            "n_candidates": int(len(candidate_rows)),
+            "n_changed": int(n),
+            "old": old,
+            "new": new,
+        },
+    )
+
+
+def displace(
+    structure: Structure,
+    *,
+    seed: int | None = None,
+    sigma: float | None = None,
+    vector=None,
+    coords: str = "cartesian",
+    ids: np.ndarray | None = None,
+    species: str | list[str] | None = None,
+    site: str | None = None,
+    mask: np.ndarray | None = None,
+    min_separation: float | None = 0.1,
+) -> EditResult:
+    """Displace selected atoms by a Gaussian (``sigma``) or a fixed vector.
+
+    Only ``model="configuration"``.  Exactly one of ``sigma`` / ``vector``.
+    """
+    if structure.model != "configuration":
+        raise ValueError("displace requires model='configuration'")
+
+    if (sigma is None) == (vector is None):
+        raise ValueError("exactly one of sigma or vector must be given")
+    if sigma is not None:
+        if sigma <= 0:
+            raise ValueError(f"sigma must be > 0, got {sigma}")
+        if seed is None:
+            raise ValueError("sigma requires a seed")
+    if vector is not None:
+        if seed is not None:
+            raise ValueError("vector must not use a seed (seed must be None)")
+        if coords not in ("cartesian", "fractional"):
+            raise ValueError(f"coords must be 'cartesian' or 'fractional', got {coords!r}")
+
+    # Selection: at most one of ids / species / site / mask; none = all rows.
+    n_sel_args = sum(x is not None for x in (ids, species, site, mask))
+    if n_sel_args > 1:
+        raise ValueError("at most one of ids, species, site, mask may be given")
+
+    if ids is not None:
+        sel = structure.select(ids=ids)
+    elif species is not None:
+        sel = structure.select(species=species)
+    elif site is not None:
+        sel = structure.select(site=site)
+    elif mask is not None:
+        sel = structure.select(mask=mask)
+    else:
+        sel = structure
+
+    n_sel = sel.n_atoms
+    if n_sel == 0:
+        raise ValueError("empty selection")
+
+    # Get the row indices of the selected rows in the original structure.
+    # sel.atom_id gives the atom_ids; we need the row positions.
+    # Build a map from atom_id -> row index.
+    aid_to_row = {int(a): i for i, a in enumerate(structure.atom_id)}
+    sel_rows = np.array([aid_to_row[int(a)] for a in sel.atom_id], dtype=np.int64)
+
+    # Displacement.
+    frac_new = structure.frac.copy()
+    if sigma is not None:
+        noise = np.random.default_rng(seed).normal(0, sigma, size=(n_sel, 3))
+        # Convert Cartesian noise to fractional: df = dcart @ inv(A)
+        A = structure.lattice.matrix
+        Ainv = np.linalg.inv(A)
+        df = noise @ Ainv.T
+        frac_new[sel_rows] += df
+    else:
+        vec = np.asarray(vector, dtype=float)
+        if vec.shape != (3,):
+            raise ValueError(f"vector must have 3 components, got shape {vec.shape}")
+        if coords == "cartesian":
+            A = structure.lattice.matrix
+            Ainv = np.linalg.inv(A)
+            df = vec @ Ainv.T
+        else:  # fractional
+            df = vec
+        frac_new[sel_rows] += df
+
+    new_struct = structure.replace(frac=frac_new, min_separation=min_separation)
+
+    return EditResult(
+        structure=new_struct,
+        ids=np.sort(structure.atom_id[sel_rows]),
+        seed=seed,
+        info={
+            "n_displaced": int(n_sel),
+            "sigma": sigma,
+            "vector": None if vector is None else tuple(vector),
+        },
+    )
+
+
+def check_composition(structure: Structure, expected: dict, *, atol: float = 0.0, rtol: float = 0.0) -> None:
+    """Check that the structure's composition matches ``expected``.
+
+    Compares ``structure.counts()`` for ``"configuration"`` and
+    ``structure.composition()`` for ``"average"``.  Missing/extra species
+    count as 0.  Raises ``ValueError`` listing every mismatch.
+    """
+    if structure.model == "configuration":
+        actual = structure.counts()
+    else:
+        actual = structure.composition()
+
+    all_species = set(expected) | set(actual)
+    mismatches = []
+    for sp in sorted(all_species):
+        exp = float(expected.get(sp, 0.0))
+        act = float(actual.get(sp, 0.0))
+        if abs(act - exp) > atol + rtol * abs(exp):
+            mismatches.append((sp, exp, act))
+
+    if mismatches:
+        details = "; ".join(f"{sp}: expected {exp}, got {act}" for sp, exp, act in mismatches)
+        raise ValueError(f"composition mismatch: {details}")
