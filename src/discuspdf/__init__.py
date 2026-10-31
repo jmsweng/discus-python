@@ -34,9 +34,19 @@ __all__ += ["Structure"]
 from .discus_io import (
     DiscusFormatError,
     DiscusCell,
+    DiscusStru,
+    detect_discus_kind,
     read_cll,
     parse_cll,
     format_cll,
     write_cll,
+    read_stru,
+    parse_stru,
+    format_stru,
+    write_stru,
 )
-__all__ += ["DiscusFormatError", "DiscusCell", "read_cll", "parse_cll", "format_cll", "write_cll"]
+__all__ += [
+    "DiscusFormatError", "DiscusCell", "DiscusStru", "detect_discus_kind",
+    "read_cll", "parse_cll", "format_cll", "write_cll",
+    "read_stru", "parse_stru", "format_stru", "write_stru",
+]

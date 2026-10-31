@@ -158,9 +158,10 @@ def test_missing_b_column_uses_discus_default():
             "negative B",
         ),
         (
-            # 5 numeric values (name + x,y,z,B,occ) is a .stru-only marker.
+            # 5 numeric values (name + x,y,z,B,occ) is rejected: a .cll has at
+            # most 4 numeric columns.
             "title t\nspcgr P1\ncell 4 4 4 90 90 90\natoms\nCu 0 0 0 1 1.5\n",
-            "extended .stru columns",
+            "cannot determine DISCUS file kind",
         ),
         (
             "title t\ntitle u\nspcgr P1\ncell 4 4 4 90 90 90\natoms\nCu 0 0 0 1\n",
