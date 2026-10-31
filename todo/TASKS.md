@@ -93,7 +93,8 @@ The existing DISCUS engine may implement some of these physical methods already.
 - [ ] **B18 / Feature 18:** Mantid MDHisto/NeXus reciprocal data import/export with projection matrix, uncertainties, masks and frame verification.
 - [x] **B19 / Feature 19:** Versioned xarray/HDF5/Zarr persistence with validated schema and scientific provenance. HDF5 schema `discuspdf.ScatteringVolume` v1 with per-array SHA-256 and per-version readers; see [`docs/SCATTERING_DATA.md`](../docs/SCATTERING_DATA.md).
   - *Open items: Zarr (not needed yet); first real schema migration when v2 exists.*
-- [ ] **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. *A basic 2D FFT slice plot already exists.*
+- [x] **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. [`src/discuspdf/viz.py`](../src/discuspdf/viz.py) · [`tests/test_viz.py`](../tests/test_viz.py) · [`docs/VISUALIZATION.md`](../docs/VISUALIZATION.md); slices in true geometry, `.vti` only for axis-aligned grids, `.vts` otherwise; files read back by VTK 9.7 with matching coordinates.
+  - *Open: interactive viewer; DISCUS plane files straight into `SampledVolume` (via `ScatteringVolume`).*
 
 ### Package C — [Disorder and correlations](03_disorder_and_correlations.md)
 

@@ -111,6 +111,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.FourierConfig` writes DISCUS 6.23.01 `fourier`/`output` macro blocks for a `ReciprocalGrid` with `set aver` (Bragg subtraction) and LOTS, using only probe-verified commands. See [docs/FOURIER_CONTROLS.md](docs/FOURIER_CONTROLS.md).
 
+## Visualisation and VTK export
+
+`discuspdf.SampledVolume` puts reciprocal-space data and 3D-ΔPDF results on physical coordinates (Å⁻¹ or Å); `plot_slice` draws layers in their true geometry, `plot_isosurfaces` needs the `viz` extra (scikit-image), and `write_vtk` writes ParaView files (`.vti` only for axis-aligned grids, `.vts` otherwise). See [docs/VISUALIZATION.md](docs/VISUALIZATION.md).
+
 ## Interoperability (CIF, ASE, DiffPy)
 
 `discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
