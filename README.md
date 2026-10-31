@@ -107,6 +107,29 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.FourierConfig` writes DISCUS 6.23.01 `fourier`/`output` macro blocks for a `ReciprocalGrid` with `set aver` (Bragg subtraction) and LOTS, using only probe-verified commands. See [docs/FOURIER_CONTROLS.md](docs/FOURIER_CONTROLS.md).
 
+## Interoperability (CIF, ASE, DiffPy)
+
+`discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
+
+```
+pip install 'discuspdf-starter[cif]'       # gemmi (CIF reading)
+pip install 'discuspdf-starter[ase]'      # ASE
+pip install 'discuspdf-starter[diffpy]'   # DiffPy
+pip install 'discuspdf-starter[interop]'  # all three
+```
+
+```python
+from discuspdf.cif_io import read_cif
+from discuspdf.ase_io import to_ase, from_ase
+
+s = read_cif("structure.cif").structure
+atoms = to_ase(s)          # full state in atoms.arrays (dp_*) and atoms.info
+s2 = from_ase(atoms)      # exact round trip
+assert s2.isclose(s)
+```
+
+`import discuspdf` works without the extras; the adapters raise a helpful `ImportError` naming the extra. Losses (partial occupancy to ASE, anisotropic ADPs, DiffPy orientation/supercell) raise `InteropError` by default and warn with `allow_loss=True`. See [docs/INTEROP.md](docs/INTEROP.md), `examples/interop_basics.py` and `notebooks/06_interop.ipynb`.
+
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.
