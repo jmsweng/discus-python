@@ -135,3 +135,25 @@ completes (exit 0) and `result.pdf` is written. No window is opened.
 > The notebook's *plots* are matplotlib (which uses the non-blocking `Agg`/inline
 > backend in this venv — `tkinter` is not installed), so they render in the browser
 > independently of DISCUS. The blank window was solely DISCUS's PGPLOT device.
+
+## Qmax limit and wavelength (measured 2026-10-31)
+
+**Limit.** A DISCUS powder pattern only exists up to a Q set by the wavelength (2θ ≤ 180°, Q ≤ 4π/λ). With DISCUS_SUITE 6.23.01 and this macro (GaAs 5×5×5, X-ray, qmin 0.5, dq 0.01, rmax 12, dr 0.02) the usable limit is slightly lower, Q·λ ≈ 12.3–12.4:
+
+| λ (Å) | 4π/λ (Å⁻¹) | G(r) stops changing between Qmax (Å⁻¹) |
+|---|---|---|
+| 1.5406 (default X-ray) | 8.16 | 8.0 and 8.1 |
+| 0.7107 | 17.68 | 17.0 and 17.5 |
+| 0.2 | 62.83 | not reached up to 60 |
+
+Above the limit `set qmax` has no effect at all: at λ = 1.5406 Å, Qmax 10, 12, 14, 15, 30 and 60 give G(r) identical to floating-point precision. DISCUS prints no warning. It is not a point-count limit (changing dq does not move it). `discuspdf` keeps the macro and the result unchanged but issues `QmaxLimitWarning` when `qmax * wavelength > 12.0`. Every default run (qmax 25, λ 1.5406 Å), including `examples/run_sample` (qmax 30), therefore effectively uses Qmax ≈ 8 Å⁻¹.
+
+**Wavelength dependence above Q ≈ 8 Å⁻¹.** A shorter explicit wavelength raises the limit, but the result then depends on the wavelength:
+
+| Qmax (Å⁻¹) | wavelengths compared (Å) | max relative difference in F(Q) | in G(r) |
+|---|---|---|---|
+| 8 | 1.4 vs 0.05 | 7e-16 | 4e-16 |
+| 15 | 0.7107 vs 0.2 / 0.05 | 5.5e-2 / 2.4e-3 | 2.2e-1 / 9.6e-3 |
+| 30 | 0.4 vs 0.2 / 0.05 | 6.4e-3 / 7.1e-3 | 2.9e-2 / 3.2e-2 |
+
+Neutron radiation shows the same effect (Qmax 15, λ 0.2 vs 0.05: 2.4e-1 in G(r)), so it is not caused by X-ray form factors or anomalous scattering. F(Q) (written with `form powder, q` / `value F(Q)`) already differs, so the source is the DISCUS powder calculation (debye mode), not the PDF transform. Cause unknown; to be raised with the DiffuseCode maintainers. Until then, Qmax ≤ about 8 Å⁻¹ at the default wavelength is the range in which this macro gives wavelength-independent results.
