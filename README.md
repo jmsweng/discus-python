@@ -49,7 +49,7 @@ result.plot()
 
 ## Explicit powder settings
 
-`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`.
+`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`. **Qmax limit:** DISCUS 6.23.01 cannot use Q above about 12.3/λ, i.e. about 8.0 Å⁻¹ at the default X-ray wavelength of 1.5406 Å. A larger `qmax` (including the default of 25) is still written to the macro and the calculation runs unchanged, but the resulting G(r) is the same as for Qmax ≈ 8; `PDFConfig` issues a `QmaxLimitWarning` when `qmax * wavelength > 12.0`. See `docs/VERIFIED_DISCUS_MACRO.md`, "Qmax limit and wavelength".
 
 ## Notebook working-directory convention
 
@@ -110,6 +110,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 ## DISCUS Fourier controls
 
 `discuspdf.FourierConfig` writes DISCUS 6.23.01 `fourier`/`output` macro blocks for a `ReciprocalGrid` with `set aver` (Bragg subtraction) and LOTS, using only probe-verified commands. See [docs/FOURIER_CONTROLS.md](docs/FOURIER_CONTROLS.md).
+
+## Visualisation and VTK export
+
+`discuspdf.SampledVolume` puts reciprocal-space data and 3D-ΔPDF results on physical coordinates (Å⁻¹ or Å); `plot_slice` draws layers in their true geometry, `plot_isosurfaces` needs the `viz` extra (scikit-image), and `write_vtk` writes ParaView files (`.vti` only for axis-aligned grids, `.vts` otherwise). See [docs/VISUALIZATION.md](docs/VISUALIZATION.md).
 
 ## Mantid MDHisto files
 
