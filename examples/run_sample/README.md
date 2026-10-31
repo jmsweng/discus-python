@@ -24,3 +24,5 @@ r, gr = job.load()
 
 See `SETUP_REPORT.md` and `docs/VERIFIED_DISCUS_MACRO.md` for the full setup and the
 verified macro syntax.
+
+**Note (2026-10-31):** although the macro says `set qmax,30`, DISCUS 6.23.01 cannot use Q above about 8.0 Å⁻¹ at λ = 1.5406 Å, so this G(r) is the same as for Qmax ≈ 8 Å⁻¹. Current `discuspdf` produces the same macro and result but issues a `QmaxLimitWarning`; see `docs/VERIFIED_DISCUS_MACRO.md`, "Qmax limit and wavelength".
