@@ -1,0 +1,30 @@
+data_aniso_loss
+_audit_creation_method 'authored for discus-python test fixtures (synthetic, public domain)'
+_cell_length_a 4.1000
+_cell_length_b 5.3000
+_cell_length_c 6.2000
+_cell_angle_alpha 78.0
+_cell_angle_beta 84.0
+_cell_angle_gamma 101.0
+_symmetry_space_group_name_H-M 'P 1'
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_U_iso_or_equiv
+_atom_site_adp_type
+Fe1 Fe 0.0 0.0 0.0 1.0 0.0120 Uani
+Fe2 Fe 0.5 0.5 0.5 1.0 0.0100 Uani
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_22
+_atom_site_aniso_U_33
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_23
+Fe1 0.0130 0.0120 0.0110 0.0001 0.0000 0.0000
+Fe2 0.0100 0.0100 0.0100 0.0000 0.0000 0.0000
