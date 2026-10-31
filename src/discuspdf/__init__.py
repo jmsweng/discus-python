@@ -1,4 +1,4 @@
-from .pdf import PDFConfig, PDFRunner, PDFRun, read_pdf, render_pdf_macro
+from .pdf import PDFConfig, PDFRunner, PDFRun, read_pdf, render_pdf_macro, QmaxLimitWarning, default_wavelength
 from .volume import (
     delta_pdf_from_diffuse,
     read_hdf5_volume,
@@ -9,7 +9,7 @@ from .volume import (
 )
 
 __all__ = [
-    "PDFConfig", "PDFRunner", "PDFRun", "read_pdf", "render_pdf_macro",
+    "PDFConfig", "PDFRunner", "PDFRun", "read_pdf", "render_pdf_macro", "QmaxLimitWarning", "default_wavelength",
     "delta_pdf_from_diffuse", "read_hdf5_volume", "plot_delta_pdf_slice",
     "FFTDiagnostics", "FFTResult", "FFTValidationError",
 ]
@@ -25,6 +25,22 @@ __all__ += ["DiscusVolume", "FractionalFFTResult", "read_discus_volume", "delta_
 # General lattice core (Package A, Feature A5).
 from .lattice import Lattice
 __all__ += ["Lattice"]
+
+# Regular reciprocal-space grids (Package B, Feature 6).
+from .reciprocal_grid import ReciprocalGrid, FFTCompatibility
+__all__ += ["ReciprocalGrid", "FFTCompatibility"]
+
+# Labelled scattering data, xarray adapter and versioned HDF5 (Package B, Features 7 and 19).
+from .scattering_data import ScatteringVolume, mask_near_bragg
+__all__ += ["ScatteringVolume", "mask_near_bragg"]
+
+# DISCUS 6.23.01 Fourier macro writer: Bragg subtraction and LOTS (Package B, Features 8 and 9).
+from .fourier_macro import FourierConfig, Lots, Seed, StructureSource, prepare_fourier_run
+__all__ += ["FourierConfig", "Lots", "Seed", "StructureSource", "prepare_fourier_run"]
+
+# Physically labelled slices, isosurfaces and VTK export (Package B, Feature 20).
+from .viz import SampledVolume, plot_slice, plot_isosurfaces, isosurface, write_vtk, read_vtk
+__all__ += ["SampledVolume", "plot_slice", "plot_isosurfaces", "isosurface", "write_vtk", "read_vtk"]
 
 # Editable Structure model (Package A, Feature A1).
 from .structure import Structure
@@ -50,3 +66,26 @@ __all__ += [
     "read_cll", "parse_cll", "format_cll", "write_cll",
     "read_stru", "parse_stru", "format_stru", "write_stru",
 ]
+
+# Interop helpers (Package A, Feature A2).
+from .interop import (
+    InteropError,
+    InteropWarning,
+    B_FROM_U,
+    u_to_b,
+    b_to_u,
+    element_from_type_symbol,
+    LossReport,
+)
+__all__ += [
+    "InteropError", "InteropWarning", "B_FROM_U",
+    "u_to_b", "b_to_u", "element_from_type_symbol", "LossReport",
+]
+
+# ASE adapter (Package A, Feature A2).
+from .ase_io import to_ase, from_ase
+__all__ += ["to_ase", "from_ase"]
+
+# DiffPy adapter (Package A, Feature A2).
+from .diffpy_io import to_diffpy, from_diffpy
+__all__ += ["to_diffpy", "from_diffpy"]

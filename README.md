@@ -49,7 +49,7 @@ result.plot()
 
 ## Explicit powder settings
 
-`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`.
+`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`. **Qmax limit:** DISCUS 6.23.01 cannot use Q above about 12.3/λ, i.e. about 8.0 Å⁻¹ at the default X-ray wavelength of 1.5406 Å. A larger `qmax` (including the default of 25) is still written to the macro and the calculation runs unchanged, but the resulting G(r) is the same as for Qmax ≈ 8; `PDFConfig` issues a `QmaxLimitWarning` when `qmax * wavelength > 12.0`. See `docs/VERIFIED_DISCUS_MACRO.md`, "Qmax limit and wavelength".
 
 ## Notebook working-directory convention
 
@@ -98,6 +98,45 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 ## DISCUS file I/O
 
 `discuspdf` reads and writes DISCUS_SUITE 6.23.01 `.cll` (unit-cell source) and `.stru` (saved structure) files. See [docs/DISCUS_IO.md](docs/DISCUS_IO.md) and `examples/discus_io_basics.py`.
+
+## Reciprocal-space grids
+
+`discuspdf.ReciprocalGrid` describes regular reciprocal-space volumes, oblique planes and lines in hkl on a `Lattice`, with Cartesian Q, DISCUS `ll/lr/ul/tl` corners and a report of which 3D transform is exact for the grid. See [docs/RECIPROCAL_GRID.md](docs/RECIPROCAL_GRID.md).
+
+## Labelled scattering data
+
+`discuspdf.ScatteringVolume` holds reciprocal-space values on a `ReciprocalGrid` with variance, an explicit mask, units, Bragg treatment, corrections and provenance; it converts to/from xarray and has a versioned HDF5 format. See [docs/SCATTERING_DATA.md](docs/SCATTERING_DATA.md).
+
+## DISCUS Fourier controls
+
+`discuspdf.FourierConfig` writes DISCUS 6.23.01 `fourier`/`output` macro blocks for a `ReciprocalGrid` with `set aver` (Bragg subtraction) and LOTS, using only probe-verified commands. See [docs/FOURIER_CONTROLS.md](docs/FOURIER_CONTROLS.md).
+
+## Visualisation and VTK export
+
+`discuspdf.SampledVolume` puts reciprocal-space data and 3D-ΔPDF results on physical coordinates (Å⁻¹ or Å); `plot_slice` draws layers in their true geometry, `plot_isosurfaces` needs the `viz` extra (scikit-image), and `write_vtk` writes ParaView files (`.vti` only for axis-aligned grids, `.vts` otherwise). See [docs/VISUALIZATION.md](docs/VISUALIZATION.md).
+
+## Interoperability (CIF, ASE, DiffPy)
+
+`discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
+
+```
+pip install 'discuspdf-starter[cif]'       # gemmi (CIF reading)
+pip install 'discuspdf-starter[ase]'      # ASE
+pip install 'discuspdf-starter[diffpy]'   # DiffPy
+pip install 'discuspdf-starter[interop]'  # all three
+```
+
+```python
+from discuspdf.cif_io import read_cif
+from discuspdf.ase_io import to_ase, from_ase
+
+s = read_cif("structure.cif").structure
+atoms = to_ase(s)          # full state in atoms.arrays (dp_*) and atoms.info
+s2 = from_ase(atoms)      # exact round trip
+assert s2.isclose(s)
+```
+
+`import discuspdf` works without the extras; the adapters raise a helpful `ImportError` naming the extra. Losses (partial occupancy to ASE, anisotropic ADPs, DiffPy orientation/supercell) raise `InteropError` by default and warn with `allow_loss=True`. See [docs/INTEROP.md](docs/INTEROP.md), `examples/interop_basics.py` and `notebooks/06_interop.ipynb`.
 
 ## Notes
 

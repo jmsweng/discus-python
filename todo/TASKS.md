@@ -73,7 +73,7 @@ The existing DISCUS engine may implement some of these physical methods already.
 
 - [x] **A1 / Feature 1:** Editable, validated `Structure` (atomic species, sites, fractional/cartesian positions, occupancy, cell, PBC and supercell metadata). [`src/discuspdf/structure.py`](../src/discuspdf/structure.py); [PR A-2](https://github.com/jmsweng/discus-python/pull/11) · [`tests/test_structure.py`](../tests/test_structure.py).
   - *Open items: magnetic moments (Package D11), anisotropic ADPs, mixed-PBC distances.*
-- [ ] **A2 / Feature 2:** CIF, ASE and optional DiffPy imports/exports with occupancy/PBC fidelity and round-trip tests.
+- [x] **A2 / Feature 2:** CIF, ASE and optional DiffPy imports/exports with occupancy/PBC fidelity and round-trip tests. [`src/discuspdf/cif_io.py`](../src/discuspdf/cif_io.py); [PR #15](https://github.com/jmsweng/discus-python/pull/15) · [`tests/test_cif_io.py`](../tests/test_cif_io.py), [`tests/test_ase_io.py`](../tests/test_ase_io.py), [`tests/test_diffpy_io.py`](../tests/test_diffpy_io.py).
 - [x] **A3 / Feature 3:** Real-format, version-aware DISCUS `.cll` / `.stru` import/export and round-trip tests. [`src/discuspdf/discus_io.py`](../src/discuspdf/discus_io.py); [PR A3](https://github.com/jmsweng/discus-python/pull/12) · [`tests/test_discus_io_cll.py`](../tests/test_discus_io_cll.py), [`tests/test_discus_io_stru.py`](../tests/test_discus_io_stru.py).
   - *Not done: symmetry expansion of `.cll`, occupancy < 1 in `.stru`, molecule/property columns, CIF/ASE (next PR).*
 - [ ] **A4 / Feature 4:** Atom selection, supercell generation, substitution and reproducible displacement/disorder editing.
@@ -82,13 +82,19 @@ The existing DISCUS engine may implement some of these physical methods already.
 
 ### Package B — [Reciprocal-space grids and data](02_reciprocal_space_and_data.md)
 
-- [ ] **B6 / Feature 6:** Flexible reciprocal-space grid objects for HKL/oblique planes or volumes with validated Q transforms. *Existing FFT supports only centered Cartesian-Q grids.*
-- [ ] **B7 / Feature 7:** Labeled `xarray` scattering data, physical coordinates, uncertainties, masks, lattice and provenance; integration with existing `ReciprocalVolume`.
-- [ ] **B8 / Feature 8:** Python control of **verified** average-structure/Bragg separation plus benchmarked diffuse output. *Manual preprocessing labels exist, but are not proof of correction.*
-- [ ] **B9 / Feature 9:** Python controls and tests for **verified** DISCUS LOTS averaging, including lot size, sampling, seed and normalization.
+- [x] **B6 / Feature 6:** Flexible reciprocal-space grid objects for HKL/oblique planes or volumes with validated Q transforms. [`src/discuspdf/reciprocal_grid.py`](../src/discuspdf/reciprocal_grid.py) · [`tests/test_reciprocal_grid.py`](../tests/test_reciprocal_grid.py) · [`docs/RECIPROCAL_GRID.md`](../docs/RECIPROCAL_GRID.md); checked against textbook d-spacings and the real C3/C4 DISCUS grids.
+  - *Open items: DISCUS plane/line output metadata (engine probe); transform for skewed volumes; `DiscusVolume` onto `Lattice`/`ReciprocalGrid`.*
+- [x] **B7 / Feature 7:** Labeled `xarray` scattering data, physical coordinates, uncertainties, masks, lattice and provenance; integration with existing `ReciprocalVolume`. [`src/discuspdf/scattering_data.py`](../src/discuspdf/scattering_data.py) · [`tests/test_scattering_data.py`](../tests/test_scattering_data.py) · [`docs/SCATTERING_DATA.md`](../docs/SCATTERING_DATA.md); transforms reproduce `delta_pdf_fractional` on real C3.
+  - *Open items: chunked/lazy access (no size test yet); DISCUS plane files (engine probe).*
+- [x] **B8 / Feature 8:** Python control of **verified** average-structure/Bragg separation plus benchmarked diffuse output. `FourierConfig` ([`docs/FOURIER_CONTROLS.md`](../docs/FOURIER_CONTROLS.md)); engine behaviour in [`b_probes/RESULT.md`](../benchmarks/discus_6_23_01/b_probes/RESULT.md) (amplitude subtraction); generated macros reproduce the probe outputs byte for byte on DISCUS 6.23.01 ([`live_b3/results.json`](../benchmarks/discus_6_23_01/b_probes/live_b3/results.json)).
+  - *Scope: commensurate grids, one undisplaced site per cell, B ignored. Open: displacement disorder / nonzero B, multi-site cells, non-commensurate grids (Gate 1 residual), loading into `ScatteringVolume`.*
+- [x] **B9 / Feature 9:** Python controls and tests for **verified** DISCUS LOTS averaging, including lot size, sampling, seed and normalization. `Lots` + 8-value `Seed` in `FourierConfig`; normalisation (scaled to the whole crystal), lot counts and seed reproducibility observed in the probes and reproduced live.
+  - *Open: `value 3DPDF` with LOTS, LOTS combined with partial `set aver`, model-size dependence beyond one 16³ crystal.*
 - [ ] **B18 / Feature 18:** Mantid MDHisto/NeXus reciprocal data import/export with projection matrix, uncertainties, masks and frame verification.
-- [ ] **B19 / Feature 19:** Versioned xarray/HDF5/Zarr persistence with validated schema and scientific provenance. *A basic HDF5 loader already exists; this task is broader.*
-- [ ] **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. *A basic 2D FFT slice plot already exists.*
+- [x] **B19 / Feature 19:** Versioned xarray/HDF5/Zarr persistence with validated schema and scientific provenance. HDF5 schema `discuspdf.ScatteringVolume` v1 with per-array SHA-256 and per-version readers; see [`docs/SCATTERING_DATA.md`](../docs/SCATTERING_DATA.md).
+  - *Open items: Zarr (not needed yet); first real schema migration when v2 exists.*
+- [x] **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. [`src/discuspdf/viz.py`](../src/discuspdf/viz.py) · [`tests/test_viz.py`](../tests/test_viz.py) · [`docs/VISUALIZATION.md`](../docs/VISUALIZATION.md); slices in true geometry, `.vti` only for axis-aligned grids, `.vts` otherwise; files read back by VTK 9.7 with matching coordinates.
+  - *Open: interactive viewer; DISCUS plane files straight into `SampledVolume` (via `ScatteringVolume`).*
 
 ### Package C — [Disorder and correlations](03_disorder_and_correlations.md)
 
