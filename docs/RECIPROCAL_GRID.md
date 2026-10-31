@@ -1,83 +1,113 @@
-# Reciprocal-space grids (Package B, Feature 6)
+# Reciprocal-space grids
 
-`discuspdf.ReciprocalGrid` describes **where** reciprocal-space samples are: a regular (affine)
-grid of points in hkl, tied to a `Lattice`. It holds no intensities; Feature 7 (xarray) attaches
-data to it. It never resamples, and it never relabels an oblique grid as Cartesian Q.
+A `ReciprocalGrid` describes **where** reciprocal-space data points are: which h, k, l each point
+has, and its Q in Å⁻¹. It holds no intensities; [`ScatteringVolume`](SCATTERING_DATA.md) attaches
+the data. You use a grid to:
 
-## Conventions
+- set up the points DISCUS should calculate (the `ll/lr/ul/tl/na/no/nt` lines of a Fourier macro);
+- look up the hkl or Q of any data point;
+- find out whether a 3D-ΔPDF can be calculated on that grid, and if not, why.
 
-| Quantity | Representation |
-|---|---|
-| Point at integer index `i = (i0, i1, i2)` | `hkl = corner + i @ axis_vectors` (r.l.u.) |
-| `axis_vectors` | 3×3, **row** `k` = hkl step along array axis `k` |
-| DISCUS 6.23.01 NeXus | `data_increment_vector[:, k]` (**column** `k`) = `axis_vectors[k]`; verified on the skewed real C4 fixture |
-| Sample positions | voxel **centres**; edges at half-integer indices (`index_to_hkl(i - 0.5)`) |
-| Cartesian Q | `Q = 2π · (hkl @ B)` Å⁻¹ for the grid's `Lattice` orientation, `|Q| = 2π/d` |
-| Planes and lines | an axis with one point is *inactive*; its vector never enters a coordinate |
-| Centred (FFT-ready) | hkl = 0 at index `n // 2` on every axis (numpy `fftshift` convention; even `n` has one extra negative point) |
-| Real-space dual grid | rows `R[k]` with `axis_vectors @ R[k] = e_k / n_k` (fractional); `1/(n·dh)` for an hkl-aligned grid |
-
-## Construction
+## Quick start
 
 ```python
 from discuspdf import Lattice, ReciprocalGrid
 
-lat = Lattice.from_parameters(5, 6, 7, 90, 105, 90)
+lat = Lattice.from_parameters(5, 6, 7, 90, 105, 90)          # a, b, c (Å), α, β, γ (°)
 
-# Same commands as the DISCUS fourier menu (ll, lr, ul, tl, na, no, nt):
-g = ReciprocalGrid.from_corners(lat, ll=(-4, -5, -6), lr=(4, -5, -6),
-                                ul=(-3, 5, -6), tl=(-4, -5, 6), shape=(33, 41, 49))
-
-g = ReciprocalGrid.from_ranges(lat, h=(-4, 4, 33), k=(-5, 5, 41), l=(0, 0, 1))   # hk0 plane
-g = ReciprocalGrid.centered(lat, shape=(64, 64, 64), steps=(0.125, 0.125, 0.125))  # FFT-ready
-g = ReciprocalGrid.from_discus_volume(read_discus_volume("C1_diffuse.h5"))
+g = ReciprocalGrid.from_ranges(lat, h=(-4, 4, 33), k=(-5, 5, 41), l=(-6, 6, 49))
+g.shape                       # (33, 41, 49)
+g.index_to_hkl((16, 20, 24))  # array([0., 0., 0.])
+g.q_magnitude()               # |Q| in Å⁻¹ for every point, shape (33, 41, 49)
 ```
 
-`from_discus_volume` rebuilds the lattice from the file's cell parameters in the canonical
-orientation (a ∥ x, b in the xy plane). DISCUS files carry no orientation matrix; give a rotated
-`Lattice` (`Lattice.from_matrix`) if an experimental orientation matters.
+## Making a grid
 
-## What it answers
+| You have | Use |
+|---|---|
+| an h, k, l range for each axis | `ReciprocalGrid.from_ranges(lat, h=(start, stop, n), k=..., l=...)` |
+| the corners you would type in DISCUS's `fourier` menu | `ReciprocalGrid.from_corners(lat, ll=..., lr=..., ul=..., tl=..., shape=(na, no, nt))` |
+| a grid you want to Fourier-transform to a 3D-ΔPDF | `ReciprocalGrid.centered(lat, shape=(64, 64, 64), steps=(0.125, 0.125, 0.125))` |
+| a DISCUS output file | `ReciprocalGrid.from_discus_volume(read_discus_volume("file.h5"))`, or load it as a `ScatteringVolume` (also works for planes and lines) |
 
-- Coordinates: `hkl()`, `q()`, `q_magnitude()`, `index_to_hkl(idx)`, `hkl_to_index(hkl)` (volumes only),
-  `hkl_axes()` (hkl-aligned grids only), `q_axes()` (only when step k ∥ +Cartesian axis k).
-- Geometry: `is_hkl_axis_aligned()`, `is_q_axis_aligned()`, `is_q_orthogonal()`, `handedness()`,
-  `is_centered()`, `real_space_step_vectors()`.
-- Derived grids: `plane(axis, index)`; `discus_corners()` gives the `ll/lr/ul/tl/na/no/nt` values for a macro.
-- Persistence: `to_dict()` / `from_dict()` / JSON, schema `discuspdf.ReciprocalGrid` version 1
-  (unknown schema or version is refused). The full lattice matrix is stored, so orientation survives.
+```python
+# A plane: give one point along the axis you want to keep fixed
+hk0 = ReciprocalGrid.from_ranges(lat, h=(-4, 4, 33), k=(-5, 5, 41), l=(0, 0, 1))
 
-### Which 3D transform is exact
+# A skewed grid, exactly as in a DISCUS macro (the second axis also steps in h)
+c4 = ReciprocalGrid.from_corners(lat, ll=(-4, -5, -6), lr=(4, -5, -6),
+                                 ul=(-3, 5, -6), tl=(-4, -5, 6), shape=(33, 41, 49))
 
-`grid.fft_compatibility()` returns `FFTCompatibility(fractional, cartesian, reasons)`:
+# Going the other way: the values to put in a DISCUS macro
+hk0.discus_corners()   # {'ll': [...], 'lr': [...], 'ul': [...], 'tl': [...], 'na': 33, 'no': 41, 'nt': 1}
+```
 
-| Transform | Requires | Typical case |
+A grid read from a DISCUS file gets its lattice from the file's a, b, c, α, β, γ, in the standard
+orientation (a along x, b in the xy plane). DISCUS files do not record a crystal orientation; if
+the orientation matters (e.g. to compare with an experiment), build the `Lattice` yourself with
+`Lattice.from_matrix`.
+
+## Asking a grid questions
+
+| Question | Method |
+|---|---|
+| hkl of every point / of one point | `g.hkl()` · `g.index_to_hkl((i, j, k))` |
+| which point has this hkl (3D grids) | `g.hkl_to_index((h, k, l))` (can be fractional) |
+| Q vector / \|Q\| of every point, Å⁻¹ | `g.q()` · `g.q_magnitude()` |
+| 1D h, k, l axes (when each axis runs along one of h, k, l) | `g.hkl_axes()` |
+| one layer of a 3D grid | `g.plane(axis, index)` |
+| are two grids the same | `g.isclose(other)` |
+| can I compute a 3D-ΔPDF here | `g.fft_compatibility()` (below) |
+| save / load the grid | `g.to_dict()` / `ReciprocalGrid.from_dict(d)` (JSON-friendly; keeps the full orientation) |
+
+## Can this grid be Fourier-transformed?
+
+`g.fft_compatibility()` answers this before you try, and lists the reasons when the answer is no:
+
+```python
+c4.fft_compatibility()
+# FFTCompatibility(fractional=False, cartesian=False, reasons=(
+#   'hkl = 0 is not at index n//2 on every axis (centred FFT would be mis-phased)',
+#   'fractional: grid is skewed in hkl (non-diagonal axis_vectors)', ...))
+```
+
+| Result | Meaning | Typical grid |
 |---|---|---|
-| `delta_pdf_fractional` (fractional) | volume, hkl-aligned, increasing, centred | any cell, incl. monoclinic/triclinic |
-| `delta_pdf_from_diffuse` / `ReciprocalVolume` (cartesian) | volume, Q step k ∥ +x/+y/+z, centred | orthogonal cell, hkl-aligned grid |
-| neither | skewed grid, plane/line, uncentred, decreasing axis | `reasons` says which |
+| `fractional=True` | `delta_pdf_fractional` / `ScatteringVolume.delta_pdf()` work | any cell (incl. monoclinic, triclinic), axes along h, k, l, hkl = 0 in the centre |
+| `cartesian=True` | the older Cartesian-Q transform (`delta_pdf_from_diffuse`) also works | orthogonal cell, axes along h, k, l, centred |
+| both False | no transform in this package accepts the grid | skewed grids, planes, lines, grids not centred on hkl = 0 |
 
-A skewed (oblique) volume is still a regular grid, and its DFT is exact on the dual real-space
-grid given by `real_space_step_vectors()` (tested against a brute-force sum), but no current
-transform function accepts such data. Feeding it into the Cartesian transform is refused by
-`q_axes()`.
+To get a grid that passes, use `ReciprocalGrid.centered(...)`: it puts hkl = 0 at index `n // 2`
+on every axis, as NumPy's `fftshift` does.
 
-## Evidence
+## Reference
 
-`tests/test_reciprocal_grid.py` (32 tests):
+| Item | Convention |
+|---|---|
+| point at index `(i0, i1, i2)` | hkl = `corner + i @ axis_vectors` (r.l.u.) |
+| `axis_vectors` | 3×3; **row** k is the hkl step along array axis k |
+| DISCUS 6.23.01 NeXus files | `data_increment_vector[:, k]` (**column** k) is the step of axis k |
+| Q | `Q = 2π · hkl · B` in Å⁻¹, so \|Q\| = 2π/d |
+| points | voxel **centres**; voxel edges are half a step either side |
+| planes and lines | an axis with one point is ignored in all coordinates (DISCUS writes a zero step, or `tl − ll`, for it) |
+| centred | hkl = 0 at index `n // 2` on every axis (for even n there is one more negative point) |
+| real-space step of the matching 3D-ΔPDF | `g.real_space_step_vectors()` (fractional); 1/(n·Δh) for a grid along h, k, l |
 
-- Q of seven reflections in a monoclinic cell equals 2π/d from the textbook monoclinic formula
-  (to 1e-12); the a*–c* angle equals 180° − β; hexagonal a*–b* angle is 60°.
-- Real DISCUS 6.23.01 output: grids built from the `ll/lr/ul/tl/na/no/nt` lines of the committed
-  C3 (aligned) and C4 (skewed) macros equal the grids read from the engine's HDF5 files.
-- C3: `real_space_step_vectors()` equals the `u` spacing of `delta_pdf_fractional`.
-- Mutation checks (transposed DISCUS increments, untransposed dual, missing 2π, centring, sign,
-  inactive-axis and rank checks disabled): each makes at least one test fail.
+The grid never interpolates or resamples, and it never treats an oblique hkl grid as if it were a
+Cartesian Q grid.
 
-## Not verified / not included
+<details>
+<summary>How this was checked</summary>
 
-- What DISCUS writes in `data_increment_vector` for a **plane or line** (an axis with one point):
-  no such engine file exists in the repository yet (probe in the Package B handoff).
-- Transforms for skewed volumes, resampling, and masks/uncertainties (Feature 7 onward).
-- `DiscusVolume` still has its own geometry code; consolidating it onto `Lattice`/`ReciprocalGrid`
-  is a separate PR with Gate 2/3 evidence parity.
+`tests/test_reciprocal_grid.py`:
+- |Q| for seven reflections in a monoclinic cell equals 2π/d from the textbook formula (to 1e-12);
+  the a*–c* angle is 180° − β and the hexagonal a*–b* angle is 60°.
+- Grids built from the corner lines of the committed DISCUS 6.23.01 C3 (aligned) and C4 (skewed)
+  macros equal the grids in the files DISCUS wrote.
+- `real_space_step_vectors()` matches the real-space spacing of `delta_pdf_fractional` on C3.
+- Deliberate bugs (transposed DISCUS steps, missing 2π, wrong centring, sign, plane handling) each
+  make at least one test fail.
+
+`DiscusVolume` (the older reader) still has its own geometry code; moving it onto
+`Lattice`/`ReciprocalGrid` is planned separately.
+</details>

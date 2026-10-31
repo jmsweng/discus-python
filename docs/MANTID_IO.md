@@ -1,85 +1,101 @@
-# Mantid MDHisto files (Package B, Feature 18)
+# Mantid MDHisto files
 
-`read_mantid_mdhisto(path)` reads a Mantid `SaveMD` (version 2) **MDHistoWorkspace** in the **HKL
-frame** into a `ScatteringVolume`; `write_mantid_mdhisto(sv, path)` writes one that Mantid's `LoadMD`
-reads. No Mantid installation is needed for either.
+`read_mantid_mdhisto` reads a binned single-crystal volume saved by Mantid, and
+`write_mantid_mdhisto` writes one that Mantid can load. Mantid does not need to be installed for
+either. Use them to:
+
+- compare measured diffuse scattering with a DISCUS calculation on the same hkl points;
+- send calculated or processed data back to Mantid for viewing or further reduction.
+
+The files are what Mantid's `SaveMD` writes for an **MDHistoWorkspace** (the binned result of
+`BinMD`, `MDNorm`, `CreateMDHistoWorkspace`, …) in the **HKL frame**.
+
+## Quick start
 
 ```python
 from discuspdf import read_mantid_mdhisto, write_mantid_mdhisto
-sv = read_mantid_mdhisto("binned.nxs")       # grid in hkl, variance = errors², mask, provenance
-sv.grid.axis_vectors                         # hkl step of each Mantid dimension (projection applied)
-write_mantid_mdhisto(sv, "for_mantid.nxs")   # LoadMD in Mantid gives the same axes, values, mask, lattice
+
+sv = read_mantid_mdhisto("binned.nxs")     # a ScatteringVolume
+sv.grid.hkl()                              # hkl of every bin centre, projection applied
+sv.variance                                # Mantid's errors squared
+sv.mask                                    # Mantid's mask plus bins with no data (NaN); None if nothing is masked
+sv.grid.lattice.parameters                 # a, b, c, α, β, γ from the file
+
+write_mantid_mdhisto(sv, "for_mantid.nxs")  # LoadMD in Mantid gives the same axes, values, mask and lattice
 ```
 
-## File conventions (observed on files written by Mantid 7.0.0)
+The result is an ordinary [`ScatteringVolume`](SCATTERING_DATA.md), so slicing, plotting, xarray and
+HDF5 all work the same as for DISCUS data.
+
+## What is read
+
+- **Axes, including projections.** Workspaces binned along directions such as `[H,H,0]`,
+  `[-H,H,0]` and `[0,0,L]` (`BinMD` projections, or `ConvertToMD` with `Uproj/Vproj/Wproj`) give a
+  grid whose points have the correct hkl.
+- **Values, errors and mask.** Errors² become `variance`. Mantid's mask is kept with the reason
+  `Mantid mask`. Bins whose signal is NaN (no coverage, e.g. from `MDNorm`) are masked with the
+  reason `NaN in Mantid signal (no coverage)`.
+- **Lattice.** Built from a, b, c, α, β, γ in the standard orientation (a along x). Mantid's UB and
+  U matrices are kept in `sv.provenance` but not applied.
+- **Extra axes with one bin** (e.g. an energy-transfer window) are dropped and their range is
+  recorded in the provenance.
+
+As a safety check, each axis's direction is worked out three ways (from the stored transform,
+from the axis name such as `[H,H,0]`, and from its length in Å⁻¹ in the units), and the file is
+refused if they disagree.
+
+## What is refused
+
+The reader stops with a `MantidFormatError` that says why, rather than guessing, for:
+
+| File | What to do |
+|---|---|
+| Q_lab or Q_sample frame | convert to HKL in Mantid first (applying UB and goniometer here is not supported) |
+| not exactly three HKL axes | bin to a 3D hkl volume |
+| an extra axis (e.g. `DeltaE`) with more than one bin | integrate over it in Mantid |
+| uneven bins, unknown units, no lattice | re-bin, or set the lattice (`SetUB`) in Mantid |
+| `SaveMD` version 1, or an MDEventWorkspace | bin to an MDHistoWorkspace and save with the current `SaveMD` |
+
+## What is written
+
+`write_mantid_mdhisto` writes each grid axis as an HKL axis named in Mantid's style (`[H,H,0]`), in
+`r.l.u.`, with the projection stored so that Mantid places every bin at the right hkl. It also
+writes errors² from `variance` (zeros if there is none), masked bins as 0 with the mask set, and
+the lattice. Planes and lines are refused: a one-point axis has no direction to store.
+
+## Reference: Mantid's file layout
+
+For anyone reading these files by hand. These are observed on files written by Mantid 7.0.0.
 
 | Item | Meaning |
 |---|---|
-| `data/D0…D{n-1}` | bin **edges** of each dimension; attrs `frame` (`HKL`, `General Frame`, …), `long_name` (`[H,H,0]`), `units` (`r.l.u.` or `in <L> A^-1`) |
-| `data/signal` attr `axes = "D{n-1}:…:D0"` | the first array axis is the **last** dimension (Mantid's linear index runs D0 fastest) |
-| `errors_squared`, `mask` (int8, 1 = masked), `num_events` | same shape as `signal` |
-| `transform_to_orig` (16 × float32, row-major 4×4) | original coordinates = M·[x, 1]; **columns** are the projection basis vectors (`BinMD` `[H,H,0]` → column (1,1,0)) |
-| `experiment0/logs/W_MATRIX/value` (row-major 3×3, from `ConvertToMD`) | **columns** are Uproj, Vproj, Wproj; hkl = W·orig (identity when absent) |
-| `units = "in <L> A^-1"` | L = 2π·\|basis vector\| in Å⁻¹ (e.g. 1.67 for [H,H,0] in a 5/6/7 Å, β = 105° cell) |
-| `experiment0/sample/oriented_lattice/orientation_matrix` | **UB** (UBᵀ·UB = reciprocal metric; B in Busing–Levy form) |
+| `data/D0 … D{n-1}` | bin **edges** of each dimension; attributes `frame`, `long_name` (e.g. `[H,H,0]`), `units` |
+| `data/signal`, attribute `axes = "D2:D1:D0"` | the array's first axis is the **last** dimension |
+| `errors_squared`, `mask` (1 = masked), `num_events` | same shape as `signal` |
+| `transform_to_orig` (4×4, row-major) | its **columns** are the projection directions |
+| `experiment0/logs/W_MATRIX` (3×3, row-major) | from `ConvertToMD`; its **columns** are Uproj, Vproj, Wproj |
+| units `in 1.67 A^-1` | coordinates along that axis are in units of 1.67 Å⁻¹, which is 2π × \|direction\| (here `[H,H,0]` in a 5, 6, 7 Å, β = 105° cell) |
+| `experiment0/sample/oriented_lattice/orientation_matrix` | the UB matrix |
 
-So for an HKL-frame workspace, **hkl = W · (M · x + t)** for bin-centre coordinates x.
+So hkl = W_MATRIX · (transform · x + offset) for bin-centre coordinates x.
 
-## Cross-checks and refusals
+<details>
+<summary>How this was checked</summary>
 
-For every axis the reader checks that three independent records agree, and refuses the file
-(`MantidFormatError`) if they do not:
-1. the basis vector from `transform_to_orig` and `W_MATRIX`;
-2. the axis name, when it has the `[aH,bK,cL]` form;
-3. the Å⁻¹ length in `units`, when given (3 significant digits, as Mantid prints it).
+Test files in `tests/fixtures/mantid_7_0_0/` were written by **Mantid 7.0.0** from
+`benchmarks/mantid_7_0_0/make_fixtures.py`. The expected position and value of every event were
+written down in `expected.json` before Mantid ran.
 
-Also refused, with the reason: `SaveMDVersion` other than 2; Q_lab / Q_sample frames (convert to HKL
-in Mantid; this reader does not apply UB or goniometer); fewer or more than three HKL axes; extra
-axes such as `DeltaE` with more than one bin (one-bin axes are dropped and their range recorded);
-non-uniform bins; HKL axes coupled to non-HKL axes; units other than `r.l.u.` / `in <L> A^-1`; no
-oriented lattice. NaN signal (no coverage, e.g. from `MDNorm`) is **masked** with reason
-`NaN in Mantid signal (no coverage)`; Mantid's own mask keeps reason `Mantid mask`.
-
-The lattice is rebuilt from a, b, c, α, β, γ in this package's canonical orientation (a ∥ x);
-Mantid's UB and U are kept in `provenance` but not applied (Q in the sample frame needs the goniometer
-too).
-
-## Writer
-
-Each grid axis becomes an HKL dimension whose basis vector is the grid step scaled so its largest
-component is ±1 (a decreasing axis is written with a flipped basis vector and increasing edges);
-names follow Mantid's `[H,H,0]` style and units are `r.l.u.`; `transform_to_orig` holds the basis.
-Variance → `errors_squared` (zeros if absent), masked voxels are written as 0 with `mask = 1`. The
-`experiment0` skeleton is the one Mantid writes (`LoadMD` needs it), with UB = Busing–Levy B
-(U = identity). Planes and lines are refused (a one-point axis has no direction to store). No
-`W_MATRIX` is written: the projection is entirely in `transform_to_orig`.
-
-## Evidence
-
-Fixtures in `tests/fixtures/mantid_7_0_0/` (see its README) were written by **Mantid 7.0.0** from
-`benchmarks/mantid_7_0_0/make_fixtures.py`; every expected position and value was fixed in
-`expected.json` before Mantid ran.
-
-- Events placed at known hkl (aligned `BinMD`, projected `BinMD` with `[H,H,0]`, `[-H,H,0]`, `[0,0,L]`)
-  land on the grid point with that hkl, with the right weight and variance.
-- `ConvertToMD` with Uproj (1,1,0), Vproj (0,0,1), Wproj (1,−1,0): the single bin that changes when
-  one event is added sits at hkl = W·x, as predicted.
-- `CreateMDHistoWorkspace` with signal 100·i0 + 10·i1 + i2 + 1: axis order, errors², the masked box
-  and the NaN bin come out as specified.
-- **Writer, checked inside Mantid** (`check_in_mantid.py`, report `roundtrip/mantid_check.json`, no
-  failures): for each fixture, the file we write loads in `LoadMD` with the same dimension names,
-  frames, bins and extents, signal and errors², mask (plus the NaN bin, by design) and lattice as
-  Mantid's own file; a skewed monoclinic volume Mantid never saw loads with the expected values and
-  mask. Mantid then saved each of our workspaces again (`roundtrip/*.resaved.nxs`), and reading those
-  gives back the same grid (to the float32 precision of the stored transform, ≤ 6e-8) and values.
-- Two older real files: Shiver's 2023 file (inelastic, `DeltaE` with 48 bins) and Javelin's test file
-  (two HKL axes, no transform) are refused with those reasons. They are not committed (GPL-3 /
-  separate projects).
-- Mutation checks: `W_MATRIX` transposed, transform rows/columns, axis order, name check, units check,
-  NaN masking, writer axis order, decreasing-axis flip, written UB — each caught.
-
-## Not included
-
-MDEventWorkspace files, SaveMD version 1, Q_lab / Q_sample frames, applying UB/goniometer to get Q in
-Mantid's sample frame, non-HKL `General Frame` volumes, `num_events`-based normalisation (the sum is
-recorded in provenance).
+- Events placed at known hkl (plain axes, `[H,H,0]`/`[-H,H,0]`/`[0,0,L]` projections, and a
+  `ConvertToMD` projection) land on the grid point with that hkl, with the right weight and error.
+- A workspace with values 100·i0 + 10·i1 + i2 + 1, a masked box and a NaN bin reads back with the
+  right axis order, errors, mask and NaN handling.
+- **Inside Mantid**: our written files load in `LoadMD` with the same axes, values, errors, mask and
+  lattice as Mantid's own (report: `roundtrip/mantid_check.json`, no failures). A skewed monoclinic
+  volume Mantid had never seen loads with the expected values. Mantid then re-saved each file, and
+  reading those gives back the same grid and values.
+- Two older third-party files (an inelastic file with 48 energy bins, and a file with two HKL axes)
+  are refused with the reasons above.
+- Deliberate bugs (transposed matrices, wrong axis order, disabled name/units checks, NaN masking,
+  writer axis order and flip, written UB) are each caught.
+</details>

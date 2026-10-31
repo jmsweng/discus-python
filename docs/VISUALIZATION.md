@@ -1,82 +1,97 @@
-# Visualisation and VTK export (Package B, Feature 20)
+# Plotting and VTK export
 
-`discuspdf.SampledVolume` holds values on a regular grid together with the **Cartesian** position
-of every point: point `(i0, i1, i2)` sits at `origin + i @ steps`. Its constructors take the
-calibrated objects of this package, so coordinates come from source metadata, never from indices:
+These tools draw reciprocal-space data and 3D-ΔPDF maps **in their real geometry**, with axes in
+Å⁻¹ or Å, and write them for ParaView:
 
-| Constructor | Source | Coordinates |
-|---|---|---|
-| `SampledVolume.from_scattering_volume(sv)` | `ScatteringVolume` (grid, mask, variance, Bragg label) | Q = 2π·hkl·B, Å⁻¹ |
-| `SampledVolume.from_fractional_fft(res)` | `delta_pdf_fractional` result | r = u·A, Å |
-| `SampledVolume.from_fft_result(res)` | `delta_pdf_from_diffuse` result | Cartesian r, Å |
+- `plot_slice`: a 2D layer through the data, with true lengths and angles (a monoclinic layer is
+  drawn as a parallelogram, not a rectangle);
+- `plot_isosurfaces`: 3D surfaces at chosen values (needs `pip install -e ".[viz]"`, i.e. scikit-image);
+- `write_vtk`: files that ParaView (or any VTK reader) opens with the correct coordinates.
 
-The orientation is the `Lattice` orientation (canonical: a ∥ x, b in the xy plane, unless the lattice
-was built from a rotated matrix).
+All of them take a `SampledVolume`: the values plus the Cartesian position of every point, taken
+from the data's own lattice and grid, never guessed from array indices.
+
+## Quick start
 
 ```python
-from discuspdf import read_discus_volume, delta_pdf_fractional, ScatteringVolume
-from discuspdf.viz import SampledVolume, plot_slice, plot_isosurfaces, write_vtk
+from discuspdf import ScatteringVolume, SampledVolume, plot_slice, plot_isosurfaces, write_vtk
 
-vol = read_discus_volume("C1_diffuse.h5")
-q = SampledVolume.from_scattering_volume(ScatteringVolume.from_discus_volume(vol))
-plot_slice(q, axis=2)                          # hk-plane through the centre, Å⁻¹, true angles
+sv = ScatteringVolume.from_discus_file("C1_diffuse.h5")
+q = SampledVolume.from_scattering_volume(sv)          # positions in Q (Å⁻¹)
+plot_slice(q, axis=2)                                 # the middle layer along the third axis
 
-rho = SampledVolume.from_fractional_fft(delta_pdf_fractional(vol))
-plot_slice(rho, axis=2)                        # signed: symmetric RdBu_r colour scale
-plot_isosurfaces(rho, levels=(+2e-3, -2e-3))   # needs pip install -e ".[viz]" (scikit-image)
-write_vtk(rho, "c1_delta_pdf.vts")             # ParaView; non-orthogonal or oblique -> .vts
+rho = SampledVolume.from_fractional_fft(sv.delta_pdf())   # positions in r (Å)
+plot_slice(rho, axis=2)                               # red positive, blue negative, white zero
+plot_isosurfaces(rho, levels=(+2e-3, -2e-3))
+write_vtk(rho, "c1_delta_pdf.vts")                    # open in ParaView
 ```
+
+## Making a SampledVolume
+
+| You have | Use | Positions |
+|---|---|---|
+| a `ScatteringVolume` | `SampledVolume.from_scattering_volume(sv)` | Q, Å⁻¹ (keeps mask, variance, Bragg label) |
+| a 3D-ΔPDF from `delta_pdf_fractional` or `sv.delta_pdf()` | `SampledVolume.from_fractional_fft(result)` | r, Å |
+| a result of the older `delta_pdf_from_diffuse` | `SampledVolume.from_fft_result(result)` | r, Å |
+
+The orientation is that of the lattice: by default a along x and b in the xy plane.
 
 ## Slices
 
-`plot_slice(vol, axis, index)` draws one layer perpendicular to array `axis` with `pcolormesh` on
-the projected voxel corners:
-- in-plane coordinates on an orthonormal basis of the plane (first axis along x), so cell edges have
-  their real lengths and the angle between the axes is the real angle (`aspect='equal'`);
-- labels name the direction in crystal coordinates, e.g. `Q ∥ [1 0.2 0]* (Å⁻¹)`, and the title gives
-  the plane's offset from the origin;
-- signed data (Bragg-subtracted intensity, ΔPDF, Patterson) use `RdBu_r` with a symmetric range;
-  unsigned data use `viridis`, optionally `log=True`;
-- masked voxels are grey (they are never filled with a number).
+```python
+plot_slice(vol, axis=2, index=10)       # layer 10 perpendicular to array axis 2
+plot_slice(vol, axis=0, log=True)       # log colour scale (unsigned data)
+plot_slice(vol, axis=2, ax=my_axes, title="...", vmax=1e5)
+```
+
+- Axis labels name the crystal direction, e.g. `Q ∥ [1 0 0]* (Å⁻¹)`; the title gives the layer's
+  offset from the origin.
+- Data that can be negative (Bragg-subtracted intensity, ΔPDF, Patterson) get a red–blue scale
+  that is symmetric about zero. Other data use `viridis`.
+- Masked points are grey; they are never filled in.
 
 ## Isosurfaces
 
-`isosurface(vol, level)` runs marching cubes (scikit-image, optional extra `viz`) in index space and
-maps the vertices with the grid's affine geometry. Masked voxels need an explicit `fill_value`.
-`plot_isosurfaces(vol, levels)` draws them with equal axis scaling.
+```python
+plot_isosurfaces(rho, levels=(+2e-3, -2e-3))           # one surface per level, equal axis scaling
+verts, faces = isosurface(rho, 2e-3)                   # the mesh itself, in Å
+```
+
+Masked points need an explicit `fill_value=`.
 
 ## VTK / ParaView
 
-`write_vtk(vol, path)` writes VTK XML with raw appended binary data (UInt64 headers, little endian);
-no VTK installation is needed to write.
+```python
+write_vtk(vol, "out.vts")       # works for every grid
+write_vtk(vol, "out.vti")       # smaller, but only for grids whose axes run along x, y, z
+data = read_vtk("out.vts")      # read back without VTK installed
+```
 
-| Extension | VTK type | When |
-|---|---|---|
-| `.vti` | ImageData (origin + spacing) | **only** if every active axis runs along +x, +y, +z; otherwise refused |
-| `.vts` | StructuredGrid (explicit point coordinates) | any regular grid: oblique planes, non-orthogonal cells, skewed hkl grids |
+| Extension | Use it for |
+|---|---|
+| `.vts` (StructuredGrid) | anything: non-orthogonal cells, skewed grids, oblique planes |
+| `.vti` (ImageData) | only grids whose axes run along +x, +y, +z; anything else is refused, because ParaView would draw it in the wrong place |
 
-Point data: the values (named after `quantity`, masked voxels written as NaN), `mask` (UInt8,
-1 = excluded) and extra arrays such as `variance`. A sidecar `<file>.json` records space, unit,
-origin, steps, the crystal index vectors and the provenance metadata. `read_vtk` reads these files back
-without VTK.
-
-## Evidence
-
-`tests/test_viz.py` (17 tests):
-- Q of every point equals `ReciprocalGrid.q()`; real-space points equal `u @ A`.
-- Real DISCUS C3 file (monoclinic, Bragg present): the strongest interatomic Patterson peak inside one
-  cell lies within one voxel of u = ±(0.3, 0.2, 0.1) converted to Å with the cell metric.
-- VTK 9.7 (`vtkXMLStructuredGridReader`, `vtkXMLImageDataReader`) reads our files: points, values
-  (incl. NaN), mask, variance, ImageData origin/spacing and point lookup all match. (Skipped when
-  `vtk` is not installed; CI does not install it. The package's own `read_vtk` round trip always runs.)
-- Slices: plotted cell edges have the true step lengths and angle; masked voxels stay masked; signed
-  scale is symmetric.
-- Isosurface of |r|² = 1 on an orthogonal and on a skewed grid: vertex radii within 0.02 of 1.
-- Mutation checks: VTK point order, StructuredGrid point order, plane basis, FFT origin, axis-alignment
-  test, isosurface mapping, symmetric scale and masking — each caught.
+Each file holds the values (masked points as NaN), the mask (1 = excluded) and any extra arrays
+such as variance. A small `<file>.json` next to it records units, origin, steps, crystal directions
+and provenance. VTK does not need to be installed to write the files.
 
 ## Not included
 
-An interactive viewer (ParaView or napari can open the `.vts`/`.vti` files), DISCUS plane files
-(read them into `ScatteringVolume` first), and the older `plot_delta_pdf_slice`, which stays for
-compatibility but labels index-derived axes only.
+An interactive viewer (ParaView or napari can open the files). The older `plot_delta_pdf_slice`
+remains for existing code, but labels its axes by index only; use `plot_slice` for new work.
+
+<details>
+<summary>How this was checked</summary>
+
+`tests/test_viz.py`:
+- The position of every point equals `ReciprocalGrid.q()` (reciprocal space) or `u @ A` (real space).
+- On the real DISCUS C3 file (monoclinic), the strongest Patterson peak lies within one voxel of the
+  interatomic vector u = ±(0.3, 0.2, 0.1), converted to Å with the cell metric.
+- VTK 9.7 reads our `.vts` and `.vti` files with matching points, values, mask and variance (this
+  test needs `vtk` installed and is skipped in CI; the `read_vtk` round trip always runs).
+- Slices: drawn cell edges have the true lengths and angle; masks and the symmetric scale are kept.
+- An isosurface of |r|² = 1 on an orthogonal and on a skewed grid lies within 0.02 of radius 1.
+- Deliberate bugs (point order, plane basis, FFT origin, axis-alignment test, isosurface mapping,
+  colour scale, masking) are each caught.
+</details>

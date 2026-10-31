@@ -1,96 +1,116 @@
-# DISCUS Fourier controls: Bragg subtraction and LOTS (Package B, Features 8 and 9)
+# DISCUS Fourier macros: Bragg subtraction and LOTS
 
-`discuspdf.FourierConfig` writes the `fourier` and `output` blocks of a DISCUS_SUITE 6.23.01 macro
-from a `ReciprocalGrid`. It offers only commands whose behaviour was observed on 6.23.01; the
-observations and numbers are in
-[`benchmarks/discus_6_23_01/b_probes/RESULT.md`](../benchmarks/discus_6_23_01/b_probes/RESULT.md).
-The macro is plain text: render it, read it, then run it with `Diffuse3DRunner`.
+`FourierConfig` writes the `fourier` and `output` part of a DISCUS_SUITE 6.23.01 macro for you,
+from a [`ReciprocalGrid`](RECIPROCAL_GRID.md) and a few options:
+
+- **Bragg subtraction** (`set aver`), to get diffuse scattering without the Bragg peaks;
+- **LOTS**, to average the scattering of many small pieces of a large crystal;
+- a fixed random **seed**, so runs can be repeated exactly;
+- which **outputs** to write (intensity, real/imaginary part, 3D-PDF) as NeXus files.
+
+It only offers commands whose behaviour was checked on DISCUS 6.23.01, and it refuses settings
+that were seen to give wrong or unrepeatable results. The macro is plain text: you can print it and
+read it before anything runs.
+
+## Quick start
 
 ```python
 from discuspdf import (Lattice, ReciprocalGrid, FourierConfig, Lots, Seed, StructureSource,
                        Diffuse3DRunner, prepare_fourier_run)
 
 lat = Lattice.from_parameters(4, 4, 4, 90, 90, 90)
-grid = ReciprocalGrid.centered(lat, (128, 128, 128), (1/16, 1/16, 1/16))   # commensurate with 16 cells
+grid = ReciprocalGrid.centered(lat, (128, 128, 128), (1/16, 1/16, 1/16))   # fits a 16×16×16-cell crystal
 
-cfg = FourierConfig(grid, outputs=(("int", "diffuse.h5"), ("3DPDF", "diffuse_3dpdf.h5")),
-                    aver_percent=100)                       # subtract <F> from all cells
+cfg = FourierConfig(grid, outputs=(("int", "diffuse.h5"),), aver_percent=100)   # subtract Bragg
 structure = StructureSource.stru("model.stru", crystal_cells=(16, 16, 16))
-print(cfg.render(structure))                                # inspect before running
+print(cfg.render(structure))          # read the macro first
 
 runner = Diffuse3DRunner(output_filename="diffuse.h5")
 job = runner.execute(prepare_fourier_run(runner, cfg, structure, "path/to/model.stru"), native_nexus=True)
-vol = job.load_discus_volume()                              # with_bragg == 'bragg_subtracted'
+sv = job.load_scattering_volume()     # labelled 'bragg_subtracted'; checked against cfg
 ```
 
-## What each option does in DISCUS 6.23.01
+The printed macro contains, among other lines:
 
-| Option | Macro | Observed behaviour |
+```
+fourier
+  ...
+  set aver,100.0
+  run
+  exit
+```
+
+## Options
+
+| Option | DISCUS command | What you get |
 |---|---|---|
-| `aver_percent=0` | `set aver,0.0` | total scattering; label `bragg_present` |
-| `aver_percent=100` | `set aver,100.0` | intensity = \|F − ⟨F⟩\|², **amplitudes** subtracted; on a commensurate grid the diffuse part off Bragg is unchanged and Bragg voxels become 0 (one undisplaced site per cell) |
-| `0 < aver_percent < 100` | `set aver,p` | ⟨F⟩ from a random subset of cells ("Used 50.3 % …"); **needs `seed=Seed(8 values)`** |
-| `lots=Lots("box"/"ellipsoid", (lx,ly,lz), n or "all", periodic)` | `lots box,4,4,4,64,y` | per-lot intensities summed and scaled to the whole crystal; `all` = one lot per origin cell (N³ periodic, (N − l + 1)³ open); random lots need a `Seed` |
-| `symmetry=None/"friedel"/"ignore"/"apply"` | `set symm:…` | default merges Friedel pairs; `ignore` differs by ~1e-15 |
-| `temperature="ignore"/"use"` | `temp …` | with `use`, DISCUS replaces B < 0.001 Å² in the file by 1.0 |
-| `outputs` | `value int/real/imag/3DPDF`, `form nexus` | `real`/`imag` are F − ⟨F⟩, rounded to single precision |
+| `aver_percent=0` (default) | `set aver,0.0` | total scattering (Bragg peaks included) |
+| `aver_percent=100` | `set aver,100.0` | diffuse scattering: the average structure's amplitude is subtracted before squaring, \|F − ⟨F⟩\|². On a grid that fits the crystal, Bragg points become 0 and the rest is unchanged (for a model without displacements) |
+| `0 < aver_percent < 100` | `set aver,p` | ⟨F⟩ is estimated from a random p % of the unit cells; **needs a `seed`** |
+| `lots=Lots("box", (4, 4, 4), 64, periodic=True)` | `lots box,4,4,4,64,y` | 64 random 4×4×4-cell pieces, summed and scaled to the whole crystal; **needs a `seed`** |
+| `lots=Lots("box", (4, 4, 4), "all", periodic=True)` | `lots box,4,4,4,all,y` | one piece starting at every unit cell (no seed needed) |
+| `seed=Seed((1, 2, 3, 4, 5, 6, 7, 8))` | `seed 1,2,…,8` | repeatable random choices; exactly 8 numbers, each 1–99999 |
+| `symmetry="ignore"` / `"apply"` | `set symm:…` | default (`None`) lets DISCUS merge Friedel pairs, as it does anyway |
+| `temperature="use"` | `temp use` | apply the structure's B values (DISCUS replaces B < 0.001 Å² by 1.0) |
+| `outputs=(("int", f), ("real", f2), ("imag", f3), ("3DPDF", f4))` | `value …`, `form nexus` | one NeXus file per entry; `real`/`imag` are of F − ⟨F⟩, in single precision |
 
-Bragg label: `cfg.bragg` is `bragg_subtracted` when `aver_percent > 0`, else `bragg_present`.
-A label is what the configuration requested; whether the subtraction suits a given model is a
-scientific question (see "Not covered").
+`cfg.bragg` tells you how the result will be labelled: `bragg_subtracted` when `aver_percent > 0`,
+otherwise `bragg_present`. That is what was requested. Whether subtraction is appropriate for your
+model is a scientific judgement (see "Not covered" below).
 
-## Refused, with the reason
+**"Fits the crystal"** means the grid step is 1/N in each direction for an N-cell crystal (as with
+1/16 above). Then Bragg positions fall exactly on grid points.
 
-| Request | Why |
+## What it refuses, and why
+
+| Request | Reason |
 |---|---|
-| `nufft` (no option exists) | 6.23.01 wrote **all-zero** files with exit code 0 (`FINUFFT … setpts error (ier=4)`) |
-| `set aver` < 100 or random lots without a `Seed` | the result depends on random draws |
-| a 1-value seed | not reproducible in 6.23.01 (two runs, different files); `Seed` needs 8 values in 1…99999 |
-| any output other than `int` with LOTS | DISCUS error −60 |
-| lot larger than the crystal | DISCUS error −101 (checked in Python when `crystal_cells` is known; LOTS require it) |
-| `value amp`, other wavelengths, neutrons, `disp` | not verified on 6.23.01 |
-| axis labels without a component along their index | DISCUS error −4 ("Component of increment vector is zero") |
-| file names with spaces, commas or paths | DISCUS macro arguments |
+| the `nufft` method | DISCUS 6.23.01 wrote files of all zeros and still reported success |
+| `set aver` below 100, or random LOTS, without a `Seed` | the result would change from run to run |
+| a seed with one number | not repeatable in 6.23.01 (two runs gave different files) |
+| any output other than `int` with LOTS | DISCUS stops with error −60 |
+| a piece (lot) larger than the crystal | DISCUS stops with error −101 (checked in Python; give `crystal_cells`) |
+| `value amp`, other wavelengths, neutrons, `disp` | not checked on 6.23.01 yet |
+| file names with spaces, commas or folders | they break DISCUS macro arguments |
 
-**Axis labels.** DISCUS needs each active axis to have a nonzero hkl component along its `abs/ord/top`
-label. `FourierConfig` picks `(h, k, l)` when that works and otherwise the first permutation that
-does (an `(h h l)` plane gets `abs h, ord l, top k`). `cfg.labels_verified` is True only for
-`(h, k, l)` on an hkl-aligned grid; the relabelled oblique case was run live for one `(h h l)` plane
-(below), so other oblique planes follow the same rule but have not each been run.
+**Axis labels.** For each grid axis DISCUS needs an `abs`/`ord`/`top` label (h, k or l) along which
+the axis actually moves; otherwise it stops with error −4. `FourierConfig` uses `h, k, l` when that
+works and otherwise picks a working order (for an h h l plane: `abs h, ord l, top k`).
+`cfg.labels_verified` is True when the labels are the plain `h, k, l` on a grid along h, k, l. The
+reordered case was run for one h h l plane, and other oblique planes follow the same rule.
 
-## Runner changes
+## Running and checking
 
-`Diffuse3DRunner` now also treats as failed:
-- any DISCUS error line (`***APPL***`, `***FOUR***`, `***MAC ***`, … — the start-up banner of bare
-  asterisks is not matched) and `FINUFFT … error` lines;
-- native NeXus output whose values are all zero.
-On the 35 probe logs the pattern flags exactly the 7 failed runs, and on the earlier Gate logs only
-the v1 run that DISCUS rejected.
+- `prepare_fourier_run(runner, cfg, structure, path)` puts the macro, a copy of the structure file
+  (with Unix line endings) and `fourier_config.json` into the run folder, with hashes in `inputs.json`.
+- `Diffuse3DRunner` marks a run **failed** when DISCUS prints an error line (`***APPL***`,
+  `***FOUR***`, `***MAC ***`, …), when FINUFFT reports an error, or when an output file is all zeros.
+- `job.load_scattering_volume()` reads the result and checks it against the saved configuration
+  (see [SCATTERING_DATA.md](SCATTERING_DATA.md)).
 
-`prepare_fourier_run` stages the macro, the structure file (with LF line endings; a Windows
-checkout has CRLF) and `fourier_config.json` (config + structure, hashed in `inputs.json`).
-
-## Evidence
-
-- `tests/test_fourier_macro.py` (offline, in CI): 25 configs render **byte for byte** the macros
-  DISCUS ran in the probes (every successful turbo probe except the `tl ≠ ll` plane and the 1-value
-  seeds, which are deliberately not offered); refusals; the engine facts above asserted on the
-  committed evidence files; runner failure detection with a fake engine. Ten mutations of the new
-  code (labels, seed rule, periodic flag, `aver` format, lot count, int-only, lot size, both error
-  patterns, zero check) are each caught.
-- `tests/test_fourier_live.py` (`DISCUS_LIVE=1`), **run on DISCUS 6.23.01 on 2026-10-31, 7/7 passed**
-  ([`live_b3/results.json`](../benchmarks/discus_6_23_01/b_probes/live_b3/results.json)):
-  - generated macros run through `prepare_fourier_run` + `Diffuse3DRunner` reproduced five probe
-    outputs **byte for byte** (`set aver 100`, `set aver 50` with seed, 64 random lots, all lots +
-    `aver 100`, `symm:ignore`; 9 files);
-  - the `(h h l)` plane with the generated labels `abs h, ord l, top k` ran (the probe with `ord k` had
-    been refused); its l = 0 row equals the h = k diagonal of the probe's hk0 plane to 9.7e-8
-    (relative L2), and DISCUS wrote the increment columns (0.1, 0.1, 0), (0, 0, 0.1), (0, 0, 0);
-  - a lot larger than the crystal gave status `failed` with `engine_error = ***MAC ***`.
+The measurements behind every row above are in
+[`benchmarks/discus_6_23_01/b_probes/RESULT.md`](../benchmarks/discus_6_23_01/b_probes/RESULT.md).
 
 ## Not covered
 
-Displacements and nonzero B (Bragg subtraction then also changes off-Bragg intensity),
-multi-site cells, `set aver` on non-commensurate grids (Gate 1's 1.8 % residual), `set mode:accumulate`,
-`value 3DPDF` with LOTS, `nufft`, neutron/electron radiation. Loading a run: `job.load_scattering_volume()`
-(see [SCATTERING_DATA.md](SCATTERING_DATA.md)) checks the output against the staged config.
+- Models with atomic displacements or nonzero B values (Bragg subtraction then also changes the
+  scattering away from Bragg points), and cells with several sites.
+- `set aver` on grids that do not fit the crystal (an earlier test left a 1.8 % residual).
+- `set mode:accumulate`, `value 3DPDF` together with LOTS, `nufft`, neutron or electron radiation.
+
+<details>
+<summary>How this was checked</summary>
+
+- `tests/test_fourier_macro.py` (runs in CI, no DISCUS needed): 25 configurations produce, **byte
+  for byte**, the macros that DISCUS ran in the engine tests; all refusals; the DISCUS behaviour in
+  the tables, checked against the committed output files; the runner's failure detection, using a
+  fake DISCUS. Ten deliberate bugs in the new code are each caught.
+- `tests/test_fourier_live.py` (needs DISCUS; `DISCUS_LIVE=1`) **passed 7/7 on DISCUS 6.23.01 on
+  2026-10-31** ([`live_b3/results.json`](../benchmarks/discus_6_23_01/b_probes/live_b3/results.json)):
+  - macros generated here reproduced five engine-test outputs byte for byte (`set aver 100`,
+    `set aver 50` with a seed, 64 random lots, all lots with `set aver 100`, `symm:ignore`);
+  - the h h l plane with the reordered labels ran, and its l = 0 row equals the h = k diagonal of
+    the hk0 plane (relative difference 9.7e-8);
+  - a lot larger than the crystal ended with status `failed`.
+- On the 35 engine-test logs the error-line check flags exactly the 7 runs that failed.
+</details>
