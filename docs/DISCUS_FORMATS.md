@@ -28,7 +28,7 @@ Every fact below is backed by a probe run against the real DISCUS 6.23.01
 | `ncell nx,ny,nz,ncatoms` is informational for `read stru`. | `Q5.log` | `gate2` (ncell 16,16,16,1): n[1]=4096, n[2]=2, n[3]=1, n[4]=0 |
 | Saved atom format is `A4,3(2X,F11.6),5X,F6.4`; 11 numeric fields after the name. | `gaas_222.stru` | `GA -1.000000, -1.000000, -1.000000, 1.000000, 1, 0, 0, 1.000000, _, 0, 0, 0` |
 | `format numbers,XYZBPMMOS` is written by `save`. | `gaas_222.stru` | `format numbers,XYZBPMMOS` |
-| `save` writes **no `ncell` line** (it is dropped on save), so a saved `.stru` must be read with `supercell=`. | `gaas_222.stru`, `C1_frozen.stru` | neither file has an `ncell` line |
+| `save` after `read cell …,n,n,n` writes **no `ncell` line**; the crystal size is only recoverable from the coordinates (centred, −n/2 …). | `gaas_222.stru` | no `ncell` line; x,y,z ∈ −1…+0.75 for n = 2 |
 | 5-column `.stru` (no `format`): col 4 = B, col 5 = ignored. | `Q8.log` + `corr_model_mod_out.stru` | input col4=0.5, col5=0.8 → saved `Biso 0.500000 … Occ 1.000000` |
 | A `.stru` atom line with **fewer** columns than the `format` line promises **fails**. | `Q10.log` | `***APPL*** File format specified as numbers only *** -49 ***` / `Error reading atom coordinates` |
 | Coordinates must be the fixed 6-decimal `F11.6` form; 10-decimals, scientific, and leading `+` all **fail**. | `Q12.log`, `Q12b.log`, `Q12c.log` | `***APPL*** File format specified as numbers only *** -49 ***` (all three) |

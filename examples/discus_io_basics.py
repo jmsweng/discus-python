@@ -30,9 +30,11 @@ for i in range(s.structure.n_atoms):
     b = 0.0 if s.structure.b_iso is None else s.structure.b_iso[i]
     print(f"  {s.structure.species[i]:<4} {x:.6f} {y:.6f} {z:.6f} B={b:.6f}")
 
-# 2. Build a 2×2×2 P1 GaAs Structure.
+# 2. Build a 2×2×2 P1 GaAs Structure (8 atoms per cell: 4 Ga + 4 As).
 print("\n=== Build 2×2×2 P1 GaAs ===")
 lat = Lattice.from_parameters(5.6537, 5.6537, 5.6537, 90.0, 90.0, 90.0)
+# 8 atoms per unit cell: the four fcc positions for Ga and the same shifted
+# by (1/4, 1/4, 1/4) for As.
 unit_frac = np.array(
     [
         [0.0, 0.0, 0.0],
@@ -50,21 +52,17 @@ unit_species = np.array(
     dtype=object,
 )
 n = (2, 2, 2)
-m = 4  # N / prod(n) = 32 / 8 = 4
-N = 32
-species = np.empty(N, dtype=object)
-frac = np.empty((N, 3))
-cell_index = np.zeros((N, 3), dtype=np.int64)
-for r in range(N):
-    cell_num = r // m
-    slot = r % m
-    iz = cell_num // 4
-    rem = cell_num % 4
-    iy = rem // 2
-    ix = rem % 2
-    cell_index[r] = (ix, iy, iz)
-    species[r] = unit_species[slot]
-    frac[r] = (unit_frac[slot] + np.array([ix, iy, iz])) / np.array(n)
+m = len(unit_frac)  # atoms per unit cell (8)
+N = m * n[0] * n[1] * n[2]  # 64
+# cell-major, x fastest (vectorised)
+cell_num = np.arange(N) // m
+ix = (cell_num % n[0]).astype(np.int64)
+iy = ((cell_num // n[0]) % n[1]).astype(np.int64)
+iz = (cell_num // (n[0] * n[1])).astype(np.int64)
+cell_index = np.stack([ix, iy, iz], axis=1)
+slot = np.arange(N) % m
+species = unit_species[slot]
+frac = (unit_frac[slot] + cell_index) / np.array(n, dtype=float)
 s2 = Structure(
     lat, species, frac,
     model="configuration",
@@ -72,11 +70,22 @@ s2 = Structure(
     cell_index=cell_index,
     supercell=n,
     pbc=(True, True, True),
-    min_separation=None,
 )
 print(f"atoms: {s2.n_atoms}")
 from collections import Counter
 print(f"species: {dict(Counter(s2.species))}")
+# Neighbour check: in the P1 8-atom cell the Ga (and As) sit on the fcc
+# sites, so the nearest-neighbour distance is a/sqrt(2) = 3.9978 A and every
+# atom has 4 neighbours at that distance (a Ga-As pair is closer, at
+# a*sqrt(3)/4 = 2.4480 A, but same-species neighbours are 3.9978 A apart).
+# (The 4-neighbour / 2.4480 A result is for the F-43m conventional cell in
+# gaas_222.stru, which the live tests check.)
+D = s2.distance_matrix()
+np.fill_diagonal(D, 99.0)
+nn = (D < 1.3).sum(axis=1)
+print(f"nearest-neighbour check: min distance {D.min():.4f} A "
+      f"(expected {5.6537 / 2 ** 0.5:.4f}), "
+      f"neighbours at that distance per atom: {sorted(set(nn.tolist()))}")
 
 # 3. Write .cll (unit cell) and .stru (supercell) into a temporary directory.
 print("\n=== Write .cll and .stru ===")
@@ -99,14 +108,19 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     # 4. Read them back and print atom counts.
     # A .cll stores the unit cell (8 atoms for P1 GaAs); DISCUS would expand
-    # it to 32 for a 2×2×2 supercell, but the Python API does not expand.
+    # it to 64 for a 2×2×2 supercell, but the Python API does not expand.
     s_cll = read_cll(cll_path)
     # The .stru we wrote carries an ncell line, so it reads back as the
-    # 2×2×2 supercell.  (A DISCUS-saved .stru has no ncell line; read those
-    # with supercell="infer" — see the gaas_222 fixture.)
+    # 2×2×2 supercell (64 atoms).
     s_stru = read_stru(stru_path)
     print(f".cll read-back (unit cell): {s_cll.structure.n_atoms} atoms")
     print(f".stru read-back (2×2×2): {s_stru.structure.n_atoms} atoms")
+
+    # A DISCUS-saved .stru has no ncell line (DISCUS `save` drops it), so the
+    # 64-atom centred gaas_222 fixture is read with supercell="infer".
+    s222 = read_stru("tests/fixtures/discus_6_23_01/gaas_222.stru", supercell="infer")
+    print(f"gaas_222.stru (supercell='infer'): {s222.structure.n_atoms} atoms, "
+          f"supercell {tuple(s222.structure.supercell)}")
 
     # 5. Print the first 6 lines of each written file.
     print("\n--- gaas.cll (first 6 lines) ---")

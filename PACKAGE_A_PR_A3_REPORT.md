@@ -3,7 +3,7 @@
 ## 1. Base / head / PR / environment
 
 - **Base:** `origin/main` at `b4f7721` (Package A PR A-2: Editable Structure model)
-- **Head:** `cb7ccdf` (A3-4: opt-in live DISCUS engine tests)
+- **Head:** see PR head (A3-6b: correct example and notebook, live physics checks, committed live evidence, report)
 - **PR:** [#12](https://github.com/jmsweng/discus-python/pull/12) (draft)
 - **Environment:** Windows 10, Python 3.14, DISCUS_SUITE 6.23.01 in WSL `Ubuntu-22.04`
 
@@ -11,8 +11,8 @@
 
 - `src/discuspdf/discus_io.py`: `.cll` and `.stru` reader/writer for DISCUS_SUITE 6.23.01.
 - `tests/test_discus_io_cll.py`: 22 offline tests for `.cll` parsing and writing.
-- `tests/test_discus_io_stru.py`: 15 offline tests for `.stru` parsing and writing.
-- `tests/test_discus_io_live.py`: 7 opt-in live tests (L0–L5) against the real DISCUS engine.
+- `tests/test_discus_io_stru.py`: 34 offline tests for `.stru` parsing and writing (15 original + 19 from A3-6a).
+- `tests/test_discus_io_live.py`: 7 opt-in live tests (L0–L5) against the real DISCUS engine, with physics (neighbour) checks added in A3-6b.
 - `tests/discus_live.py`: helper for running DISCUS macros via WSL.
 - `docs/DISCUS_FORMATS.md`: verified facts and 7 design decisions.
 - `docs/DISCUS_IO.md`: user documentation.
@@ -26,8 +26,8 @@
 | `.cll` atom columns | ≤ 4 (name,x,y,z[,B]) | Q1: 5-column form is rejected by DISCUS |
 | `.stru` atom columns | 12 (x,y,z,Biso,Property,MoleNo,MoleAt,Occ,St,Sh,Sk) | Q14: DISCUS writes 12 columns |
 | Missing B in `.cll` | Written as explicit `0.0` | Q1: DISCUS defaults missing B to 1.0 |
-| `.stru` without `ncell` | Treated as a single unit cell | Q5/Q7: `ncell` is optional |
-| Species names | 1–4 chars, uppercased on save, charges kept | Q9: DISCUS uppercases and truncates |
+| `.stru` without `ncell` | `supercell=` selects the supercell: `None` reads one cell only if every axis spans < 1 unit cell (else raise); `(n1,n2,n3)` uses it; `"infer"` recovers a centred crystal (`n = round(−2·lo)`) | Q4/Q5/Q7: a saved supercell is centred and spans n cells, so one-cell is wrong (A3-6a) |
+| Species names | Written **verbatim** (no upper-casing); DISCUS upper-cases on save; >4 chars rejected on read and write | Q9: DISCUS uppercases and truncates |
 | Decimal places | 6 (F11.6-style) | Q12: DISCUS accepts only fixed 6-decimal form |
 | Atomic write | Temp file + `os.replace` | Safety: no partial writes |
 | Overwrite | Refused by default | Safety: no accidental data loss |
@@ -39,23 +39,25 @@ Copied from `docs/DISCUS_FORMATS.md` "Decisions":
 1. **Writer header for `.stru`** — write `title`, `spcgr`, `cell`, `format numbers,XYZBPMMOS`, `atoms` header, and `ncell` line.
 2. **Writer decimal places** — 6 decimals, F11.6-style, no scientific notation, no leading `+`.
 3. **Deriving `cell_index`** — from `ncell n1,n2,n3,m` and atom order: `cell_index = i // m`, x-fastest.
-4. **Handling a `.stru` without `ncell`** — treat as a single unit cell.
+4. **Handling a `.stru` without `ncell`** — `supercell=` selects the supercell: `None` reads one cell only if every axis spans < 1 unit cell (else raise); `(n1,n2,n3)` uses it; `"infer"` recovers a centred crystal (`n = round(−2·lo)`). (A3-6a; overrides the original "treat as one cell".)
 5. **Telling a `.cll` from a `.stru`** — `.cll` has no `format`/`ncell` and ≤ 4 numeric columns; `.stru` has `format` and 12 columns.
-6. **Species name policy** — 1–4 chars, uppercase on write, optional trailing charge.
+6. **Species name policy** — written verbatim (no upper-casing); DISCUS upper-cases on save; >4 chars rejected on read and write.
 7. **Columns droppable only with `allow_loss=True`** — `Property`, `MoleNo`, `MoleAt`, `Occ`, `St`, `Sh`, `Sk`; `Biso` is never droppable.
 
 ## 5. Tests
 
-- **Offline:** 37 tests (22 `.cll` + 15 `.stru`), all passing.
-- **Live:** 7 tests (L0–L5), all passing with `DISCUS_LIVE=1` (~5 s).
+- **Offline:** 56 tests (22 `.cll` + 34 `.stru`), all passing.
+- **Live:** 7 tests (L0–L5), all passing with `DISCUS_LIVE=1` (~5 s); all skipped without the env var.
 - **Mutation (A3-3):** 5 breaks caught (ncell count, occupancy, order, ncell line, `/n` → `*n`).
 - **Mutation (A3-4):** 3 breaks caught (B default, ncell line, order check).
+- **Mutation (A3-6a):** 4 breaks caught — (a) `min_separation=None` back → `test_overlap_check_is_active`; (b) span guard removed → `test_no_ncell_policy`; (c) `infer` → `round(−lo)` → `test_no_ncell_policy`; (d) order check skips `m=1` → new `test_order_check_runs_for_m1`.
+- **Mutation (A3-6b):** 3 breaks caught — (a) `format_stru` writes supercell lengths → L2 + `test_roundtrip_gaas_222`; (b) `format_stru` writes `frac` unscaled → L2 + `test_roundtrip_gaas_222`; (c) `infer` off by 2 → L1/L3 + `test_no_ncell_policy`/`test_gaas_222_is_zinc_blende`.
 
 ## 6. Evidence
 
 - **Fixtures:** `tests/fixtures/discus_6_23_01/` (gaas.cll, gaas_111.stru, gaas_222.stru, p1_2x2x2_a4.stru).
 - **Probe logs:** `tests/fixtures/discus_6_23_01/evidence/` (Q1–Q14, smoke).
-- **Live evidence:** `C:\tmp\a3live\` (macro outputs, saved `.stru` files).
+- **Live evidence:** `tests/fixtures/discus_6_23_01/live_evidence/20261031T0403Z/` (7 passing-run logs + `MANIFEST.sha256`, 157 419 bytes total).
 
 ## 7. Caveats / not done
 

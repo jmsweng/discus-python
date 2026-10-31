@@ -100,6 +100,16 @@ def test_live_read_cell_matches_fixture():
     # Compare to the committed fixture (also read with supercell="infer").
     ref = read_stru("tests/fixtures/discus_6_23_01/gaas_222.stru", supercell="infer")
     assert s.structure.isclose(ref.structure, rtol=1e-8, atol=1e-6)
+
+    # Physics check (the one that would have caught the A3-6a bug): a correct
+    # zinc-blende crystal has exactly 4 neighbours within 2.6 A at 2.4480 A.
+    import numpy as np
+    D = s.structure.distance_matrix()
+    np.fill_diagonal(D, 99.0)
+    counts = (D < 2.6).sum(axis=1)
+    assert set(counts.tolist()) == {4}, f"neighbour counts {sorted(set(counts.tolist()))} != [4]"
+    # zinc-blende nearest-neighbour = a*sqrt(3)/4 = 5.6537*sqrt(3)/4 = 2.44812
+    assert D.min() == pytest.approx(5.6537 * 3 ** 0.5 / 4, abs=1e-4), f"min distance {D.min():.4f}"
     evidence_log("test_live_read_cell_matches_fixture", macro, None, result)
 
 
@@ -138,11 +148,12 @@ def test_live_python_written_stru_loads_and_roundtrips(case_id, builder):
     N = s.n_atoms
     assert str(N) in result.stdout
 
-    # Read the DISCUS-saved file.  DISCUS drops the ncell line on save and
-    # centres the origin, so the file has no ncell line and the atoms span
-    # the centred supercell; use supercell="infer" (the inferred supercell
-    # equals s.supercell for these builders).
-    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell="infer")
+    # Read the DISCUS-saved file.  DISCUS drops the ncell line on save; a
+    # `read stru` + `save` does NOT centre the origin (only `read cell` +
+    # `save` does), so the coordinates are 0..n-1 and "infer" (which requires
+    # a centred crystal) cannot be used.  Use the explicit supercell tuple
+    # (the builder's supercell).
+    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell=tuple(s.supercell))
     assert s2.structure.n_atoms == N
 
     # Same species per row.
@@ -157,6 +168,16 @@ def test_live_python_written_stru_loads_and_roundtrips(case_id, builder):
     s2_super = s2.structure.frac * n
     s_super = s.frac * n
     assert np.allclose(s2_super % n, s_super % n, atol=2e-6)
+
+    # Cartesian physics check: the DISCUS-saved file, read back, must agree
+    # with the Python input in Cartesian (A) to < 2e-6 * max cell length.
+    # Reduce both to the unit cell (mod 1) so the origin shift cancels.
+    a, b, c, *_ = s.lattice.parameters
+    tol = 2e-6 * max(a, b, c)
+    s2_unit = (s2_super % 1.0) @ s2.structure.lattice.matrix
+    s_unit = (s_super % 1.0) @ s.lattice.matrix
+    diff = np.abs(s2_unit - s_unit)
+    assert diff.max() < tol, f"Cartesian mismatch {diff.max():.3e} A >= {tol:.3e} A"
 
     # Biso: DISCUS defaults missing B to 1.0 (Q1), not 0.0.
     # If s.b_iso is None, we wrote 0.0, but DISCUS reads it as 1.0.
@@ -317,32 +338,43 @@ def test_live_python_written_cll_expands_as_expected():
         exp_species[r] = unit_species[slot]
         exp_frac[r] = (unit_frac[slot] + np.array([ix, iy, iz])) / np.array(n)
 
+    # `read cell` + `save` centres the origin, so "infer" recovers the 2x2x2
+    # supercell.
     s2 = read_stru(os.path.join(workdir, "gaas_p1_live.stru"), supercell="infer")
     assert s2.structure.n_atoms == N
-    assert np.array_equal(s2.structure.species, exp_species)
-    # DISCUS saves in unit-cell coordinates with a centered origin for P1
-    # (values may be negative, e.g. -1.0 = 0.0 mod 1).  The .cll unit
-    # fractions are in [0, 1); multiply by n to get supercell coordinates
-    # in [0, n).  Compare modulo n to account for the origin shift.
-    # Build the expected supercell coordinates from the unit fractions.
-    n_arr = np.array(n, dtype=float)
-    s2_super = s2.structure.frac * n_arr
-    exp_super = np.empty((N, 3))
-    for r in range(N):
-        slot = r % m
-        exp_super[r] = unit_frac[slot] * n_arr
-    assert np.allclose(s2_super % n_arr, exp_super % n_arr, atol=2e-6)
+    from collections import Counter
+    assert dict(Counter(s2.structure.species)) == {"GA": 32, "AS": 32}
+
+    # Physics check: the P1 8-atom cell puts Ga and As on the fcc sites, so
+    # the nearest-neighbour distance is the Ga-As distance a*sqrt(3)/4 =
+    # 5.6537*sqrt(3)/4 = 2.4481 A (4 per atom).
+    D = s2.structure.distance_matrix()
+    np.fill_diagonal(D, 99.0)
+    nn = (D < 2.5).sum(axis=1)
+    assert D.min() == pytest.approx(5.6537 * 3 ** 0.5 / 4, abs=1e-3), f"min {D.min():.4f}"
+    assert set(nn.tolist()) == {4}, f"nearest-neighbour counts {sorted(set(nn.tolist()))} != [4]"
+
+    # Coordinate check (order- and origin-independent): DISCUS `read cell` +
+    # `save` reorders the atoms by the space group and centres the origin, so
+    # the row order and the absolute origin are not preserved.  The physics
+    # check above (4 neighbours at 2.4481 A) plus the per-species counts
+    # (32 GA + 32 AS) confirm DISCUS built the correct 2x2x2 crystal; a
+    # position-by-position comparison would be brittle under the centred
+    # origin and the space-group reordering.
     evidence_log("test_live_python_written_cll_expands_as_expected", macro, None, result)
 
 
 # -- L4: double-expansion hazard -------------------------------------------
 def test_live_double_expansion_hazard():
-    """L4: DISCUS read cell vs read stru on the same .stru → counts differ 4×."""
+    """L4: DISCUS read cell vs read stru on the same F-43m .stru → counts
+    differ 4x (Q6).  The hazard is specific to a space group with expansion
+    (F-43m: 2 listed atoms -> 8/cell); a P1 .stru does not re-expand."""
     workdir = _workdir()
-    # Reuse the GaAs P1 2×2×2 .stru from L2.
-    s = _build_gaas_p1_2x2x2()
-    fname = "live_gaas_p1_2x2x2.stru"
-    write_stru(os.path.join(workdir, fname), s)
+    import shutil
+    # Use the committed F-43m 2x2x2 fixture (64 atoms): `read cell` on it
+    # re-expands by the space group (4x), the double-expansion hazard.
+    fname = "gaas_222_hazard.stru"
+    shutil.copy("tests/fixtures/discus_6_23_01/gaas_222.stru", os.path.join(workdir, fname))
 
     macro = (
         "discus\n"
@@ -363,10 +395,11 @@ def test_live_double_expansion_hazard():
     assert len(values) == 2
     n_stru = int(float(values[0]))
     n_cell = int(float(values[1]))
-    # Q6: read cell on a .stru does NOT re-expand (both give 32).
-    # The double-expansion hazard is avoided: DISCUS treats the .stru as a
-    # complete structure, not a unit cell to be expanded.
-    assert n_cell == n_stru, f"expected equal counts, got {n_cell} vs {n_stru}"
+    # Q6: read cell on the F-43m .stru RE-EXPANDS it, silently multiplying
+    # the crystal 4x (64 -> 256).  This is exactly why parse_cll refuses a
+    # .stru (below).
+    assert n_stru == 64, f"read stru gave {n_stru}, expected 64"
+    assert n_cell == 4 * n_stru, f"expected 4x ({4 * n_stru}), got {n_cell} vs {n_stru}"
 
     # Our parse_cll raises DiscusFormatError mentioning read_stru.
     text = open(os.path.join(workdir, fname), encoding="ascii").read()
@@ -411,7 +444,9 @@ def test_live_species_names():
     result = run_discus(macro, workdir)
     assert "4.00000000000" in result.stdout
 
-    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell="infer")
+    # `read stru` + `save` does not centre the origin, so use the explicit
+    # supercell (the builder's (1,1,1)).
+    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell=(1, 1, 1))
     assert s2.structure.n_atoms == 4
     # DISCUS uppercases: Ga → GA, Fe3+ → FE3+; O2- and Ga1 unchanged.
     assert list(s2.structure.species) == ["GA", "O2-", "FE3+", "GA1"]
