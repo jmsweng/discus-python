@@ -55,8 +55,8 @@ scientific question (see "Not covered").
 **Axis labels.** DISCUS needs each active axis to have a nonzero hkl component along its `abs/ord/top`
 label. `FourierConfig` picks `(h, k, l)` when that works and otherwise the first permutation that
 does (an `(h h l)` plane gets `abs h, ord l, top k`). `cfg.labels_verified` is True only for
-`(h, k, l)` on an hkl-aligned grid, the case the probes ran; the oblique case is covered by the live
-test below.
+`(h, k, l)` on an hkl-aligned grid; the relabelled oblique case was run live for one `(h h l)` plane
+(below), so other oblique planes follow the same rule but have not each been run.
 
 ## Runner changes
 
@@ -78,10 +78,15 @@ checkout has CRLF) and `fourier_config.json` (config + structure, hashed in `inp
   committed evidence files; runner failure detection with a fake engine. Ten mutations of the new
   code (labels, seed rule, periodic flag, `aver` format, lot count, int-only, lot size, both error
   patterns, zero check) are each caught.
-- `tests/test_fourier_live.py` (`DISCUS_LIVE=1`): generated macros run through the runner must
-  reproduce five probe outputs byte for byte; the `(h h l)` plane with generated labels must run and
-  its l = 0 row must equal the h = k diagonal of the probe's hk0 plane; a DISCUS error must give
-  status `failed`. Results go to `results.json` in the work directory.
+- `tests/test_fourier_live.py` (`DISCUS_LIVE=1`), **run on DISCUS 6.23.01 on 2026-10-31, 7/7 passed**
+  ([`live_b3/results.json`](../benchmarks/discus_6_23_01/b_probes/live_b3/results.json)):
+  - generated macros run through `prepare_fourier_run` + `Diffuse3DRunner` reproduced five probe
+    outputs **byte for byte** (`set aver 100`, `set aver 50` with seed, 64 random lots, all lots +
+    `aver 100`, `symm:ignore`; 9 files);
+  - the `(h h l)` plane with the generated labels `abs h, ord l, top k` ran (the probe with `ord k` had
+    been refused); its l = 0 row equals the h = k diagonal of the probe's hk0 plane to 9.7e-8
+    (relative L2), and DISCUS wrote the increment columns (0.1, 0.1, 0), (0, 0, 0.1), (0, 0, 0);
+  - a lot larger than the crystal gave status `failed` with `engine_error = ***MAC ***`.
 
 ## Not covered
 
