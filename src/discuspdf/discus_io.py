@@ -29,6 +29,7 @@ import numpy as np
 
 from .lattice import Lattice
 from .structure import Structure
+from ._safe_write import atomic_write_text
 
 # DISCUS's default isotropic B (Å²) when a ``.cll`` atom line has no B column
 # (verified by probe Q1/Q10: a missing B silently becomes 1.0 on save).
@@ -437,34 +438,15 @@ def write_cll(
     file is deleted, the target is left untouched, and an error is raised.
     """
     target = Path(path)
-    if target.exists() and not overwrite:
-        raise FileExistsError(f"refusing to overwrite existing file: {target}")
-
     text = format_cll(obj, title=title, spacegroup=spacegroup)
-
-    # ASCII check (species/titles that are not ASCII -> error).
-    try:
-        text.encode("ascii")
-    except UnicodeEncodeError as e:
-        raise ValueError(f"non-ASCII text in .cll output: {e}") from e
-
-    directory = target.parent if str(target.parent) else Path(".")
-    fd, tmp_name = tempfile.mkstemp(dir=str(directory), prefix=".cll_", suffix=".tmp")
-    os.close(fd)
-    tmp = Path(tmp_name)
-    try:
-        with open(tmp, "w", newline="\n", encoding="ascii") as f:
-            f.write(text)
-        # Read back and verify agreement with the input.
-        written = parse_cll(tmp.read_text(encoding="ascii"), source=str(tmp))
-        source = obj if isinstance(obj, DiscusCell) else obj
-        if not _cll_roundtrip_agrees(source, written, text):
-            raise ValueError("written .cll does not round-trip to the input")
-        os.replace(tmp, target)
-    except Exception:
-        if tmp.exists():
-            os.unlink(tmp)
-        raise
+    # Write atomically (refuses existing unless overwrite; temp file + os.replace).
+    tmp = atomic_write_text(target, text, overwrite=overwrite)
+    # Read back and verify agreement with the input.
+    written = parse_cll(tmp.read_text(encoding="ascii"), source=str(tmp))
+    source = obj if isinstance(obj, DiscusCell) else obj
+    if not _cll_roundtrip_agrees(source, written, text):
+        tmp.unlink()
+        raise ValueError("written .cll does not round-trip to the input")
     return target
 
 
@@ -997,31 +979,15 @@ def write_stru(
     untouched, and raise.
     """
     target = Path(path)
-    if target.exists() and not overwrite:
-        raise FileExistsError(f"refusing to overwrite existing file: {target}")
-
     text = format_stru(obj, title=title, spacegroup=spacegroup)
-    try:
-        text.encode("ascii")
-    except UnicodeEncodeError as e:
-        raise ValueError(f"non-ASCII text in .stru output: {e}") from e
-
-    directory = target.parent if str(target.parent) else Path(".")
-    fd, tmp_name = tempfile.mkstemp(dir=str(directory), prefix=".stru_", suffix=".tmp")
-    os.close(fd)
-    tmp = Path(tmp_name)
-    try:
-        with open(tmp, "w", newline="\n", encoding="ascii") as f:
-            f.write(text)
-        written = parse_stru(tmp.read_text(encoding="ascii"), source=str(tmp))
-        ref = obj if isinstance(obj, DiscusStru) else obj
-        if not _stru_roundtrip_agrees(ref, written):
-            raise ValueError("written .stru does not round-trip to the input")
-        os.replace(tmp, target)
-    except Exception:
-        if tmp.exists():
-            os.unlink(tmp)
-        raise
+    # Write atomically (refuses existing unless overwrite; temp file + os.replace).
+    tmp = atomic_write_text(target, text, overwrite=overwrite)
+    # Read back and verify agreement with the input.
+    written = parse_stru(tmp.read_text(encoding="ascii"), source=str(tmp))
+    ref = obj if isinstance(obj, DiscusStru) else obj
+    if not _stru_roundtrip_agrees(ref, written):
+        tmp.unlink()
+        raise ValueError("written .stru does not round-trip to the input")
     return target
 
 
