@@ -94,16 +94,10 @@ def test_construction_duplicate_atom_id():
 
 
 def test_construction_negative_b_iso():
-    """Negative B is allowed at construction; the writer rejects it (A3-9)."""
     lat = _cubic()
-    # Construction succeeds (the writer will reject it).
-    s = Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
-                 model="configuration", b_iso=np.array([-1.0]))
-    # The writer rejects it.
-    from discuspdf import DiscusFormatError
-    from discuspdf import format_stru
-    with pytest.raises(DiscusFormatError):
-        format_stru(s)
+    with pytest.raises(ValueError, match="b_iso"):
+        Structure(lat, np.array(["Ga"]), np.array([[0.25, 0.25, 0.25]]),
+                  model="configuration", b_iso=np.array([-1.0]))
 
 
 def test_construction_invalid_species_empty():

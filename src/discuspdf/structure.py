@@ -89,16 +89,13 @@ def _validate_pbc(pbc: tuple) -> None:
 
 
 def _validate_b_iso(b_iso: np.ndarray | None) -> None:
-    """Validate an optional (N,) float array of isotropic B factors.
-
-    Negative values are allowed here (the DISCUS writer/reader will reject
-    them with a more specific message); only shape and finiteness are
-    checked at construction time.
-    """
+    """Validate an optional (N,) float array of isotropic B factors (>= 0)."""
     if b_iso is None:
         return
     if b_iso.ndim != 1:
         raise ValueError(f"b_iso must be a 1-D array, got shape {b_iso.shape}")
+    if np.any(b_iso < 0):
+        raise ValueError("b_iso values must be >= 0")
     if not np.isfinite(b_iso).all():
         raise ValueError("b_iso contains NaN or inf values")
 
