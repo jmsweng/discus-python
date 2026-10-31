@@ -1,0 +1,1005 @@
+"""Immutable atomic-structure value type (Package A, Feature A1).
+
+A ``Structure`` holds per-atom NumPy arrays (no per-atom Python objects) plus a
+``Lattice``.  It supports two models:
+
+* ``"average"`` — a site-occupancy model (as in a CIF).  Mixed sites are several
+  rows with the same ``(site_label, cell_index)``; occupancies sum to ≤ 1.
+* ``"configuration"`` — a realised atomistic arrangement (as in a DISCUS
+  supercell).  Every occupancy is exactly 1.0; each site holds at most one atom.
+
+All stored arrays are read-only.  ``__setattr__`` and ``__delattr__`` raise.
+Functional edits return new ``Structure`` instances; the original is untouched.
+"""
+from __future__ import annotations
+
+import numpy as np
+
+from .lattice import Lattice
+from ._elements import atomic_number
+
+
+def _validate_species(species: np.ndarray) -> None:
+    """Validate a (N,) string array of species labels."""
+    if species.ndim != 1:
+        raise ValueError(f"species must be a 1-D array, got shape {species.shape}")
+    for i, s in enumerate(species):
+        if not isinstance(s, str) or not s:
+            raise ValueError(f"species[{i}] must be a non-empty string, got {s!r}")
+        if len(s) > 8:
+            raise ValueError(f"species[{i}] exceeds 8 characters: {s!r}")
+        if any(c.isspace() for c in s):
+            raise ValueError(f"species[{i}] contains whitespace: {s!r}")
+
+
+def _validate_frac(frac: np.ndarray) -> None:
+    """Validate a (N, 3) float array of fractional coordinates."""
+    if frac.ndim != 2 or frac.shape[1] != 3:
+        raise ValueError(f"frac must have shape (N, 3), got {frac.shape}")
+    if not np.isfinite(frac).all():
+        raise ValueError("frac contains NaN or inf values")
+
+
+def _validate_occupancy(occ: np.ndarray) -> None:
+    """Validate a (N,) float array of occupancies in (0, 1]."""
+    if occ.ndim != 1:
+        raise ValueError(f"occupancy must be a 1-D array, got shape {occ.shape}")
+    if np.any(occ <= 0) or np.any(occ > 1):
+        raise ValueError("occupancy values must be in (0, 1]")
+
+
+def _validate_cell_index(ci: np.ndarray, supercell: np.ndarray) -> None:
+    """Validate a (N, 3) int array of unit-cell indices inside a supercell."""
+    if ci.ndim != 2 or ci.shape[1] != 3:
+        raise ValueError(f"cell_index must have shape (N, 3), got {ci.shape}")
+    if np.any(ci < 0):
+        raise ValueError("cell_index values must be >= 0")
+    for axis in range(3):
+        if np.any(ci[:, axis] >= supercell[axis]):
+            raise ValueError(
+                f"cell_index[:, {axis}] exceeds supercell[{axis}] = {supercell[axis]}"
+            )
+
+
+def _validate_site_label(site_label: np.ndarray) -> None:
+    """Validate a (N,) string array of site labels.
+
+    Each label must be a non-empty string, at most 16 characters, with no
+    whitespace and no ``|`` or ``,`` (both are used in the internal
+    ``(site_label, cell_index)`` key format).
+    """
+    for i, s in enumerate(site_label):
+        if not isinstance(s, str) or not s:
+            raise ValueError(f"site_label[{i}] must be a non-empty string, got {s!r}")
+        if len(s) > 16:
+            raise ValueError(f"site_label[{i}] exceeds 16 characters: {s!r}")
+        if any(c.isspace() for c in s):
+            raise ValueError(f"site_label[{i}] contains whitespace: {s!r}")
+        if "|" in s or "," in s:
+            raise ValueError(f"site_label[{i}] must not contain '|' or ',': {s!r}")
+
+
+def _validate_pbc(pbc: tuple) -> None:
+    """Validate that pbc is exactly 3 real booleans."""
+    if len(pbc) != 3:
+        raise ValueError(f"pbc must be 3 booleans, got {pbc}")
+    for i, x in enumerate(pbc):
+        if not isinstance(x, (bool, np.bool_)):
+            raise ValueError(f"pbc[{i}] must be a boolean, got {x!r}")
+
+
+def _validate_b_iso(b_iso: np.ndarray | None) -> None:
+    """Validate an optional (N,) float array of isotropic B factors (>= 0)."""
+    if b_iso is None:
+        return
+    if b_iso.ndim != 1:
+        raise ValueError(f"b_iso must be a 1-D array, got shape {b_iso.shape}")
+    if np.any(b_iso < 0):
+        raise ValueError("b_iso values must be >= 0")
+    if not np.isfinite(b_iso).all():
+        raise ValueError("b_iso contains NaN or inf values")
+
+
+def _check_site_consistency(
+    model: str,
+    species: np.ndarray,
+    frac: np.ndarray,
+    occupancy: np.ndarray,
+    site_label: np.ndarray,
+    cell_index: np.ndarray,
+    b_iso: np.ndarray | None,
+) -> None:
+    """Check site-level consistency rules for the given model."""
+    n = len(species)
+    if n == 0:
+        return
+
+    # Build a structured composite key: (site_label, ci0, ci1, ci2).
+    # np.unique works on structured arrays, and this avoids the slow Python
+    # string formatting for every n.
+    dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
+    keys = np.empty(n, dtype=dtype)
+    keys["sl"] = site_label
+    keys["c0"] = cell_index[:, 0]
+    keys["c1"] = cell_index[:, 1]
+    keys["c2"] = cell_index[:, 2]
+    unique_keys, inverse, counts = np.unique(keys, return_inverse=True, return_counts=True)
+
+    def _site_name(key) -> str:
+        """Format a structured key as ``site 'S0' in cell (0, 0, 0)``."""
+        return f"site {key['sl']!r} in cell ({key['c0']}, {key['c1']}, {key['c2']})"
+
+    # Only sites with > 1 member need checking.
+    multi_mask = counts > 1
+    if not multi_mask.any():
+        return
+
+    n_multi = int(multi_mask.sum())
+
+    for key_idx in range(n_multi):
+        # Find the original unique_keys index for this multi-site.
+        orig_idx = np.where(multi_mask)[0][key_idx]
+        key = unique_keys[orig_idx]
+        members = np.where(inverse == orig_idx)[0]
+        if model == "configuration":
+            raise ValueError(
+                f"configuration model: {_site_name(key)} has "
+                f"{len(members)} atoms; a configuration site holds at most one atom"
+            )
+        # average model: all rows must share the same fractional position (<= 1e-6)
+        # and the same b_iso.
+        ref_frac = frac[members[0]]
+        if np.max(np.abs(frac[members] - ref_frac)) > 1e-6:
+            raise ValueError(
+                f"average model: {_site_name(key)} has rows with "
+                f"differing fractional positions (> 1e-6)"
+            )
+        if b_iso is not None:
+            ref_b = b_iso[members[0]]
+            if np.max(np.abs(b_iso[members] - ref_b)) > 1e-12:
+                raise ValueError(
+                    f"average model: {_site_name(key)} has rows with "
+                    f"differing b_iso values"
+                )
+        # Occupancies must sum to <= 1 + 1e-6.
+        occ_sum = float(np.sum(occupancy[members]))
+        if occ_sum > 1.0 + 1e-6:
+            raise ValueError(
+                f"average model: {_site_name(key)} has total occupancy "
+                f"{occ_sum:.6f} > 1 + 1e-6"
+            )
+
+
+def _site_keys(site_label: np.ndarray, cell_index: np.ndarray):
+    """Unique sites as (unique structured keys, per-row site index)."""
+    n = len(site_label)
+    dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
+    keys = np.empty(n, dtype=dtype)
+    keys["sl"] = site_label
+    keys["c0"] = cell_index[:, 0]
+    keys["c1"] = cell_index[:, 1]
+    keys["c2"] = cell_index[:, 2]
+    unique_sites, inverse = np.unique(keys, return_inverse=True)
+    return unique_sites, inverse.reshape(-1)
+
+
+def _candidate_pairs(bins: np.ndarray, nb: np.ndarray, periodic: bool):
+    """Yield (i, j) row-index arrays, i < j, for atoms in the same or adjacent bins.
+
+    ``bins`` is an (n, 3) int array of bin coordinates in ``[0, nb)``.  Adjacent
+    means each bin coordinate differs by at most 1 (modulo ``nb`` when periodic).
+    Each unordered pair is produced at most once.
+    """
+    n = len(bins)
+    flat = (bins[:, 0] * nb[1] + bins[:, 1]) * nb[2] + bins[:, 2]
+    order = np.argsort(flat, kind="stable")
+    sorted_bins = flat[order]
+    if periodic:
+        # distinct offsets per axis modulo nb (nb = 1 or 2 would otherwise repeat)
+        axis_offsets = [np.unique(np.array([-1, 0, 1]) % m) for m in nb]
+    else:
+        axis_offsets = [np.array([-1, 0, 1])] * 3
+    for ox in axis_offsets[0]:
+        for oy in axis_offsets[1]:
+            for oz in axis_offsets[2]:
+                nbr = bins + np.array([ox, oy, oz])
+                if periodic:
+                    nbr %= nb
+                    valid = np.ones(n, dtype=bool)
+                else:
+                    valid = np.all((nbr >= 0) & (nbr < nb), axis=1)
+                nbr_flat = (nbr[:, 0] * nb[1] + nbr[:, 1]) * nb[2] + nbr[:, 2]
+                lo = np.searchsorted(sorted_bins, nbr_flat, side="left")
+                hi = np.searchsorted(sorted_bins, nbr_flat, side="right")
+                counts = np.where(valid, hi - lo, 0)
+                total = int(counts.sum())
+                if total == 0:
+                    continue
+                i = np.repeat(np.arange(n), counts)
+                starts = np.repeat(lo - np.concatenate(([0], np.cumsum(counts)[:-1])), counts)
+                j = order[starts + np.arange(total)]
+                keep = i < j
+                yield i[keep], j[keep]
+
+
+def _check_overlap(
+    model: str,
+    frac: np.ndarray,
+    occupancy: np.ndarray,
+    site_label: np.ndarray,
+    cell_index: np.ndarray,
+    lattice: Lattice,
+    pbc: tuple[bool, bool, bool],
+    min_separation: float | None = 0.1,
+) -> None:
+    """Raise ``ValueError`` if two atoms in different sites are closer than ``min_separation`` Å.
+
+    Configuration: every pair of atoms in different sites is checked.  Average
+    model: a pair is checked only if the two sites' total occupancies add up to
+    more than 1 (split sites are legitimate).  Periodic structures use the
+    minimum image.  The check always runs unless ``min_separation is None``.
+
+    Method: a cell list.  Positions are binned so that every bin is at least
+    ``min_separation`` thick in each lattice direction; any pair closer than the
+    cutoff then lies in the same or adjacent bins.  When every axis has >= 3
+    bins, the nearest (rounded) image is the only one that can be within the
+    cutoff, so no full minimum-image search is needed; otherwise candidate
+    pairs go through ``Lattice.minimum_image``.
+    """
+    if min_separation is None:
+        return
+    n = len(frac)
+    if n < 2:
+        return
+    all_pbc = all(pbc)
+    if not all_pbc and any(pbc):
+        raise NotImplementedError("mixed PBC not yet supported")
+    cut = float(min_separation)
+    if not np.isfinite(cut) or cut <= 0:
+        raise ValueError(f"min_separation must be a positive number of Å or None, got {min_separation!r}")
+
+    unique_sites, site_of = _site_keys(site_label, cell_index)
+    site_occ = np.bincount(site_of, weights=occupancy)
+    A = lattice.matrix
+    max_bins = max(1, 4 * n)
+
+    if all_pbc:
+        d_planes = 1.0 / np.linalg.norm(lattice.reciprocal_matrix, axis=1)  # interplanar spacings (Å)
+        nb = np.maximum(1, np.floor(d_planes / cut)).astype(np.int64)
+        if np.prod(nb.astype(float)) > max_bins:
+            scale = (np.prod(nb.astype(float)) / max_bins) ** (1.0 / 3.0)
+            nb = np.maximum(1, np.floor(nb / scale)).astype(np.int64)
+        f = frac - np.floor(frac)                       # wrap to [0, 1)
+        bins = np.minimum((f * nb).astype(np.int64), nb - 1)
+        rounding_is_exact = bool(np.all(nb >= 3))
+    else:
+        cart = frac @ A
+        lo = cart.min(axis=0)
+        span = cart.max(axis=0) - lo
+        nb = np.maximum(1, np.floor(span / cut) + 1).astype(np.int64)
+        if np.prod(nb.astype(float)) > max_bins:
+            scale = (np.prod(nb.astype(float)) / max_bins) ** (1.0 / 3.0)
+            nb = np.maximum(1, np.floor(nb / scale)).astype(np.int64)
+        width = np.where(nb > 0, np.maximum(span, cut) / nb, 1.0)
+        width = np.maximum(width, cut)
+        bins = np.minimum(((cart - lo) / width).astype(np.int64), nb - 1)
+
+    worst = None  # (distance, i, j)
+    for i, j in _candidate_pairs(bins, nb, periodic=all_pbc):
+        diff_site = site_of[i] != site_of[j]
+        if model == "average":
+            diff_site &= (site_occ[site_of[i]] + site_occ[site_of[j]]) > 1.0 + 1e-9
+        i, j = i[diff_site], j[diff_site]
+        if len(i) == 0:
+            continue
+        for start in range(0, len(i), 1 << 18):
+            ii, jj = i[start:start + (1 << 18)], j[start:start + (1 << 18)]
+            df = frac[jj] - frac[ii]
+            if all_pbc:
+                if rounding_is_exact:
+                    df = df - np.rint(df)
+                else:
+                    df, _ = lattice.minimum_image(df)
+            dist = np.linalg.norm(df @ A, axis=1)
+            k = int(np.argmin(dist))
+            if dist[k] < cut and (worst is None or dist[k] < worst[0]):
+                worst = (float(dist[k]), int(ii[k]), int(jj[k]))
+    if worst is not None:
+        d, i, j = worst
+        a, b = unique_sites[site_of[i]], unique_sites[site_of[j]]
+        name = lambda key: f"site {key['sl']!r} in cell ({key['c0']}, {key['c1']}, {key['c2']})"
+        raise ValueError(f"atoms at {name(a)} and {name(b)} are {d:.6f} Å apart (< {cut} Å)")
+
+
+def _Structure_bypass_validation(
+    lattice: Lattice,
+    species: np.ndarray,
+    frac: np.ndarray,
+    *,
+    model: str,
+    occupancy: np.ndarray,
+    site_label: np.ndarray,
+    atom_id: np.ndarray,
+    b_iso: np.ndarray | None,
+    cell_index: np.ndarray,
+    supercell: tuple[int, int, int],
+    pbc: tuple[bool, bool, bool],
+) -> "Structure":
+    """Internal: create a Structure without site-consistency or overlap validation.
+
+    Used by ``concat`` and ``_subset`` where the caller has already validated
+    the individual structures.
+    """
+    species = np.array(species, dtype=object, copy=True)
+    frac = np.array(frac, dtype=float, copy=True)
+    occupancy = np.array(occupancy, dtype=float, copy=True)
+    site_label = np.array(site_label, dtype=object, copy=True)
+    atom_id = np.array(atom_id, dtype=np.int64, copy=True)
+    cell_index = np.array(cell_index, dtype=np.int64, copy=True)
+    supercell_arr = np.array(supercell, dtype=np.int64, copy=True)
+
+    if b_iso is not None:
+        b_iso = np.array(b_iso, dtype=float, copy=True)
+
+    species.flags.writeable = False
+    frac.flags.writeable = False
+    occupancy.flags.writeable = False
+    site_label.flags.writeable = False
+    atom_id.flags.writeable = False
+    if b_iso is not None:
+        b_iso.flags.writeable = False
+    cell_index.flags.writeable = False
+    supercell_arr.flags.writeable = False
+
+    obj = object.__new__(Structure)
+    object.__setattr__(obj, "_lattice", lattice)
+    object.__setattr__(obj, "_species", species)
+    object.__setattr__(obj, "_frac", frac)
+    object.__setattr__(obj, "_occupancy", occupancy)
+    object.__setattr__(obj, "_site_label", site_label)
+    object.__setattr__(obj, "_atom_id", atom_id)
+    object.__setattr__(obj, "_b_iso", b_iso)
+    object.__setattr__(obj, "_cell_index", cell_index)
+    object.__setattr__(obj, "_supercell", supercell_arr)
+    object.__setattr__(obj, "_pbc", pbc)
+    object.__setattr__(obj, "_model", model)
+    return obj
+
+
+class Structure:
+    """Immutable atomic structure.
+
+    Holds per-atom NumPy arrays (read-only) plus a ``Lattice``.  Supports
+    ``"average"`` (site-occupancy) and ``"configuration"`` (realised) models.
+    """
+
+    __slots__ = (
+        "_lattice", "_species", "_frac", "_occupancy", "_site_label",
+        "_atom_id", "_b_iso", "_cell_index", "_supercell", "_pbc", "_model",
+    )
+
+    def __init__(
+        self,
+        lattice: Lattice,
+        species: np.ndarray,
+        frac: np.ndarray,
+        *,
+        model: str,
+        occupancy: np.ndarray | None = None,
+        site_label: np.ndarray | None = None,
+        atom_id: np.ndarray | None = None,
+        b_iso: np.ndarray | None = None,
+        cell_index: np.ndarray | None = None,
+        supercell: tuple[int, int, int] = (1, 1, 1),
+        pbc: tuple[bool, bool, bool] = (True, True, True),
+        min_separation: float | None = 0.1,
+    ) -> None:
+        if model not in ("average", "configuration"):
+            raise ValueError(f"model must be 'average' or 'configuration', got {model!r}")
+
+        species = np.array(species, dtype=object, copy=True)
+        frac = np.array(frac, dtype=float, copy=True)
+        n = len(species)
+
+        _validate_species(species)
+        _validate_frac(frac)
+
+        if occupancy is None:
+            occupancy = np.ones(n, dtype=float)
+        else:
+            occupancy = np.array(occupancy, dtype=float, copy=True)
+        _validate_occupancy(occupancy)
+
+        if site_label is None:
+            # Default: species + 1-based index within that species.
+            site_label = np.empty(n, dtype=object)
+            counts: dict[str, int] = {}
+            for i in range(n):
+                s = species[i]
+                counts[s] = counts.get(s, 0) + 1
+                site_label[i] = f"{s}{counts[s]}"
+        else:
+            site_label = np.array(site_label, dtype=object, copy=True)
+            if site_label.shape != (n,):
+                raise ValueError(f"site_label must have shape ({n},), got {site_label.shape}")
+            _validate_site_label(site_label)
+
+        if atom_id is None:
+            atom_id = np.arange(n, dtype=np.int64)
+        else:
+            atom_id = np.array(atom_id, dtype=np.int64, copy=True)
+            if atom_id.shape != (n,):
+                raise ValueError(f"atom_id must have shape ({n},), got {atom_id.shape}")
+            if np.any(atom_id < 0):
+                raise ValueError("atom_id values must be >= 0")
+            if len(np.unique(atom_id)) != n:
+                raise ValueError("atom_id values must be unique")
+
+        if b_iso is not None:
+            b_iso = np.array(b_iso, dtype=float, copy=True)
+        _validate_b_iso(b_iso)
+
+        if cell_index is None:
+            cell_index = np.zeros((n, 3), dtype=np.int64)
+        else:
+            cell_index = np.array(cell_index, dtype=np.int64, copy=True)
+        supercell_arr = np.array(supercell, dtype=np.int64, copy=True)
+        _validate_cell_index(cell_index, supercell_arr)
+
+        if supercell_arr.shape != (3,) or np.any(supercell_arr < 1):
+            raise ValueError(f"supercell must be (3,) ints >= 1, got {supercell_arr}")
+        supercell = supercell_arr
+
+        pbc = tuple(pbc)
+        _validate_pbc(pbc)
+
+        # Model-specific validation.
+        if model == "configuration":
+            if np.any(occupancy != 1.0):
+                raise ValueError(
+                    "configuration model: all occupancies must be exactly 1.0; "
+                    "for partial occupancies use model='average'"
+                )
+
+        # Site consistency check.
+        _check_site_consistency(
+            model, species, frac, occupancy, site_label, cell_index, b_iso
+        )
+
+        # Overlap check.
+        _check_overlap(
+            model, frac, occupancy, site_label, cell_index,
+            lattice, pbc, min_separation=min_separation,
+        )
+
+        # Store read-only.
+        species.flags.writeable = False
+        frac.flags.writeable = False
+        occupancy.flags.writeable = False
+        site_label.flags.writeable = False
+        atom_id.flags.writeable = False
+        if b_iso is not None:
+            b_iso.flags.writeable = False
+        cell_index.flags.writeable = False
+        supercell.flags.writeable = False
+
+        object.__setattr__(self, "_lattice", lattice)
+        object.__setattr__(self, "_species", species)
+        object.__setattr__(self, "_frac", frac)
+        object.__setattr__(self, "_occupancy", occupancy)
+        object.__setattr__(self, "_site_label", site_label)
+        object.__setattr__(self, "_atom_id", atom_id)
+        object.__setattr__(self, "_b_iso", b_iso)
+        object.__setattr__(self, "_cell_index", cell_index)
+        object.__setattr__(self, "_supercell", supercell)
+        object.__setattr__(self, "_pbc", pbc)
+        object.__setattr__(self, "_model", model)
+
+    @classmethod
+    def from_cartesian(
+        cls,
+        lattice: Lattice,
+        species: np.ndarray,
+        cart: np.ndarray,
+        *,
+        model: str,
+        **kwargs,
+    ) -> "Structure":
+        """Build a Structure from Cartesian coordinates (Å).
+
+        Converts to fractional via ``lattice.cart_to_frac`` and delegates to
+        :meth:`__init__`.
+        """
+        cart = np.asarray(cart, dtype=float)
+        if cart.ndim != 2 or cart.shape[1] != 3:
+            raise ValueError(f"cart must have shape (N, 3), got {cart.shape}")
+        if not np.isfinite(cart).all():
+            raise ValueError("cart contains NaN or inf values")
+        frac = lattice.cart_to_frac(cart)
+        return cls(lattice, species, frac, model=model, **kwargs)
+
+    def __setattr__(self, name, value) -> None:
+        raise AttributeError(f"Structure is immutable; cannot set {name!r}")
+
+    def __delattr__(self, name) -> None:
+        raise AttributeError(f"Structure is immutable; cannot delete {name!r}")
+
+    # -- properties -------------------------------------------------------
+    @property
+    def n_atoms(self) -> int:
+        """Number of atom rows."""
+        return len(self._species)
+
+    @property
+    def lattice(self) -> Lattice:
+        """The lattice (frame for fractional coordinates)."""
+        return self._lattice
+
+    @property
+    def species(self) -> np.ndarray:
+        """(N,) string array of species labels. Read-only view."""
+        return self._species
+
+    @property
+    def frac(self) -> np.ndarray:
+        """(N, 3) float array of fractional coordinates. Read-only view."""
+        return self._frac
+
+    @property
+    def cartesian(self) -> np.ndarray:
+        """(N, 3) float array of Cartesian coordinates in Å. Returns a copy."""
+        return self._frac @ self._lattice.matrix
+
+    @property
+    def occupancy(self) -> np.ndarray:
+        """(N,) float array of occupancies. Read-only view."""
+        return self._occupancy
+
+    @property
+    def site_label(self) -> np.ndarray:
+        """(N,) string array of site labels. Read-only view."""
+        return self._site_label
+
+    @property
+    def atom_id(self) -> np.ndarray:
+        """(N,) int64 array of atom IDs. Read-only view."""
+        return self._atom_id
+
+    @property
+    def b_iso(self) -> np.ndarray | None:
+        """(N,) float array of isotropic B factors (Å²) or None. Read-only view."""
+        return self._b_iso
+
+    @property
+    def cell_index(self) -> np.ndarray:
+        """(N, 3) int array of unit-cell indices. Read-only view."""
+        return self._cell_index
+
+    @property
+    def supercell(self) -> np.ndarray:
+        """(3,) int array of supercell repetitions. Read-only view."""
+        return self._supercell
+
+    @property
+    def pbc(self) -> tuple[bool, bool, bool]:
+        """3-tuple of periodic-axis booleans."""
+        return self._pbc
+
+    @property
+    def model(self) -> str:
+        """'average' or 'configuration'."""
+        return self._model
+
+    # -- summaries --------------------------------------------------------
+    def sites(self) -> list[dict]:
+        """Table of unique sites with members and total occupancy.
+
+        Returns a list of dicts, one per unique (site_label, cell_index) pair:
+        ``{"site_label": str, "cell_index": (i, j, k), "members": [row_idx, ...],
+        "total_occupancy": float}``.
+        """
+        n = self.n_atoms
+        if n == 0:
+            return []
+        keys = [
+            f"{self._site_label[i]}|{self._cell_index[i, 0]},{self._cell_index[i, 1]},{self._cell_index[i, 2]}"
+            for i in range(n)
+        ]
+        unique_keys, inverse = np.unique(np.array(keys, dtype=object), return_inverse=True)
+        result = []
+        for key_idx, key in enumerate(unique_keys):
+            parts = key.split("|")
+            site_label = parts[0]
+            ci = tuple(int(x) for x in parts[1].split(","))
+            members = list(np.where(inverse == key_idx)[0])
+            total_occ = float(np.sum(self._occupancy[members]))
+            result.append({
+                "site_label": site_label,
+                "cell_index": ci,
+                "members": members,
+                "total_occupancy": total_occ,
+            })
+        return result
+
+    def atomic_numbers(self) -> np.ndarray:
+        """(N,) int array of atomic numbers.
+
+        Resolves each species label via ``_elements.atomic_number``; unknown
+        labels raise ``ValueError`` here (not at construction).
+        """
+        return np.array([atomic_number(s) for s in self._species], dtype=np.int64)
+
+    def composition(self) -> dict[str, float]:
+        """Dict species -> occupancy-weighted count."""
+        comp: dict[str, float] = {}
+        for i in range(self.n_atoms):
+            s = self._species[i]
+            comp[s] = comp.get(s, 0.0) + float(self._occupancy[i])
+        return comp
+
+    def counts(self) -> dict[str, int]:
+        """Dict species -> number of rows."""
+        c: dict[str, int] = {}
+        for s in self._species:
+            c[s] = c.get(s, 0) + 1
+        return c
+
+    def formula(self) -> str:
+        """Chemical formula string, e.g. 'GaAs' or 'Cu0.75Au0.25'."""
+        comp = self.composition()
+        parts = []
+        for s, count in comp.items():
+            if count == 1.0:
+                parts.append(s)
+            else:
+                parts.append(f"{s}{count:.2f}".rstrip("0").rstrip("."))
+        return "".join(parts)
+
+    # -- selection --------------------------------------------------------
+    def select(
+        self,
+        mask: np.ndarray | None = None,
+        *,
+        ids: np.ndarray | None = None,
+        rows: np.ndarray | None = None,
+        species: str | list[str] | None = None,
+        site: str | None = None,
+        allow_empty: bool = False,
+    ) -> "Structure":
+        """Return a new Structure with the selected rows (original atom_ids, original order).
+
+        ``ids`` selects by ``atom_id`` values (not row numbers); unknown ids raise
+        ``ValueError``.  ``rows`` selects by row position.  An empty selection
+        raises ``ValueError`` unless ``allow_empty=True``.
+        """
+        n = self.n_atoms
+        if mask is not None:
+            mask = np.asarray(mask, dtype=bool)
+            if mask.shape != (n,):
+                raise ValueError(f"mask must have shape ({n},), got {mask.shape}")
+            selected = mask
+        elif ids is not None:
+            rows_ = self._rows_for_ids(ids)
+            selected = np.zeros(n, dtype=bool)
+            selected[rows_] = True
+        elif rows is not None:
+            rows_ = np.asarray(rows, dtype=np.int64)
+            if np.any(rows_ < 0) or np.any(rows_ >= n):
+                raise ValueError(f"rows must be in [0, {n})")
+            selected = np.zeros(n, dtype=bool)
+            selected[rows_] = True
+        elif species is not None:
+            if isinstance(species, str):
+                species = [species]
+            selected = np.isin(self._species, species)
+        elif site is not None:
+            selected = self._site_label == site
+        else:
+            selected = np.ones(n, dtype=bool)
+
+        if not selected.any() and not allow_empty:
+            raise ValueError("empty selection; pass allow_empty=True to permit it")
+
+        idx = np.where(selected)[0]
+        return self._subset(idx)
+
+    def _subset(self, idx: np.ndarray) -> "Structure":
+        """Internal: create a new Structure from the given row indices.
+
+        Skips re-validation on purpose: any subset of a valid structure is valid
+        (no new sites, positions or occupancies are introduced).
+        """
+        b_iso = self._b_iso[idx].copy() if self._b_iso is not None else None
+        return _Structure_bypass_validation(
+            lattice=self._lattice,
+            species=self._species[idx],
+            frac=self._frac[idx],
+            model=self._model,
+            occupancy=self._occupancy[idx],
+            site_label=self._site_label[idx],
+            atom_id=self._atom_id[idx],
+            b_iso=b_iso,
+            cell_index=self._cell_index[idx],
+            supercell=tuple(self._supercell),
+            pbc=self._pbc,
+        )
+
+    # -- functional edits -------------------------------------------------
+    def replace(self, *, min_separation: float | None = 0.1, **fields) -> "Structure":
+        """Return a new Structure with the given fields replaced.
+
+        Supported fields: species, frac, occupancy, site_label, atom_id,
+        b_iso, cell_index, supercell, pbc.  The result is fully re-validated,
+        including the overlap check; pass ``min_separation=None`` to skip it.
+        """
+        if not fields:
+            return self
+        allowed = ("species", "frac", "occupancy", "site_label", "atom_id",
+                   "b_iso", "cell_index", "supercell", "pbc")
+        for name in fields:
+            if name not in allowed:
+                raise ValueError(f"unknown field {name!r} for replace()")
+        kwargs = {
+            "species": self._species.copy(),
+            "frac": self._frac.copy(),
+            "occupancy": self._occupancy.copy(),
+            "site_label": self._site_label.copy(),
+            "atom_id": self._atom_id.copy(),
+            "b_iso": None if self._b_iso is None else self._b_iso.copy(),
+            "cell_index": self._cell_index.copy(),
+            "supercell": tuple(self._supercell),
+            "pbc": self._pbc,
+        }
+        kwargs.update(fields)
+        return Structure(self._lattice, model=self._model,
+                         min_separation=min_separation, **kwargs)
+
+    def with_frac(self, frac: np.ndarray, *, min_separation: float | None = 0.1) -> "Structure":
+        """Return a new Structure with the given fractional coordinates (re-validated)."""
+        return self.replace(frac=np.asarray(frac, dtype=float), min_separation=min_separation)
+
+    def with_cartesian(self, cart: np.ndarray, *, min_separation: float | None = 0.1) -> "Structure":
+        """Return a new Structure with the given Cartesian coordinates in Å (re-validated)."""
+        frac = self._lattice.cart_to_frac(np.asarray(cart, dtype=float))
+        return self.replace(frac=frac, min_separation=min_separation)
+
+    def with_occupancy(self, values: np.ndarray, *, min_separation: float | None = 0.1) -> "Structure":
+        """Return a new Structure with the given occupancies (re-validated)."""
+        return self.replace(occupancy=np.asarray(values, dtype=float), min_separation=min_separation)
+
+    def remove(self, ids: np.ndarray) -> "Structure":
+        """Return a new Structure without the given atom IDs.
+
+        ``ids`` are ``atom_id`` values; unknown ids raise ``ValueError``.
+        """
+        rows_ = self._rows_for_ids(ids)
+        mask = np.ones(self.n_atoms, dtype=bool)
+        mask[rows_] = False
+        idx = np.where(mask)[0]
+        if len(idx) == 0:
+            raise ValueError("removing all atoms; pass allow_empty=True to permit it")
+        return self._subset(idx)
+
+    def concat(self, other: "Structure", *, renumber: bool = False,
+               min_separation: float | None = 0.1) -> "Structure":
+        """Return a new Structure that is the concatenation of self and other.
+
+        Lattices must be isclose; model, supercell and pbc must be equal; either
+        both or neither structure has ``b_iso``.  atom_id clashes raise unless
+        ``renumber=True``, in which case other's IDs are shifted to start at
+        max(existing) + 1.  The result is fully re-validated (site consistency
+        and overlap check); pass ``min_separation=None`` to skip the overlap check.
+        """
+        if not self._lattice.isclose(other._lattice):
+            raise ValueError("concat: lattices are not isclose")
+        if self._model != other._model:
+            raise ValueError(f"concat: models differ ({self._model!r} vs {other._model!r})")
+        if not np.array_equal(self._supercell, other._supercell):
+            raise ValueError(
+                f"concat: supercells differ ({tuple(self._supercell)} vs {tuple(other._supercell)})")
+        if self._pbc != other._pbc:
+            raise ValueError(f"concat: pbc differ ({self._pbc} vs {other._pbc})")
+        if (self._b_iso is None) != (other._b_iso is None):
+            raise ValueError("concat: only one structure has b_iso; set it on both or neither")
+
+        if renumber:
+            max_id = max(int(self._atom_id.max()), int(other._atom_id.max()))
+            id2 = other._atom_id - int(other._atom_id.min()) + (max_id + 1)
+        else:
+            id2 = other._atom_id
+        atom_id = np.concatenate([self._atom_id, id2])
+        if not renumber and len(np.unique(atom_id)) != len(atom_id):
+            raise ValueError("concat: atom_id clash; pass renumber=True to reassign IDs")
+
+        b_iso = None
+        if self._b_iso is not None:
+            b_iso = np.concatenate([self._b_iso, other._b_iso])
+        return Structure(
+            self._lattice,
+            np.concatenate([self._species, other._species]),
+            np.concatenate([self._frac, other._frac]),
+            model=self._model,
+            occupancy=np.concatenate([self._occupancy, other._occupancy]),
+            site_label=np.concatenate([self._site_label, other._site_label]),
+            atom_id=atom_id,
+            b_iso=b_iso,
+            cell_index=np.concatenate([self._cell_index, other._cell_index]),
+            supercell=tuple(self._supercell),
+            pbc=self._pbc,
+            min_separation=min_separation,
+        )
+
+    def renumbered(self) -> "Structure":
+        """Return a new Structure with atom_ids renumbered to 0..N-1.
+
+        This is the **only** method that changes atom_ids.
+        """
+        new_ids = np.arange(self.n_atoms, dtype=np.int64)
+        return self.replace(atom_id=new_ids)
+
+    # -- distances --------------------------------------------------------
+    def _check_pbc(self) -> None:
+        all_pbc = all(self._pbc)
+        no_pbc = not any(self._pbc)
+        if not all_pbc and not no_pbc:
+            raise NotImplementedError("mixed PBC not yet supported")
+
+    def distance(self, id_a: int, id_b: int) -> float:
+        """Distance in Å between two atoms (minimum image if periodic)."""
+        self._check_pbc()
+        i = self._row_for_id(id_a)
+        j = self._row_for_id(id_b)
+        df = self._frac[i] - self._frac[j]
+        if all(self._pbc):
+            df_min, _ = self._lattice.minimum_image(df)
+            return float(np.linalg.norm(df_min @ self._lattice.matrix))
+        return float(np.linalg.norm(df @ self._lattice.matrix))
+
+    def distance_matrix(self, ids: np.ndarray | None = None) -> np.ndarray:
+        """(M, M) distance matrix in Å.  Refuses M > 5000."""
+        self._check_pbc()
+        if ids is None:
+            idx = np.arange(self.n_atoms)
+        else:
+            idx = self._rows_for_ids(ids)
+        m = len(idx)
+        if m > 5000:
+            raise ValueError(
+                f"distance_matrix: M = {m} > 5000; use Package C neighbour lists "
+                "for large structures"
+            )
+        A = self._lattice.matrix
+        frac = self._frac[idx]
+        if not all(self._pbc):
+            cart = frac @ A
+            return np.linalg.norm(cart[:, None, :] - cart[None, :, :], axis=2)
+        # Periodic: all i < j pairs, batched through Lattice.minimum_image in chunks.
+        out = np.zeros((m, m))
+        iu, ju = np.triu_indices(m, k=1)
+        for start in range(0, len(iu), 1 << 18):
+            i, j = iu[start:start + (1 << 18)], ju[start:start + (1 << 18)]
+            df, _ = self._lattice.minimum_image(frac[j] - frac[i])
+            d = np.linalg.norm(df @ A, axis=1)
+            out[i, j] = d
+            out[j, i] = d
+        return out
+
+    def displacement(self, id_a: int, id_b: int) -> np.ndarray:
+        """Cartesian minimum-image displacement vector from atom a to atom b (Å)."""
+        self._check_pbc()
+        i = self._row_for_id(id_a)
+        j = self._row_for_id(id_b)
+        df = self._frac[j] - self._frac[i]
+        if all(self._pbc):
+            df_min, _ = self._lattice.minimum_image(df)
+            return df_min @ self._lattice.matrix
+        return df @ self._lattice.matrix
+
+    def _row_for_id(self, atom_id: int) -> int:
+        """Find the row index for a given atom_id (raises if unknown)."""
+        return int(self._rows_for_ids(np.array([atom_id], dtype=np.int64))[0])
+
+    def _rows_for_ids(self, ids: np.ndarray) -> np.ndarray:
+        """Vectorised lookup: rows for the given atom_id values.
+
+        Unknown ids raise ``ValueError`` naming up to five of them.
+        """
+        ids = np.asarray(ids, dtype=np.int64)
+        order = np.argsort(self._atom_id)
+        positions = np.searchsorted(self._atom_id, ids, sorter=order)
+        found = (positions < self.n_atoms) & (
+            self._atom_id[order][np.minimum(positions, self.n_atoms - 1)] == ids
+        )
+        missing = ids[~found]
+        if missing.size:
+            shown = np.unique(missing)[:5]
+            names = ", ".join(str(int(x)) for x in shown)
+            more = f" (and {missing.size - shown.size} more)" if missing.size > 5 else ""
+            raise ValueError(f"unknown atom_id(s): {names}{more}")
+        rows = order[positions]
+        rows[~found] = 0  # keep indices valid; only valid rows are used
+        return rows
+
+    def _cartesian_subset(self, idx: np.ndarray) -> np.ndarray:
+        return self._frac[idx] @ self._lattice.matrix
+
+    # -- wrapping ---------------------------------------------------------
+    def wrapped(self) -> "Structure":
+        """Return a new Structure with fractional coordinates wrapped to [0, 1).
+
+        Only valid on fully periodic structures.  ``cell_index`` is unchanged.
+        Wrapping changes coordinates but not physics.
+        """
+        if not all(self._pbc):
+            raise ValueError("wrapped() is only valid on fully periodic structures")
+        frac_wrapped = self._frac % 1.0
+        return self.replace(frac=frac_wrapped)
+
+    # -- comparison -------------------------------------------------------
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Structure):
+            return False
+        return (
+            self._lattice == other._lattice
+            and np.array_equal(self._species, other._species)
+            and np.array_equal(self._frac, other._frac)
+            and np.array_equal(self._occupancy, other._occupancy)
+            and np.array_equal(self._site_label, other._site_label)
+            and np.array_equal(self._atom_id, other._atom_id)
+            and np.array_equal(self._cell_index, other._cell_index)
+            and np.array_equal(self._supercell, other._supercell)
+            and self._pbc == other._pbc
+            and self._model == other._model
+            and ((self._b_iso is None and other._b_iso is None)
+                 or (self._b_iso is not None and other._b_iso is not None
+                     and np.array_equal(self._b_iso, other._b_iso)))
+        )
+
+    def isclose(self, other: "Structure", rtol: float = 1e-12, atol: float = 1e-15) -> bool:
+        """Element-wise closeness of the numeric fields.
+
+        Species, site_label, atom_id, cell_index, supercell, pbc and model are
+        compared exactly; tolerances apply only to the lattice, frac, occupancy
+        and b_iso.  Returns ``False`` if exactly one side has ``b_iso``.
+        """
+        if not isinstance(other, Structure):
+            raise TypeError("isclose requires another Structure")
+        if self._model != other._model:
+            return False
+        if self.n_atoms != other.n_atoms:
+            return False
+        if not np.array_equal(self._species, other._species):
+            return False
+        if not np.array_equal(self._site_label, other._site_label):
+            return False
+        if not np.array_equal(self._atom_id, other._atom_id):
+            return False
+        if not np.array_equal(self._cell_index, other._cell_index):
+            return False
+        if not np.array_equal(self._supercell, other._supercell):
+            return False
+        if self._pbc != other._pbc:
+            return False
+        if (self._b_iso is None) != (other._b_iso is None):
+            return False
+        if not self._lattice.isclose(other._lattice, rtol=rtol, atol=atol):
+            return False
+        if not np.allclose(self._frac, other._frac, rtol=rtol, atol=atol):
+            return False
+        if not np.allclose(self._occupancy, other._occupancy, rtol=rtol, atol=atol):
+            return False
+        if self._b_iso is not None:
+            if not np.allclose(self._b_iso, other._b_iso, rtol=rtol, atol=atol):
+                return False
+        return True
+
+    __hash__ = None  # type: ignore
+
+    def __repr__(self) -> str:
+        a, b, c, alpha, beta, gamma = self._lattice.parameters
+        return (
+            f"Structure(n={self.n_atoms}, formula={self.formula()}, "
+            f"model={self._model!r}, supercell={tuple(self._supercell)}, "
+            f"a={a:.4g} Å, b={b:.4g} Å, c={c:.4g} Å, "
+            f"alpha={alpha:.4g}°, beta={beta:.4g}°, gamma={gamma:.4g}°)"
+        )

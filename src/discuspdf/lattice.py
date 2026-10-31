@@ -255,6 +255,14 @@ class Lattice:
            then 2; components equal if they differ by < 1e-12). In a cubic
            cell this maps half-cell ties to −½, i.e. the half-open interval
            [−½, ½). The result is deterministic and translation invariant.
+
+        Performance: the candidate-offset grid is enumerated in chunks sized
+        by *element* count (``chunk = max(1, 2**20 // K)`` rows, ``K`` =
+        number of candidate offsets), so each ``(chunk, K, 3)`` float64
+        temporary stays at about 8 MB (2**20 · 8 bytes) regardless
+        of the number of displacements. The tie-resolution block (reduced
+        vectors + lexsort) allocates a few more temporaries of the same
+        shape, so the peak stays at a small multiple of the budget.
         """
         df = np.asarray(df, dtype=float)
         if df.shape[-1:] != (3,):
@@ -269,17 +277,21 @@ class Lattice:
         n0 = np.rint(flat)
         r0 = (flat - n0) @ A
         R = np.linalg.norm(r0, axis=1)
+        # Bounded search window for the offset k = n - n0 (see the bound below).
         Rmax = R.max() if R.size else 0.0
-        # Bounded search window for the offset k = n - n0: |k_i| <= R |b_i| (rows of B).
         b_norms = np.linalg.norm(B, axis=1)  # (3,)
-        bounds = np.ceil(Rmax * b_norms).astype(int) + 1
+        # Exact bound: any image within R of the origin has |red'_i| <= R |b_i|, and
+        # red' = red - k with |red_i| <= 1/2, so |k_i| <= R |b_i| + 1/2.  A tiny
+        # relative slack keeps candidates that tie within the tie tolerance.
+        bounds = np.floor(0.5 + Rmax * b_norms * (1.0 + 1e-9) + 1e-9).astype(int)
         # Candidate offsets k in the box [-bounds, +bounds] per axis.
         ranges = [np.arange(-bounds[i], bounds[i] + 1) for i in range(3)]
         grid = np.stack(np.meshgrid(*ranges, indexing="ij"), axis=-1)  # (N1, N2, N3, 3)
         k_all = grid.reshape(-1, 3).astype(float)  # (K, 3)
 
         # Process in chunks so the temporary (chunk, K, 3) stays bounded.
-        chunk = max(1, min(flat.shape[0], 65536 // max(k_all.shape[0], 1)))
+        # Budget: 2**20 elements (~8 MB) per temporary.
+        chunk = max(1, 2**20 // max(k_all.shape[0], 1))
         out = np.empty_like(flat)
         n_out = np.empty(flat.shape, dtype=np.int64)
         for start in range(0, flat.shape[0], chunk):
@@ -297,16 +309,29 @@ class Lattice:
             atol = 1e-12 * Rc + 1e-15
             tie = dist <= dmin[:, None] + atol[:, None]  # (chunk, K)
             if tie.any():
-                # Reduced fractional vector for each candidate: (df - (n0 + k))
-                red = fc[:, None, :] - nc[:, None, :] - k_all[None, :, :]  # (chunk, K, 3)
-                # Lexicographic key with 1e-12 component equality:
-                # key = (round(red_0 / 1e-12)) * S^2 + (round(red_1 / 1e-12)) * S + round(red_2 / 1e-12)
-                S = 2 * int(bounds.max()) + 3  # > max possible |red_i / 1e-12| in the window
-                key = (np.round(red[:, :, 0] / 1e-12) * S**2
-                       + np.round(red[:, :, 1] / 1e-12) * S
-                       + np.round(red[:, :, 2] / 1e-12))
-                key[~tie] = np.inf
-                best = key.argmin(axis=1)
+                # Lexicographic key with 1e-12 component equality: divide each
+                # reduced component by 1e-12 first, then round, so the key is
+                # the integer number of 1e-12 units (np.round(x / 1e-12)).
+                # Ties are resolved WITHIN EACH ROW: the row index is the
+                # primary sort key, so the first entry per row (smallest
+                # reduced vector, component 0 then 1 then 2) wins.
+                # This is exact: two tied candidates of the same row differ
+                # by an integer lattice vector, so their reduced components
+                # differ by integers, which cannot collapse under 1e-12
+                # rounding.
+                # The reduced vector of a tied candidate is (df - (n0 + k)),
+                # i.e. the main-loop ``d`` values at the tied positions.
+                tie_rows, tie_cols = np.nonzero(tie)
+                red_t = d[tie_rows, tie_cols]  # (T, 3)
+                order = np.lexsort((
+                    np.round(red_t[:, 2] / 1e-12),
+                    np.round(red_t[:, 1] / 1e-12),
+                    np.round(red_t[:, 0] / 1e-12),
+                    tie_rows,
+                ))
+                # First (per-row) entry after the sort wins the tie.
+                _, first_pos = np.unique(tie_rows[order], return_index=True)
+                best[tie_rows[order[first_pos]]] = tie_cols[order[first_pos]]
             n_best = (nc + k_all[best]).astype(int)
             out[start:stop] = fc - n_best
             n_out[start:stop] = n_best
