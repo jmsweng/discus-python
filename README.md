@@ -103,6 +103,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.ReciprocalGrid` describes regular reciprocal-space volumes, oblique planes and lines in hkl on a `Lattice`, with Cartesian Q, DISCUS `ll/lr/ul/tl` corners and a report of which 3D transform is exact for the grid. See [docs/RECIPROCAL_GRID.md](docs/RECIPROCAL_GRID.md).
 
+## Labelled scattering data
+
+`discuspdf.ScatteringVolume` holds reciprocal-space values on a `ReciprocalGrid` with variance, an explicit mask, units, Bragg treatment, corrections and provenance; it converts to/from xarray and has a versioned HDF5 format. See [docs/SCATTERING_DATA.md](docs/SCATTERING_DATA.md).
+
 ## Notes
 
 The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.

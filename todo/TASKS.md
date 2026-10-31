@@ -84,11 +84,13 @@ The existing DISCUS engine may implement some of these physical methods already.
 
 - [x] **B6 / Feature 6:** Flexible reciprocal-space grid objects for HKL/oblique planes or volumes with validated Q transforms. [`src/discuspdf/reciprocal_grid.py`](../src/discuspdf/reciprocal_grid.py) · [`tests/test_reciprocal_grid.py`](../tests/test_reciprocal_grid.py) · [`docs/RECIPROCAL_GRID.md`](../docs/RECIPROCAL_GRID.md); checked against textbook d-spacings and the real C3/C4 DISCUS grids.
   - *Open items: DISCUS plane/line output metadata (engine probe); transform for skewed volumes; `DiscusVolume` onto `Lattice`/`ReciprocalGrid`.*
-- [ ] **B7 / Feature 7:** Labeled `xarray` scattering data, physical coordinates, uncertainties, masks, lattice and provenance; integration with existing `ReciprocalVolume`.
+- [x] **B7 / Feature 7:** Labeled `xarray` scattering data, physical coordinates, uncertainties, masks, lattice and provenance; integration with existing `ReciprocalVolume`. [`src/discuspdf/scattering_data.py`](../src/discuspdf/scattering_data.py) · [`tests/test_scattering_data.py`](../tests/test_scattering_data.py) · [`docs/SCATTERING_DATA.md`](../docs/SCATTERING_DATA.md); transforms reproduce `delta_pdf_fractional` on real C3.
+  - *Open items: chunked/lazy access (no size test yet); DISCUS plane files (engine probe).*
 - [ ] **B8 / Feature 8:** Python control of **verified** average-structure/Bragg separation plus benchmarked diffuse output. *Manual preprocessing labels exist, but are not proof of correction.*
 - [ ] **B9 / Feature 9:** Python controls and tests for **verified** DISCUS LOTS averaging, including lot size, sampling, seed and normalization.
 - [ ] **B18 / Feature 18:** Mantid MDHisto/NeXus reciprocal data import/export with projection matrix, uncertainties, masks and frame verification.
-- [ ] **B19 / Feature 19:** Versioned xarray/HDF5/Zarr persistence with validated schema and scientific provenance. *A basic HDF5 loader already exists; this task is broader.*
+- [x] **B19 / Feature 19:** Versioned xarray/HDF5/Zarr persistence with validated schema and scientific provenance. HDF5 schema `discuspdf.ScatteringVolume` v1 with per-array SHA-256 and per-version readers; see [`docs/SCATTERING_DATA.md`](../docs/SCATTERING_DATA.md).
+  - *Open items: Zarr (not needed yet); first real schema migration when v2 exists.*
 - [ ] **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. *A basic 2D FFT slice plot already exists.*
 
 ### Package C — [Disorder and correlations](03_disorder_and_correlations.md)
