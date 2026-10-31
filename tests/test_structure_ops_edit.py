@@ -220,6 +220,72 @@ def test_substitute_statistics():
         f"some row frequency outside 5 sigma: min={min_freq:.4f}, max={max_freq:.4f}"
 
 
+# ------------------------------ b_iso ------------------------------
+def _gaas_444_with_b_iso() -> Structure:
+    """GaAs 4x4x4 supercell with per-atom b_iso = 0.5 + 0.001 * row."""
+    s = _gaas_444()
+    b_iso = 0.5 + 0.001 * np.arange(s.n_atoms, dtype=float)
+    return s.replace(b_iso=b_iso)
+
+
+def test_substitute_preserves_b_iso_without_new_b_iso():
+    """substitute without new_b_iso leaves b_iso bit-identical."""
+    s = _gaas_444_with_b_iso()
+    r = substitute(s, old="Ga", new="In", seed=42, fraction=0.25)
+    new_s = r.structure
+    assert new_s.b_iso is not None
+    assert np.array_equal(new_s.b_iso, s.b_iso)
+
+
+def test_substitute_new_b_iso_changes_only_chosen_rows():
+    """substitute with new_b_iso=0.8: chosen rows get 0.8, others unchanged."""
+    s = _gaas_444_with_b_iso()
+    r = substitute(s, old="Ga", new="In", seed=42, count=10, new_b_iso=0.8)
+    new_s = r.structure
+    assert new_s.b_iso is not None
+    # Chosen rows have b_iso == 0.8.
+    chosen_mask = new_s.species == "In"
+    assert np.all(new_s.b_iso[chosen_mask] == 0.8)
+    # Other rows are bit-identical to input.
+    other_mask = ~chosen_mask
+    assert np.array_equal(new_s.b_iso[other_mask], s.b_iso[other_mask])
+
+
+def test_displace_preserves_b_iso_and_other_fields():
+    """displace on a structure with b_iso: all non-position fields bit-identical."""
+    s = _gaas_444_with_b_iso()
+    r = displace(s, seed=42, sigma=0.05)
+    new_s = r.structure
+    assert new_s.b_iso is not None
+    assert np.array_equal(new_s.b_iso, s.b_iso)
+    # occupancy is always a (N,) float array (default 1.0); bit-identical.
+    assert new_s.occupancy is not None
+    assert np.array_equal(new_s.occupancy, s.occupancy)
+    # site_label is an object array; np.testing does not compare object arrays.
+    assert np.array_equal(new_s.site_label, s.site_label)
+    np.testing.assert_array_equal(new_s.cell_index, s.cell_index)
+    # supercell is a (3,) int array; compare element-wise (== on int arrays
+    # returns an array, which is ambiguous in an assert).
+    assert np.array_equal(new_s.supercell, s.supercell)
+    assert new_s.pbc == s.pbc
+    assert new_s.model == s.model
+
+
+def test_operations_preserve_b_iso_absence():
+    """repeat, substitute, displace on a structure without b_iso stay without b_iso."""
+    s = _gaas_444()
+    assert s.b_iso is None
+    # repeat
+    r_rep = repeat(s, (2, 2, 2))
+    assert r_rep.structure.b_iso is None
+    # substitute
+    r_sub = substitute(s, old="Ga", new="In", seed=42, count=10)
+    assert r_sub.structure.b_iso is None
+    # displace
+    r_disp = displace(s, seed=42, sigma=0.05)
+    assert r_disp.structure.b_iso is None
+
+
 # ------------------------------ displace sigma ------------------------------
 def test_displace_sigma_005():
     """sigma=0.05 A on all atoms of GaAs 4x4x4: sample std within 5% of 0.05,
@@ -507,36 +573,53 @@ def test_displace_no_mutation():
 
 # ------------------------------ physics ------------------------------
 def test_displace_physics_nn_distance():
-    """After sigma=0.05 A the mean nearest-neighbour (Ga-As) distance stays
-    within 0.01 A of 2.448124 and its std is 0 < std < 0.1 A."""
+    """After sigma=0.05 A the 1024 Ga-As bond lengths have mean ~ 2.45017 A
+    (within 0.011 A, i.e. 5 standard errors) and std ~ 0.0707 A (within 10%).
+
+    Theory: for independent isotropic Gaussian noise of standard deviation
+    sigma on BOTH atoms of a bond of length d, the bond length distribution
+    has mean ~= d + 2*sigma**2/d and std ~= sigma*sqrt(2).  With
+    d = 2.45017 A and sigma = 0.05 A: 2*sigma**2/d = 0.00204 A (tiny, within
+    the 0.011 A tolerance) and sigma*sqrt(2) = 0.0707 A.
+    """
     s = _gaas_444()
     a_unit = s.lattice.parameters[0] / s.supercell[0]  # unit cell parameter
-    d_expected = a_unit * math.sqrt(3) / 4  # 2.448124
+    d_expected = a_unit * math.sqrt(3) / 4  # 2.45017
 
-    r = displace(s, seed=42, sigma=0.05)
-    new_s = r.structure
-
-    dm = new_s.distance_matrix()
-    n = new_s.n_atoms
-
-    # For each atom, find the nearest opposite-species neighbour.
-    nn_dists = []
+    # Identify the 1024 Ga-As bonds in the undisplaced structure:
+    # pairs (one Ga, one As) whose distance is d_expected +/- 1e-6 A.
+    dm = s.distance_matrix()
+    n = s.n_atoms
+    bonds = []
     for i in range(n):
-        dists = dm[i].copy()
-        dists[i] = np.inf
-        opp_mask = np.array([new_s.species[j] != new_s.species[i] for j in range(n)])
-        nn_dists.append(dists[opp_mask].min())
+        if s.species[i] != "Ga":
+            continue
+        for j in range(n):
+            if j == i:
+                continue
+            if s.species[j] == "As" and abs(dm[i, j] - d_expected) < 1e-6:
+                bonds.append((i, j))
+    assert len(bonds) == 1024, f"expected 1024 Ga-As bonds, found {len(bonds)}"
 
-    nn_dists = np.array(nn_dists)
-    mean_nn = nn_dists.mean()
-    std_nn = nn_dists.std()
-    print(f"  NN distance: mean={mean_nn:.6f} (expected {d_expected:.6f}), std={std_nn:.6f}")
-
-    # Note: with sigma=0.05 A the mean NN distance shifts by ~0.078 A (measured
-    # over multiple seeds), which is ~1.5 sigma.  The task says "within 0.01 A"
-    # but the physics does not support that tolerance; we use 0.1 A (2 sigma).
-    assert abs(mean_nn - d_expected) < 0.1, f"mean NN={mean_nn:.6f} not within 0.1 of {d_expected:.6f}"
-    assert 0 < std_nn < 0.1, f"std NN={std_nn:.6f} not in (0, 0.1)"
+    # For each seed, compute the lengths of those same 1024 bonds
+    # (identified by atom index pairs) in the displaced structure.
+    for seed in range(5):
+        r = displace(s, seed=seed, sigma=0.05)
+        new_s = r.structure
+        dm_new = new_s.distance_matrix()
+        bond_lengths = np.array([dm_new[i, j] for i, j in bonds])
+        mean_bond = bond_lengths.mean()
+        std_bond = bond_lengths.std()
+        print(f"  seed={seed}: mean={mean_bond:.6f}, std={std_bond:.6f}")
+        # 5 standard errors: SE = sigma*sqrt(2)/sqrt(1024) ~ 0.0707/sqrt(1024) ~ 0.0022,
+        # so 5*SE ~ 0.011 A.
+        assert abs(mean_bond - 2.45017) < 0.011, (
+            f"seed={seed}: mean={mean_bond:.6f} not within 0.011 of 2.45017"
+        )
+        # Within 10% of the theoretical std sigma*sqrt(2) = 0.0707 A.
+        assert abs(std_bond - 0.0707) < 0.1 * 0.0707, (
+            f"seed={seed}: std={std_bond:.6f} not within 10% of 0.0707"
+        )
 
 
 # ------------------------------ check_composition ------------------------------

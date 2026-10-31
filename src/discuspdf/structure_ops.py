@@ -195,7 +195,10 @@ def substitute(
         b_iso_new = structure.b_iso.copy()
         b_iso_new[chosen] = new_b_iso
 
-    new_struct = structure.replace(species=species_new, b_iso=b_iso_new)
+    if b_iso_new is not None:
+        new_struct = structure.replace(species=species_new, b_iso=b_iso_new)
+    else:
+        new_struct = structure.replace(species=species_new)
 
     ids = np.sort(structure.atom_id[chosen])
 
