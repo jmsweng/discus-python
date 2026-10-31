@@ -33,8 +33,15 @@ Files store coordinates in **unit-cell** form; `Structure` stores
 
 - **Reading a `.stru` with `ncell n1,n2,n3,m`:**
   `frac = x_file / n` (element-wise, no shift, no wrap).
-- **Reading a `.stru` without `ncell`:** treated as a single unit cell
-  (`n = (1,1,1)`); `frac = x_file`.
+- **Reading a `.stru` without `ncell`** (the common case: DISCUS `save` drops
+  the `ncell` line) — selected by the `supercell=` argument:
+  - `supercell=None` (default): read as one cell (`n = (1,1,1)`, `frac = x_file`)
+    **only if every axis spans less than one unit cell**; otherwise
+    `DiscusFormatError` (pass `supercell=(n1,n2,n3)` or `supercell="infer"`).
+  - `supercell=(n1,n2,n3)`: `frac = x_file / n`; the cell-major order check runs.
+  - `supercell="infer"`: per axis `n = round(−2·lo)` for a centred crystal
+    (`n ≥ 1`, `|−2·lo − n| ≤ 1e-5`, `hi < n/2 + 1e-6`, `N % prod(n) == 0`);
+    `frac = x_file / n`.
 - **Writing a `.stru`:** `x_file = frac * n` (element-wise).
 
 **Worked example** (cell 4 Å, `ncell 2,2,2,1`):
@@ -61,9 +68,11 @@ from discuspdf import read_cll, read_stru, parse_cll, parse_stru
 s = read_cll("examples/gaas.cll")          # 8 atoms (F-43m GaAs)
 s = read_cll("examples/gaas.cll", supercell=(2, 2, 2))  # 64 atoms
 
-# Read a .stru file (saved structure).
-s = read_stru("tests/fixtures/discus_6_23_01/gaas_222.stru")  # 64 atoms
+# Read a .stru file (saved structure).  DISCUS `save` drops the ncell line,
+# so a saved multi-cell file needs supercell=:
+s = read_stru("tests/fixtures/discus_6_23_01/gaas_222.stru", supercell="infer")  # 64 atoms, 2x2x2
 s = read_stru("some_file.stru", supercell=(8, 8, 8))  # 4096 atoms (no ncell)
+s = read_stru("tests/fixtures/discus_6_23_01/gaas_111.stru")  # one cell: 0..0.75
 ```
 
 ### Writing
@@ -96,6 +105,9 @@ kind = detect_discus_kind("file.txt")  # "cll" or "stru"
   (not performed), `Property`/`MoleNo`/`MoleAt`/`St` columns (only with
   `allow_loss=True`).
 - **`b_iso=None`** → explicit `0.0` in the file (DISCUS defaults missing B to 1.0).
+- **Species names** are written **verbatim** (the writer does not upper-case
+  them); DISCUS upper-cases on save (`Ga` → `GA`).  Names longer than 4
+  characters are rejected on read and on write.
 - **`defaults_applied`:** recorded when `allow_loss=True` drops non-constant columns.
 
 ## Safety

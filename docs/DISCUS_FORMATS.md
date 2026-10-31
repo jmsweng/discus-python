@@ -28,6 +28,7 @@ Every fact below is backed by a probe run against the real DISCUS 6.23.01
 | `ncell nx,ny,nz,ncatoms` is informational for `read stru`. | `Q5.log` | `gate2` (ncell 16,16,16,1): n[1]=4096, n[2]=2, n[3]=1, n[4]=0 |
 | Saved atom format is `A4,3(2X,F11.6),5X,F6.4`; 11 numeric fields after the name. | `gaas_222.stru` | `GA -1.000000, -1.000000, -1.000000, 1.000000, 1, 0, 0, 1.000000, _, 0, 0, 0` |
 | `format numbers,XYZBPMMOS` is written by `save`. | `gaas_222.stru` | `format numbers,XYZBPMMOS` |
+| `save` writes **no `ncell` line** (it is dropped on save), so a saved `.stru` must be read with `supercell=`. | `gaas_222.stru`, `C1_frozen.stru` | neither file has an `ncell` line |
 | 5-column `.stru` (no `format`): col 4 = B, col 5 = ignored. | `Q8.log` + `corr_model_mod_out.stru` | input col4=0.5, col5=0.8 → saved `Biso 0.500000 … Occ 1.000000` |
 | A `.stru` atom line with **fewer** columns than the `format` line promises **fails**. | `Q10.log` | `***APPL*** File format specified as numbers only *** -49 ***` / `Error reading atom coordinates` |
 | Coordinates must be the fixed 6-decimal `F11.6` form; 10-decimals, scientific, and leading `+` all **fail**. | `Q12.log`, `Q12b.log`, `Q12c.log` | `***APPL*** File format specified as numbers only *** -49 ***` (all three) |
@@ -83,10 +84,27 @@ therefore always write B explicitly (`0.0` when `b_iso` is `None`).
    (n1,n2,n3) with **x fastest** (Q4: x varies fastest). `site_label` = the species
    name at that site. Rationale: Q4/Q5 establish m = atoms/cell and the x-fastest
    ordering.
-4. **Handling a `.stru` without `ncell`** — treat it as a single unit cell
-   (`ncell 1,1,1,m` with m = total atoms) for the purpose of `cell_index`/
-   `site_label`, and flag it. Rationale: Q5/Q7 show `ncell` is optional and its
-   absence does not change the atom count; the safe interpretation is one cell.
+4. **Handling a `.stru` without `ncell`** — a `.stru` without an `ncell` line
+   (the common case: DISCUS `save` drops the `ncell` line) is read with the
+   `supercell=` argument of `read_stru`/`parse_stru`:
+
+   * `supercell=None` (default): read as **one** cell (`supercell=(1,1,1)`,
+     `m = N`) only if every axis has `hi − lo < 1 + 1e-6` (lo/hi = min/max of
+     the file coordinates per axis).  Otherwise raise `DiscusFormatError`
+     naming the per-axis spans: the atoms span more than one unit cell.
+   * `supercell=(n1,n2,n3)`: use it (`m = N / prod(n)`); the cell-major order
+     check then runs.
+   * `supercell="infer"`: per axis `n = round(−2·lo)`; accepted only for a
+     centred crystal — `n ≥ 1`, `|−2·lo − n| ≤ 1e-5`, `hi < n/2 + 1e-6`, and
+     `N % prod(n) == 0` — i.e. the layout `read cell …,n1,n2,n3` followed by
+     `save` produces (Q4: −1…+0.75 for n = 2).  `gaas_222.stru` → (2,2,2);
+     `C1_frozen.stru` → (8,8,8); `gaas_111.stru` (0…0.75) reads with the
+     default.
+
+   Rationale: Q5/Q7 show `ncell` is optional and its absence does not change
+   the atom count, but Q4 shows a saved supercell is **centred** and spans n
+   unit cells, so reading it as one cell puts the atoms on top of each other
+   (the A3-6a failure).  The default must therefore refuse multi-cell files.
 5. **Telling a `.cll` from a `.stru` by content** — a file is a `.clu`/`.cll`
    (unit-cell source) iff it has **no** `format` line **and** **no** `ncell` line
    **and** its atom lines carry **≤ 4** numeric columns (name,x,y,z[,B]); a
@@ -95,9 +113,12 @@ therefore always write B explicitly (`0.0` when `b_iso` is `None`).
    `gaas_111/222.stru` (format present, 11-col) and `p1_2x2x2_a4.stru` (format +
    ncell, 11-col). Rationale: Q1/Q3/Q8 show the two kinds differ exactly in these
    markers.
-6. **Species name policy** — accept 1–4 characters; uppercase on write; keep an
-   optional trailing charge token (`2-`, `3+`). Reject names longer than 4 chars
-   (DISCUS truncates to 4 and then fails to find the element). Rationale: Q9.
+6. **Species name policy** — the Python writer writes species names
+   **verbatim** (it does not upper-case them); DISCUS upper-cases them on save
+   (`Ga` → `GA`, `Fe3+` → `FE3+`, `O2-` unchanged).  Names longer than 4
+   characters are **rejected on read and on write** (DISCUS truncates to 4 and
+   then fails to find the element).  An optional trailing charge token (`2-`,
+   `3+`) is kept. Rationale: Q9.
 7. **Columns droppable only with `allow_loss=True`** — the trailing
    `Property, MoleNo, MoleAt, Occ, St, Sh, Sk` columns (DISCUS writes them as
    constants for a plain crystal; dropping them loses no per-atom data for the

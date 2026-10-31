@@ -101,6 +101,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
     # A .cll stores the unit cell (8 atoms for P1 GaAs); DISCUS would expand
     # it to 32 for a 2×2×2 supercell, but the Python API does not expand.
     s_cll = read_cll(cll_path)
+    # The .stru we wrote carries an ncell line, so it reads back as the
+    # 2×2×2 supercell.  (A DISCUS-saved .stru has no ncell line; read those
+    # with supercell="infer" — see the gaas_222 fixture.)
     s_stru = read_stru(stru_path)
     print(f".cll read-back (unit cell): {s_cll.structure.n_atoms} atoms")
     print(f".stru read-back (2×2×2): {s_stru.structure.n_atoms} atoms")

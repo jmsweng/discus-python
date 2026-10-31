@@ -89,14 +89,16 @@ def test_live_read_cell_matches_fixture():
     result = run_discus(macro, workdir)
     assert "64.0000000000" in result.stdout
 
-    # Read the saved .stru with our parser.
-    s = read_stru(os.path.join(workdir, "gaas_live.stru"))
+    # Read the saved .stru with our parser.  DISCUS drops the ncell line on
+    # save, so the file has no ncell; the atoms span the centred 2x2x2
+    # supercell, so use supercell="infer".
+    s = read_stru(os.path.join(workdir, "gaas_live.stru"), supercell="infer")
     assert s.structure.n_atoms == 64
     from collections import Counter
     assert dict(Counter(s.structure.species)) == {"GA": 32, "AS": 32}
 
-    # Compare to the committed fixture.
-    ref = read_stru("tests/fixtures/discus_6_23_01/gaas_222.stru")
+    # Compare to the committed fixture (also read with supercell="infer").
+    ref = read_stru("tests/fixtures/discus_6_23_01/gaas_222.stru", supercell="infer")
     assert s.structure.isclose(ref.structure, rtol=1e-8, atol=1e-6)
     evidence_log("test_live_read_cell_matches_fixture", macro, None, result)
 
@@ -136,21 +138,25 @@ def test_live_python_written_stru_loads_and_roundtrips(case_id, builder):
     N = s.n_atoms
     assert str(N) in result.stdout
 
-    # Read the DISCUS-saved file.
-    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"))
+    # Read the DISCUS-saved file.  DISCUS drops the ncell line on save and
+    # centres the origin, so the file has no ncell line and the atoms span
+    # the centred supercell; use supercell="infer" (the inferred supercell
+    # equals s.supercell for these builders).
+    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell="infer")
     assert s2.structure.n_atoms == N
 
     # Same species per row.
     import numpy as np
     assert np.array_equal(s2.structure.species, s.species)
 
-    # DISCUS drops the ncell line on save, so s2 is read as a single unit
-    # cell (decision #4).  The coordinates are in supercell units [0, n),
-    # so divide by n to get unit-cell fractions [0, 1).
+    # s2 is read in the inferred supercell frame; the file coordinates are
+    # centred unit-cell values, so s2.structure.frac * n gives the centred
+    # supercell coordinates.  Compare modulo n to the input supercell
+    # fractions to account for the origin shift.
     n = np.array(s.supercell, dtype=float)
-    s2_frac_unit = s2.structure.frac / n
-    s_frac_unit = s.frac
-    assert np.allclose(s2_frac_unit, s_frac_unit, atol=2e-6)
+    s2_super = s2.structure.frac * n
+    s_super = s.frac * n
+    assert np.allclose(s2_super % n, s_super % n, atol=2e-6)
 
     # Biso: DISCUS defaults missing B to 1.0 (Q1), not 0.0.
     # If s.b_iso is None, we wrote 0.0, but DISCUS reads it as 1.0.
@@ -311,7 +317,7 @@ def test_live_python_written_cll_expands_as_expected():
         exp_species[r] = unit_species[slot]
         exp_frac[r] = (unit_frac[slot] + np.array([ix, iy, iz])) / np.array(n)
 
-    s2 = read_stru(os.path.join(workdir, "gaas_p1_live.stru"))
+    s2 = read_stru(os.path.join(workdir, "gaas_p1_live.stru"), supercell="infer")
     assert s2.structure.n_atoms == N
     assert np.array_equal(s2.structure.species, exp_species)
     # DISCUS saves in unit-cell coordinates with a centered origin for P1
@@ -405,7 +411,7 @@ def test_live_species_names():
     result = run_discus(macro, workdir)
     assert "4.00000000000" in result.stdout
 
-    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"))
+    s2 = read_stru(os.path.join(workdir, f"{fname}_out.stru"), supercell="infer")
     assert s2.structure.n_atoms == 4
     # DISCUS uppercases: Ga → GA, Fe3+ → FE3+; O2- and Ga1 unchanged.
     assert list(s2.structure.species) == ["GA", "O2-", "FE3+", "GA1"]

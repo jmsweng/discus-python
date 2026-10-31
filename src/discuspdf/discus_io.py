@@ -309,7 +309,6 @@ def parse_cll(text: str, *, source: str = "<string>") -> DiscusCell:
         b_iso=b_iso,
         supercell=(1, 1, 1),
         pbc=(True, True, True),
-        min_separation=None,
     )
     return DiscusCell(
         title=title,
@@ -513,11 +512,36 @@ def _parse_stru_atoms(
     return atoms, max_cols
 
 
+def _resolve_supercell(
+    supercell: tuple[int, int, int] | str | None,
+) -> tuple[int, int, int] | str | None:
+    """Validate and normalise the ``supercell`` argument.
+
+    Accepts ``None``, a 3-tuple of ints, or the string ``"infer"``.  Any other
+    string raises ``ValueError``.
+    """
+    if supercell is None:
+        return None
+    if isinstance(supercell, str):
+        if supercell == "infer":
+            return "infer"
+        raise ValueError(
+            f"supercell string must be 'infer', got {supercell!r}"
+        )
+    try:
+        n = tuple(int(v) for v in supercell)
+    except (TypeError, ValueError):
+        raise ValueError(f"supercell must be a 3-tuple of ints, 'infer', or None, got {supercell!r}")
+    if len(n) != 3 or any(v < 1 for v in n):
+        raise ValueError(f"supercell must be a 3-tuple of ints >= 1, got {supercell!r}")
+    return n
+
+
 def parse_stru(
     text: str,
     *,
     source: str = "<string>",
-    supercell: tuple[int, int, int] | None = None,
+    supercell: tuple[int, int, int] | str | None = None,
     allow_loss: bool = False,
 ) -> DiscusStru:
     """Parse DISCUS ``.stru`` text into a :class:`DiscusStru`.
@@ -527,7 +551,25 @@ def parse_stru(
     Atom coordinates in the file are measured in unit cells; they are divided by
     ``ncell`` (no origin shift, no wrapping).  See the module docstring for the
     conversion.
+
+    ``supercell`` selects the supercell for files **without** an ``ncell`` line
+    (DISCUS ``save`` drops the ``ncell`` line, so this is the most common real
+    input):
+
+    * ``None`` (default): read as one cell (``supercell=(1,1,1)``) only if every
+      axis spans less than one unit cell; otherwise raise ``DiscusFormatError``
+      (pass ``supercell=(n1,n2,n3)`` or ``supercell="infer"``).
+    * ``(n1,n2,n3)``: use it (``m = N / prod(n)``); the cell-major order check
+      then runs.
+    * ``"infer"``: per axis ``n = round(-2*lo)``; accepted only for a centred
+      crystal (``n >= 1``, ``|-2*lo - n| <= 1e-5``, ``hi < n/2 + 1e-6``, and
+      ``N`` divisible by ``prod(n)``) — the layout ``read cell …,n1,n2,n3``
+      followed by ``save`` produces (Q4: −1…+0.75 for n = 2).
+
+    For files **with** an ``ncell`` line, ``supercell=None`` and ``"infer"`` use
+    the ``ncell`` line; a differing tuple raises the "disagree" error.
     """
+    supercell = _resolve_supercell(supercell)
     kind = detect_discus_kind(text, source=source)
     if kind == "cll":
         _fail(
@@ -583,8 +625,19 @@ def parse_stru(
             elif keyword == "ncell":
                 ncell = _parse_ncell(rest, source, line_no)
             elif keyword == "format":
-                # accepted; content not validated further
-                pass
+                # Validate the format line: it must be ``format numbers,``
+                # followed by a column list (DISCUS writes
+                # ``format numbers,XYZBPMMOS``).  A non-numeric first token
+                # (where the ``numbers`` keyword is expected) is a bad line.
+                fmt = rest.strip()
+                if not fmt:
+                    _fail(source, line_no, stripped, "empty format line")
+                first = fmt.split(",")[0].strip()
+                if first and not first[0].isalpha():
+                    _fail(
+                        source, line_no, stripped,
+                        f"bad format line: expected 'numbers,…', got {first!r}",
+                    )
         else:
             _fail(source, line_no, stripped, f"unknown directive: {keyword!r}")
 
@@ -613,8 +666,62 @@ def parse_stru(
                 f"atom count {N} != n1*n2*n3*m = {n1 * n2 * n3 * m}",
             )
         n = (n1, n2, n3)
+        # If both ncell and supercell= are given and differ -> error.
+        if supercell is not None and supercell != "infer" and n != supercell:
+            _fail(
+                source, 0, "",
+                f"ncell {ncell[:3]} and supercell= {supercell} disagree",
+            )
     else:
-        if supercell is not None:
+        # No ncell line (the common case: DISCUS `save` drops ncell).
+        x_file = np.array([at[1][:3] for at in atoms], dtype=float)
+        lo = x_file.min(axis=0)
+        hi = x_file.max(axis=0)
+        if supercell is None:
+            # Read as one cell only if every axis spans less than one unit cell.
+            if np.all(hi - lo < 1.0 + 1e-6):
+                n = (1, 1, 1)
+                m = N
+            else:
+                _fail(
+                    source, 0, "",
+                    "no ncell line and the atoms span more than one unit cell "
+                    f"(x: {lo[0]:.6f}…{hi[0]:.6f}, y: {lo[1]:.6f}…{hi[1]:.6f}, "
+                    f"z: {lo[2]:.6f}…{hi[2]:.6f}); pass supercell=(n1,n2,n3), "
+                    "or supercell='infer' for a DISCUS-saved centred crystal",
+                )
+        elif supercell == "infer":
+            # Centred crystal (Q4): per axis n = round(-2*lo).
+            n = tuple(int(round(-2.0 * v)) for v in lo)
+            if any(v < 1 for v in n):
+                _fail(
+                    source, 0, "",
+                    f"cannot infer supercell from a centred crystal "
+                    f"(x: {lo[0]:.6f}…{hi[0]:.6f}, y: {lo[1]:.6f}…{hi[1]:.6f}, "
+                    f"z: {lo[2]:.6f}…{hi[2]:.6f}); pass supercell=(n1,n2,n3)",
+                )
+            if any(abs(-2.0 * v - k) > 1e-5 for v, k in zip(lo, n)):
+                _fail(
+                    source, 0, "",
+                    f"cannot infer supercell: {n} does not match the centred "
+                    f"origin (x: {lo[0]:.6f}…{hi[0]:.6f}, y: {lo[1]:.6f}…{hi[1]:.6f}, "
+                    f"z: {lo[2]:.6f}…{hi[2]:.6f}); pass supercell=(n1,n2,n3)",
+                )
+            if any(h >= k / 2.0 + 1e-6 for h, k in zip(hi, n)):
+                _fail(
+                    source, 0, "",
+                    f"cannot infer supercell: coordinates exceed n/2 "
+                    f"(x: {lo[0]:.6f}…{hi[0]:.6f}, y: {lo[1]:.6f}…{hi[1]:.6f}, "
+                    f"z: {lo[2]:.6f}…{hi[2]:.6f}); pass supercell=(n1,n2,n3)",
+                )
+            prod_n = n[0] * n[1] * n[2]
+            if N % prod_n != 0:
+                _fail(
+                    source, 0, "",
+                    f"atom count {N} not divisible by inferred supercell volume {prod_n}",
+                )
+            m = N // prod_n
+        else:
             n = supercell
             prod_n = n[0] * n[1] * n[2]
             if N % prod_n != 0:
@@ -623,17 +730,6 @@ def parse_stru(
                     f"atom count {N} not divisible by supercell volume {prod_n}",
                 )
             m = N // prod_n
-        else:
-            # No ncell, no supercell: treat as a single unit cell (decision #4).
-            n = (1, 1, 1)
-            m = N
-
-    # If both ncell and supercell= are given and differ -> error.
-    if ncell is not None and supercell is not None and tuple(ncell[:3]) != tuple(supercell):
-        _fail(
-            source, 0, "",
-            f"ncell {ncell[:3]} and supercell= {supercell} disagree",
-        )
 
     # Build the whole-frame lattice and fractional coordinates.
     unit_lattice = Lattice.from_parameters(a, b, c, alpha, beta, gamma)
@@ -650,40 +746,36 @@ def parse_stru(
         _fail(source, 0, "", "occupancy must be exactly 1 in a .stru")
 
     # frac = x_file / n (element-wise, no shift, no wrap).
-    frac = np.empty((N, 3), dtype=float)
-    for i, at in enumerate(atoms):
-        frac[i, 0] = at[1][0] / n[0]
-        frac[i, 1] = at[1][1] / n[1]
-        frac[i, 2] = at[1][2] / n[2]
+    x_file = np.array([at[1][:3] for at in atoms], dtype=float)
+    frac = x_file / np.array(n, dtype=float)
 
     # cell_index: row r -> cell number r // m, slot r % m; unravel with x fastest.
-    cell_index = np.zeros((N, 3), dtype=np.int64)
-    site_label = np.empty(N, dtype=object)
-    for r in range(N):
-        cell_num = r // m
-        slot = r % m
-        iz = cell_num // (n[0] * n[1])
-        rem = cell_num % (n[0] * n[1])
-        iy = rem // n[0]
-        ix = rem % n[0]
-        cell_index[r] = (ix, iy, iz)
-        site_label[r] = f"site{slot + 1}"
+    cell_num = np.arange(N, dtype=np.int64) // m
+    ix = (cell_num % n[0]).astype(np.int64)
+    iy = ((cell_num // n[0]) % n[1]).astype(np.int64)
+    iz = (cell_num // (n[0] * n[1])).astype(np.int64)
+    cell_index = np.stack([ix, iy, iz], axis=1)
+    slot = np.arange(N, dtype=np.int64) % m
+    site_label = np.array([f"site{v + 1}" for v in slot], dtype=object)
 
-    # Order check: for every slot and axis, ref = median over cells of
-    # (x_file - cell_index); every atom must satisfy |x_file - cell_index - ref| <= 0.5.
-    if m > 1:
-        for slot in range(m):
-            rows = list(range(slot, N, m))
-            for axis in range(3):
-                vals = np.array([atoms[r][1][axis] - cell_index[r, axis] for r in rows], dtype=float)
-                ref = float(np.median(vals))
-                for r in rows:
-                    if abs(atoms[r][1][axis] - cell_index[r, axis] - ref) > 0.5:
-                        _fail(
-                            source, 0, "",
-                            "atom order does not match ncell cell-major order "
-                            f"(row {r}, slot {slot}, axis {axis})",
-                        )
+    # Order check (runs for every m >= 1): for every slot and axis, ref = median
+    # over cells of (x_file - cell_index); every atom must satisfy
+    # |x_file - cell_index - ref| <= 0.5.
+    ncells = N // m
+    d = x_file - cell_index
+    # ref[cell, slot, axis] = median over cells of (x_file - cell_index);
+    # keepdims broadcasts it to every cell.
+    ref = np.median(d.reshape(ncells, m, 3), axis=0, keepdims=True)  # (1, m, 3)
+    bad = np.abs(d.reshape(ncells, m, 3) - ref) > 0.5
+    if bad.any():
+        # first bad (cell, slot, axis); row = cell * m + slot
+        cell_idx, slot_idx, axis = np.unravel_index(int(np.argmax(bad)), bad.shape)
+        r = int(cell_idx) * m + int(slot_idx)
+        _fail(
+            source, 0, "",
+            "atom order does not match ncell cell-major order "
+            f"(row {r}, slot {slot_idx}, axis {axis})",
+        )
 
     # Column policy (decision #7): the trailing Property, MoleNo, MoleAt, Occ,
     # St, Sh, Sk columns are droppable only with allow_loss=True.  DISCUS writes
@@ -712,7 +804,6 @@ def parse_stru(
         cell_index=cell_index,
         supercell=n,
         pbc=(True, True, True),
-        min_separation=None,
     )
     return DiscusStru(
         title=title,
@@ -727,10 +818,16 @@ def parse_stru(
 def read_stru(
     path,
     *,
-    supercell: tuple[int, int, int] | None = None,
+    supercell: tuple[int, int, int] | str | None = None,
     allow_loss: bool = False,
 ) -> DiscusStru:
-    """Read a DISCUS ``.stru`` file from ``path``."""
+    """Read a DISCUS ``.stru`` file from ``path``.
+
+    ``supercell`` selects the supercell for files without an ``ncell`` line
+    (see :func:`parse_stru`): ``None`` reads as one cell only if the atoms
+    span less than one unit cell, ``(n1,n2,n3)`` uses the given supercell, and
+    ``"infer"`` recovers the supercell of a DISCUS-saved centred crystal.
+    """
     p = Path(path)
     text = p.read_text(encoding="ascii")
     return parse_stru(text, source=str(p), supercell=supercell, allow_loss=allow_loss)
@@ -767,6 +864,12 @@ def format_stru(obj, *, title: str | None = None, spacegroup: str | None = None)
         )
     if not all(structure.pbc):
         raise ValueError("a .stru requires all pbc True")
+    # Species names are written verbatim; DISCUS upper-cases them on save and
+    # truncates names longer than 4 characters (then fails to find the
+    # element), so reject them here (decision #6).
+    for i, sp in enumerate(structure.species):
+        if len(sp) > 4:
+            raise ValueError(f"species name exceeds 4 characters: {sp!r}")
 
     n = tuple(structure.supercell)
     N = structure.n_atoms
@@ -877,7 +980,11 @@ def _stru_roundtrip_agrees(source, written: DiscusStru) -> bool:
         return False
     if not np.array_equal(written.structure.species, ref.species):
         return False
-    if not written.structure.lattice.isclose(ref.lattice, rtol=1e-8):
+    # Lattice: the cell line is written with _DECIMALS places, so compare the
+    # parameters to that precision (a 6-decimal rounding of a large cell can
+    # exceed rtol=1e-8).
+    tol = 0.5 * 10 ** -_DECIMALS
+    if not np.allclose(written.structure.lattice.parameters, ref.lattice.parameters, atol=tol):
         return False
     if not np.allclose(written.structure.frac, ref.frac, atol=0.5 * 10 ** -_DECIMALS):
         return False
