@@ -170,6 +170,58 @@ def _check_site_consistency(
             )
 
 
+def _site_keys(site_label: np.ndarray, cell_index: np.ndarray):
+    """Unique sites as (unique structured keys, per-row site index)."""
+    n = len(site_label)
+    dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
+    keys = np.empty(n, dtype=dtype)
+    keys["sl"] = site_label
+    keys["c0"] = cell_index[:, 0]
+    keys["c1"] = cell_index[:, 1]
+    keys["c2"] = cell_index[:, 2]
+    unique_sites, inverse = np.unique(keys, return_inverse=True)
+    return unique_sites, inverse.reshape(-1)
+
+
+def _candidate_pairs(bins: np.ndarray, nb: np.ndarray, periodic: bool):
+    """Yield (i, j) row-index arrays, i < j, for atoms in the same or adjacent bins.
+
+    ``bins`` is an (n, 3) int array of bin coordinates in ``[0, nb)``.  Adjacent
+    means each bin coordinate differs by at most 1 (modulo ``nb`` when periodic).
+    Each unordered pair is produced at most once.
+    """
+    n = len(bins)
+    flat = (bins[:, 0] * nb[1] + bins[:, 1]) * nb[2] + bins[:, 2]
+    order = np.argsort(flat, kind="stable")
+    sorted_bins = flat[order]
+    if periodic:
+        # distinct offsets per axis modulo nb (nb = 1 or 2 would otherwise repeat)
+        axis_offsets = [np.unique(np.array([-1, 0, 1]) % m) for m in nb]
+    else:
+        axis_offsets = [np.array([-1, 0, 1])] * 3
+    for ox in axis_offsets[0]:
+        for oy in axis_offsets[1]:
+            for oz in axis_offsets[2]:
+                nbr = bins + np.array([ox, oy, oz])
+                if periodic:
+                    nbr %= nb
+                    valid = np.ones(n, dtype=bool)
+                else:
+                    valid = np.all((nbr >= 0) & (nbr < nb), axis=1)
+                nbr_flat = (nbr[:, 0] * nb[1] + nbr[:, 1]) * nb[2] + nbr[:, 2]
+                lo = np.searchsorted(sorted_bins, nbr_flat, side="left")
+                hi = np.searchsorted(sorted_bins, nbr_flat, side="right")
+                counts = np.where(valid, hi - lo, 0)
+                total = int(counts.sum())
+                if total == 0:
+                    continue
+                i = np.repeat(np.arange(n), counts)
+                starts = np.repeat(lo - np.concatenate(([0], np.cumsum(counts)[:-1])), counts)
+                j = order[starts + np.arange(total)]
+                keep = i < j
+                yield i[keep], j[keep]
+
+
 def _check_overlap(
     model: str,
     frac: np.ndarray,
@@ -179,84 +231,84 @@ def _check_overlap(
     lattice: Lattice,
     pbc: tuple[bool, bool, bool],
     min_separation: float | None = 0.1,
-    n_atoms_limit: int = 20_000,
 ) -> None:
-    """Check for unphysical atom overlaps.
+    """Raise ``ValueError`` if two atoms in different sites are closer than ``min_separation`` Å.
 
-    In a configuration, every pair of atoms in different sites must be >= min_separation.
-    In an average model, the check applies only when two occupancies sum to > 1.
-    Skipped above n_atoms_limit unless min_separation is explicitly requested.
+    Configuration: every pair of atoms in different sites is checked.  Average
+    model: a pair is checked only if the two sites' total occupancies add up to
+    more than 1 (split sites are legitimate).  Periodic structures use the
+    minimum image.  The check always runs unless ``min_separation is None``.
+
+    Method: a cell list.  Positions are binned so that every bin is at least
+    ``min_separation`` thick in each lattice direction; any pair closer than the
+    cutoff then lies in the same or adjacent bins.  When every axis has >= 3
+    bins, the nearest (rounded) image is the only one that can be within the
+    cutoff, so no full minimum-image search is needed; otherwise candidate
+    pairs go through ``Lattice.minimum_image``.
     """
     if min_separation is None:
         return
     n = len(frac)
-    if n >= n_atoms_limit:
+    if n < 2:
         return
-
-    def _site_name(key) -> str:
-        """Format a structured key as ``site 'S0' in cell (0, 0, 0)``."""
-        return f"site {key['sl']!r} in cell ({key['c0']}, {key['c1']}, {key['c2']})"
-
     all_pbc = all(pbc)
-    no_pbc = not any(pbc)
-    if not all_pbc and not no_pbc:
+    if not all_pbc and any(pbc):
         raise NotImplementedError("mixed PBC not yet supported")
+    cut = float(min_separation)
+    if not np.isfinite(cut) or cut <= 0:
+        raise ValueError(f"min_separation must be a positive number of Å or None, got {min_separation!r}")
 
-    # Group rows by site.
-    dtype = np.dtype([("sl", object), ("c0", np.int64), ("c1", np.int64), ("c2", np.int64)])
-    keys = np.empty(n, dtype=dtype)
-    keys["sl"] = site_label
-    keys["c0"] = cell_index[:, 0]
-    keys["c1"] = cell_index[:, 1]
-    keys["c2"] = cell_index[:, 2]
-    unique_sites, inverse = np.unique(keys, return_inverse=True)
-    n_sites = len(unique_sites)
+    unique_sites, site_of = _site_keys(site_label, cell_index)
+    site_occ = np.bincount(site_of, weights=occupancy)
+    A = lattice.matrix
+    max_bins = max(1, 4 * n)
 
-    # For each pair of distinct sites, check the minimum distance.
-    for i in range(n_sites):
-        rows_i = np.where(inverse == i)[0]
-        for j in range(i + 1, n_sites):
-            rows_j = np.where(inverse == j)[0]
-            # Determine if this pair should be checked.
-            if model == "configuration":
-                check = True
-            else:
-                occ_i = float(np.sum(occupancy[rows_i]))
-                occ_j = float(np.sum(occupancy[rows_j]))
-                check = (occ_i + occ_j) > 1.0
-            if not check:
-                continue
-            # Vectorised: compute all pairwise distances between rows_i and rows_j.
-            df = frac[rows_i][:, None, :] - frac[rows_j][None, :, :]  # (ni, nj, 3)
+    if all_pbc:
+        d_planes = 1.0 / np.linalg.norm(lattice.reciprocal_matrix, axis=1)  # interplanar spacings (Å)
+        nb = np.maximum(1, np.floor(d_planes / cut)).astype(np.int64)
+        if np.prod(nb.astype(float)) > max_bins:
+            scale = (np.prod(nb.astype(float)) / max_bins) ** (1.0 / 3.0)
+            nb = np.maximum(1, np.floor(nb / scale)).astype(np.int64)
+        f = frac - np.floor(frac)                       # wrap to [0, 1)
+        bins = np.minimum((f * nb).astype(np.int64), nb - 1)
+        rounding_is_exact = bool(np.all(nb >= 3))
+    else:
+        cart = frac @ A
+        lo = cart.min(axis=0)
+        span = cart.max(axis=0) - lo
+        nb = np.maximum(1, np.floor(span / cut) + 1).astype(np.int64)
+        if np.prod(nb.astype(float)) > max_bins:
+            scale = (np.prod(nb.astype(float)) / max_bins) ** (1.0 / 3.0)
+            nb = np.maximum(1, np.floor(nb / scale)).astype(np.int64)
+        width = np.where(nb > 0, np.maximum(span, cut) / nb, 1.0)
+        width = np.maximum(width, cut)
+        bins = np.minimum(((cart - lo) / width).astype(np.int64), nb - 1)
+
+    worst = None  # (distance, i, j)
+    for i, j in _candidate_pairs(bins, nb, periodic=all_pbc):
+        diff_site = site_of[i] != site_of[j]
+        if model == "average":
+            diff_site &= (site_occ[site_of[i]] + site_occ[site_of[j]]) > 1.0 + 1e-9
+        i, j = i[diff_site], j[diff_site]
+        if len(i) == 0:
+            continue
+        for start in range(0, len(i), 1 << 18):
+            ii, jj = i[start:start + (1 << 18)], j[start:start + (1 << 18)]
+            df = frac[jj] - frac[ii]
             if all_pbc:
-                # Process in chunks to keep memory bounded.
-                chunk = max(1, 1000 // max(len(rows_j), 1))
-                found = False
-                for start in range(0, len(rows_i), chunk):
-                    stop = min(start + chunk, len(rows_i))
-                    dc = df[start:stop]
-                    df_min, _ = lattice.minimum_image(dc)
-                    dists = np.linalg.norm(df_min @ lattice.matrix, axis=2)  # (chunk, nj)
-                    if np.any(dists < min_separation):
-                        found = True
-                        break
-                if found:
-                    # Find the specific pair for the error message.
-                    dmin_idx = np.unravel_index(np.argmin(dists), dists.shape)
-                    d = float(dists[dmin_idx])
-                    raise ValueError(
-                        f"atoms at sites {_site_name(unique_sites[i])} and {_site_name(unique_sites[j])} "
-                        f"are {d:.6f} Å apart (< {min_separation} Å)"
-                    )
-            else:
-                dists = np.linalg.norm(df @ lattice.matrix, axis=2)  # (ni, nj)
-                if np.any(dists < min_separation):
-                    dmin_idx = np.unravel_index(np.argmin(dists), dists.shape)
-                    d = float(dists[dmin_idx])
-                    raise ValueError(
-                        f"atoms at sites {_site_name(unique_sites[i])} and {_site_name(unique_sites[j])} "
-                        f"are {d:.6f} Å apart (< {min_separation} Å)"
-                    )
+                if rounding_is_exact:
+                    df = df - np.rint(df)
+                else:
+                    df, _ = lattice.minimum_image(df)
+            dist = np.linalg.norm(df @ A, axis=1)
+            k = int(np.argmin(dist))
+            if dist[k] < cut and (worst is None or dist[k] < worst[0]):
+                worst = (float(dist[k]), int(ii[k]), int(jj[k]))
+    if worst is not None:
+        d, i, j = worst
+        a, b = unique_sites[site_of[i]], unique_sites[site_of[j]]
+        name = lambda key: f"site {key['sl']!r} in cell ({key['c0']}, {key['c1']}, {key['c2']})"
+        raise ValueError(f"atoms at {name(a)} and {name(b)} are {d:.6f} Å apart (< {cut} Å)")
 
 
 def _Structure_bypass_validation(
@@ -816,22 +868,21 @@ class Structure:
                 f"distance_matrix: M = {m} > 5000; use Package C neighbour lists "
                 "for large structures"
             )
-        cart = self._cartesian_subset(idx)
-        if all(self._pbc):
-            # Compute all pairwise minimum-image distances.
-            out = np.empty((m, m))
-            for i in range(m):
-                for j in range(i + 1, m):
-                    df = self._frac[idx[i]] - self._frac[idx[j]]
-                    df_min, _ = self._lattice.minimum_image(df)
-                    d = float(np.linalg.norm(df_min @ self._lattice.matrix))
-                    out[i, j] = d
-                    out[j, i] = d
-            np.fill_diagonal(out, 0.0)
-            return out
-        # Non-periodic: plain Cartesian.
-        diff = cart[:, None, :] - cart[None, :, :]
-        return np.linalg.norm(diff, axis=2)
+        A = self._lattice.matrix
+        frac = self._frac[idx]
+        if not all(self._pbc):
+            cart = frac @ A
+            return np.linalg.norm(cart[:, None, :] - cart[None, :, :], axis=2)
+        # Periodic: all i < j pairs, batched through Lattice.minimum_image in chunks.
+        out = np.zeros((m, m))
+        iu, ju = np.triu_indices(m, k=1)
+        for start in range(0, len(iu), 1 << 18):
+            i, j = iu[start:start + (1 << 18)], ju[start:start + (1 << 18)]
+            df, _ = self._lattice.minimum_image(frac[j] - frac[i])
+            d = np.linalg.norm(df @ A, axis=1)
+            out[i, j] = d
+            out[j, i] = d
+        return out
 
     def displacement(self, id_a: int, id_b: int) -> np.ndarray:
         """Cartesian minimum-image displacement vector from atom a to atom b (Å)."""

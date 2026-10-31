@@ -578,28 +578,119 @@ def test_scale_1e6_atoms():
     # select and edit
     s2 = s.select(ids=np.arange(100))
     assert s2.n_atoms == 100
-    s3 = s.with_frac(coords + 0.001)
+    s3 = s.with_frac(coords + 0.001, min_separation=None)  # grid spacing is far below 0.1 Å
     assert s3.n_atoms == n
     print(f"  10^6 atoms: peak {peak / 1e6:.1f} MB")
 
 
-def test_scale_20k_atoms_skips_separation():
-    """Construct 20 000 atoms; the separation check is skipped at n >= 20000."""
+def _gaas_supercell(N):
+    """GaAs zinc-blende N x N x N supercell as a configuration (8 atoms per cell)."""
+    a = 5.6537
+    fcc = np.array([[0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5]])
+    base = np.vstack([fcc, fcc + 0.25])
+    cells = np.array(np.meshgrid(range(N), range(N), range(N), indexing="ij")).reshape(3, -1).T
+    frac = ((base[None, :, :] + cells[:, None, :]) / N).reshape(-1, 3)
+    labels = [f"Ga{i}" for i in range(1, 5)] + [f"As{i}" for i in range(1, 5)]
+    return dict(
+        lattice=Lattice.from_parameters(a * N, a * N, a * N, 90.0, 90.0, 90.0),
+        species=np.tile(["Ga"] * 4 + ["As"] * 4, len(cells)).astype(object),
+        frac=frac,
+        site_label=np.tile(labels, len(cells)).astype(object),
+        cell_index=np.repeat(cells, 8, axis=0),
+        supercell=(N, N, N),
+    )
+
+
+def test_overlap_check_runs_at_scale():
+    """The overlap check is never skipped: a 16x16x16 GaAs supercell (32 768 atoms)
+    validates quickly, and a single planted overlap in it is found."""
     import time
-    lat = _cubic(50.0)  # large cell to avoid overlaps
-    n = 20_000
-    rng = np.random.default_rng(42)
-    coords = rng.uniform(0.01, 0.99, (n, 3))
-    species = np.array(["Ga"] * n, dtype=object)
+    d = _gaas_supercell(16)
     t0 = time.perf_counter()
-    s = Structure(lat, species, coords, model="configuration")
-    t1 = time.perf_counter()
-    assert s.n_atoms == n
-    print(f"  20k atoms (separation check skipped): {t1 - t0:.2f} s")
+    s = Structure(d["lattice"], d["species"], d["frac"], model="configuration",
+                  site_label=d["site_label"], cell_index=d["cell_index"], supercell=d["supercell"])
+    elapsed = time.perf_counter() - t0
+    assert s.n_atoms == 32_768
+    assert elapsed < 30.0, f"overlap check too slow: {elapsed:.1f} s"
+    frac = d["frac"].copy()
+    frac[-1] = frac[0] + np.array([0.05, 0.0, 0.0]) / (5.6537 * 16)  # 0.05 Å from atom 0
+    with pytest.raises(ValueError, match="apart"):
+        Structure(d["lattice"], d["species"], frac, model="configuration",
+                  site_label=d["site_label"], cell_index=d["cell_index"], supercell=d["supercell"])
+
+
+def _brute_min_overlap(model, frac, occ, site, lat, periodic, cut):
+    import itertools
+    shifts = np.array(list(itertools.product(range(-3, 4), repeat=3)), float)
+    sid = np.unique(site, return_inverse=True)[1].reshape(-1)
+    site_occ = np.bincount(sid, weights=occ)
+    i, j = np.triu_indices(len(frac), 1)
+    keep = sid[i] != sid[j]
+    if model == "average":
+        keep &= (site_occ[sid[i]] + site_occ[sid[j]]) > 1.0 + 1e-9
+    i, j = i[keep], j[keep]
+    df = frac[j] - frac[i]
+    if periodic:
+        base = df - np.rint(df)
+        dist = np.linalg.norm((base[:, None, :] - shifts[None]) @ lat.matrix, axis=2).min(axis=1)
+    else:
+        dist = np.linalg.norm(df @ lat.matrix, axis=1)
+    dist = dist[dist < cut]
+    return float(dist.min()) if len(dist) else None
+
+
+def test_overlap_cell_list_matches_brute_force():
+    """Cell-list overlap check agrees with brute force (all pairs, all images)
+    on random structures, incl. skewed and smaller-than-cutoff cells."""
+    from discuspdf.structure import _check_overlap
+    rng = np.random.default_rng(0)
+    cells = [(5, 5, 5, 90, 90, 90), (5, 5, 5, 90, 90, 20), (4.1, 5.3, 6.7, 78, 95, 112),
+             (0.25, 0.3, 0.28, 90, 90, 90)]
+    for p in cells:
+        lat = Lattice.from_parameters(*p)
+        inv = np.linalg.inv(lat.matrix)
+        for _ in range(10):
+            n = int(rng.integers(20, 80))
+            frac = rng.uniform(-1.5, 2.5, (n, 3))
+            for _ in range(int(rng.integers(0, 4))):  # plant near pairs, some across the boundary
+                i, j = rng.integers(n, size=2)
+                if i != j:
+                    v = rng.normal(size=3)
+                    v *= rng.choice([0.03, 0.0999, 0.1001, 0.2]) / np.linalg.norm(v)
+                    frac[j] = frac[i] + v @ inv + rng.integers(-2, 3, 3)
+            model = str(rng.choice(["configuration", "average"]))
+            occ = np.ones(n) if model == "configuration" else rng.choice([0.3, 0.5, 0.6, 1.0], n)
+            site = np.array([f"S{k}" for k in range(n)], dtype=object)
+            for periodic in (True, False):
+                ref = _brute_min_overlap(model, frac, occ, site, lat, periodic, 0.1)
+                try:
+                    _check_overlap(model, frac, occ, site, np.zeros((n, 3), int), lat, (periodic,) * 3, 0.1)
+                    got = None
+                except ValueError as err:
+                    got = float(str(err).split(" are ")[1].split(" Å")[0])
+                assert (ref is None) == (got is None), (p, model, periodic, ref, got)
+                if ref is not None:
+                    assert abs(ref - got) < 1e-6
+
+
+def test_distance_matrix_matches_pairwise_distance():
+    lat = Lattice.from_parameters(5.0, 5.0, 5.0, 90.0, 90.0, 20.0)
+    rng = np.random.default_rng(3)
+    n = 60
+    frac = rng.uniform(-1, 2, (n, 3))
+    s = Structure(lat, np.array(["Cu"] * n, dtype=object), frac, model="configuration",
+                  atom_id=np.arange(100, 100 + n), min_separation=None)
+    D = s.distance_matrix()
+    assert D.shape == (n, n) and np.allclose(D, D.T) and np.all(np.diag(D) == 0)
+    for a in range(0, n, 7):
+        for b in range(a + 1, n, 5):
+            assert D[a, b] == pytest.approx(s.distance(100 + a, 100 + b), abs=1e-12)
+    sub = s.distance_matrix(ids=[130, 101, 155])
+    assert sub[0, 2] == pytest.approx(s.distance(130, 155), abs=1e-12)
 
 
 def test_scale_1k_atoms_with_separation():
-    """Construct 1 000 atoms with the separation check on (below the 20k limit)."""
+    """Construct 1 000 atoms with the separation check on."""
     import time
     lat = _cubic(50.0)  # large cell to avoid overlaps
     n = 1_000

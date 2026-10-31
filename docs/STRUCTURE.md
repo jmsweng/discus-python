@@ -42,11 +42,27 @@ one atom. Displaced atoms keep their site.
 that is A4's explicit, seeded sampling step. Attempts such as a configuration with
 occupancy 0.5 raise `ValueError` with a message pointing to the average model.
 
-**Overlap check.** Two atoms in different sites closer than 0.1 Å raise an error. Use the
-minimum image on periodic structures. In a configuration, this applies to every such pair.
-In an average model, it applies only when the two occupancies sum to more than 1. The
-threshold is a documented keyword (`min_separation=0.1`, `None` to skip); the check is
-skipped above 20 000 atoms.
+**Overlap check.** Two atoms in different sites closer than `min_separation` (default
+0.1 Å) raise `ValueError`, naming both sites and the distance. Periodic structures use the
+minimum image. In a configuration, this applies to every such pair. In an average model,
+it applies only when the two sites' total occupancies add up to more than 1, so split
+sites (e.g. two half-occupied positions 0.05 Å apart) are allowed.
+
+The check runs on construction, on every edit (`replace`, `with_frac`, `with_cartesian`,
+`with_occupancy`, `wrapped`, `renumbered`) and on `concat`. It is never skipped
+automatically, whatever the size; `min_separation=None` is the only way to turn it off,
+and each of those methods accepts it. Structures with mixed `pbc` must pass
+`min_separation=None`, because mixed-PBC distances are not implemented yet.
+
+*Method.* A cell list: positions are binned so that every bin is at least `min_separation`
+thick in each lattice direction (using the interplanar spacings `1/|b_i|`), so any pair
+closer than the cutoff lies in the same or an adjacent bin, also in strongly skewed
+cells. When every axis has at least 3 bins, the nearest rounded image is the only one
+that can be within the cutoff; otherwise (cells not much larger than the cutoff) candidate
+pairs go through `Lattice.minimum_image`. The number of bins is capped at 4 per atom.
+A test compares it with a brute-force all-pairs, all-images check on random structures.
+Typical cost (cloud runner): a 20 × 20 × 20 GaAs supercell (64 000 atoms) validates in
+about 0.4 s, and 10⁵ random atoms in about 0.6 s.
 
 ## Periodicity
 
@@ -62,6 +78,8 @@ and leaves `cell_index` unchanged. Wrapping changes coordinates but not physics.
 ## Identity rules
 
 * `atom_id` never changes except through `renumbered()`.
+* `ids=` arguments (`select`, `remove`, `distance`, `displacement`, `distance_matrix`)
+  always mean `atom_id` values, never row numbers; unknown ids raise `ValueError`.
 * `select`, `remove` and `with_*` keep row order.
 * New ids, needed only by `concat(renumber=True)`, start at `max(existing) + 1`.
 * No method sorts or shuffles rows.
@@ -78,10 +96,14 @@ and leaves `cell_index` unchanged. Wrapping changes coordinates but not physics.
 * **Views:** `n_atoms`, `cartesian` (Å), `frac`, `sites()`, `atomic_numbers`,
   `composition()`, `counts()`, `formula()`.
 * **Selection:** `select(mask=None, *, ids=None, species=None, site=None)`.
-* **Functional edits:** `replace(**fields)`, `with_frac(frac)`, `with_cartesian(cart)`,
-  `with_occupancy(values)`, `remove(ids)`, `concat(other, *, renumber=False)`,
-  `renumbered()`.
-* **Distances:** `distance(id_a, id_b)`, `distance_matrix(ids=None)`, `displacement(id_a, id_b)`.
+* **Functional edits** (each returns a new, fully re-validated `Structure`):
+  `replace(*, min_separation=0.1, **fields)`, `with_frac(frac)`, `with_cartesian(cart)`,
+  `with_occupancy(values)`, `remove(ids)`, `renumbered()`, and
+  `concat(other, *, renumber=False, min_separation=0.1)`. `concat` requires matching
+  lattices (`isclose`), model, `supercell` and `pbc`, and `b_iso` on both or neither.
+* **Distances:** `distance(id_a, id_b)`, `displacement(id_a, id_b)` and
+  `distance_matrix(ids=None)` (vectorised; refuses more than 5 000 atoms — use the
+  Package C neighbour lists for larger sets; about 3.5 s for 2 000 atoms on the cloud runner).
 * **Wrapping:** `wrapped()`.
 * **Comparison:** `__eq__` (exact), `isclose(other, rtol, atol)`, `__hash__ = None`.
 

@@ -277,11 +277,13 @@ class Lattice:
         n0 = np.rint(flat)
         r0 = (flat - n0) @ A
         R = np.linalg.norm(r0, axis=1)
-        # Bounded search window for the offset k = n - n0: |k_i| <= R |b_i|
-        # (rows of B).
+        # Bounded search window for the offset k = n - n0 (see the bound below).
         Rmax = R.max() if R.size else 0.0
         b_norms = np.linalg.norm(B, axis=1)  # (3,)
-        bounds = np.ceil(Rmax * b_norms).astype(int) + 1
+        # Exact bound: any image within R of the origin has |red'_i| <= R |b_i|, and
+        # red' = red - k with |red_i| <= 1/2, so |k_i| <= R |b_i| + 1/2.  A tiny
+        # relative slack keeps candidates that tie within the tie tolerance.
+        bounds = np.floor(0.5 + Rmax * b_norms * (1.0 + 1e-9) + 1e-9).astype(int)
         # Candidate offsets k in the box [-bounds, +bounds] per axis.
         ranges = [np.arange(-bounds[i], bounds[i] + 1) for i in range(3)]
         grid = np.stack(np.meshgrid(*ranges, indexing="ij"), axis=-1)  # (N1, N2, N3, 3)
