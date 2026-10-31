@@ -26,6 +26,10 @@ __all__ += ["DiscusVolume", "FractionalFFTResult", "read_discus_volume", "delta_
 from .lattice import Lattice
 __all__ += ["Lattice"]
 
+# Regular reciprocal-space grids (Package B, Feature 6).
+from .reciprocal_grid import ReciprocalGrid, FFTCompatibility
+__all__ += ["ReciprocalGrid", "FFTCompatibility"]
+
 # Editable Structure model (Package A, Feature A1).
 from .structure import Structure
 __all__ += ["Structure"]
