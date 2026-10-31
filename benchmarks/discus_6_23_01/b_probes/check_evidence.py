@@ -1,6 +1,7 @@
 """Read-only check of one probe evidence directory before it is committed.
 
     python benchmarks/discus_6_23_01/b_probes/check_evidence.py benchmarks/discus_6_23_01/b_probes/evidence/<stamp>
+    python benchmarks/discus_6_23_01/b_probes/check_evidence.py <smoke evidence dir> --partial
 
 Checks: MANIFEST.sha256 matches every file (and lists every file except itself), runs_status.json,
 summary.json and SUMMARY.md exist, every run in runs.json has a directory with run.mac and run.log,
@@ -19,7 +20,10 @@ HERE = Path(__file__).resolve().parent
 
 
 def main(argv=None) -> int:
-    argv = sys.argv[1:] if argv is None else argv
+    argv = list(sys.argv[1:] if argv is None else argv)
+    partial = "--partial" in argv
+    if partial:
+        argv.remove("--partial")
     if len(argv) != 1:
         print(__doc__)
         return 2
@@ -63,7 +67,7 @@ def main(argv=None) -> int:
         if staged is not None and staged.read_bytes() != committed:
             problems.append(f"{r['id']}/run.mac differs from {r['macro']}")
     missing_runs = sorted({r["id"] for r in spec["runs"]} - status_ids)
-    if missing_runs:
+    if missing_runs and not partial:
         problems.append(f"runs not executed: {missing_runs}")
     for name, path in files.items():
         if Path(name).name in inputs:
