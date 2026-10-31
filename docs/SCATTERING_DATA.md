@@ -48,6 +48,23 @@ grid's Q steps are parallel to x, y, z. Both refuse what `ReciprocalGrid.fft_com
 `mask_near_bragg(grid, radius)` masks by Euclidean distance in Q to the nearest reflection; the
 radius must be below half the shortest reciprocal-lattice vector.
 
+## Reading DISCUS output directly (volumes, planes, lines)
+
+```python
+sv = ScatteringVolume.from_discus_file("hk0_plane.h5")              # any DISCUS 6.23.01 form-nexus hkl file
+sv = ScatteringVolume.from_discus_file("job_int.h5", config=cfg)    # also checked against its FourierConfig
+sv = job.load_scattering_volume()                                   # Diffuse3DRun: uses the staged fourier_config.json
+```
+
+`from_discus_file` builds the grid with `ReciprocalGrid`, so planes and lines work (DISCUS writes a
+zero step, or `tl − ll`, for a one-point axis; `read_discus_volume` refuses those files). Accepted
+contents are `intensity`, `real part` and `imaginary part` (`value int/real/imag`); real-space files
+(`3DPDF`, axes `uvw`) are refused. With a `FourierConfig` the reader refuses a file whose name, content
+(`value`), Bragg label (`set aver`), shape, corner or steps (to the 6 digits written in the macro)
+disagree with the configuration, and stores the configuration (seed, lots, labels) in
+`provenance['fourier_config']`. `Diffuse3DRunner.execute(..., native_nexus=True)` now validates with
+this reader, so plane runs end `complete` and a contradicting output ends `failed`.
+
 ## xarray
 
 ```python
