@@ -119,7 +119,7 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.read_mantid_mdhisto` / `write_mantid_mdhisto` convert between Mantid `SaveMD` (v2) MDHistoWorkspace files in the HKL frame and `ScatteringVolume`, including projections (`[H,H,0]`-style axes, `W_MATRIX`), errors² and masks. Checked against files written by Mantid 7.0.0, and Mantid loads the files we write. See [docs/MANTID_IO.md](docs/MANTID_IO.md).
 
-`notebooks/07_package_b.ipynb` walks through these reciprocal-space and data features (grids, DISCUS output loading, Fourier macros, Bragg subtraction and masking, xarray/HDF5, slices, isosurfaces and VTK, Mantid files) on data committed to this repository.
+`notebooks/07_reciprocal_space_data.ipynb` walks through these reciprocal-space and data features (grids, DISCUS output loading, Fourier macros, Bragg subtraction and masking, xarray/HDF5, slices, isosurfaces and VTK, Mantid files) on data committed to this repository.
 
 ## Interoperability (CIF, ASE, DiffPy)
 
