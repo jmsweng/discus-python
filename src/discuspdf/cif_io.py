@@ -296,7 +296,12 @@ def _build_structure(
     """Build a ``Structure`` from the expanded rows.
 
     ``site_label = f"{label}_{k}"`` where ``k`` is the 1-based image number.
-    Mixed sites (same position) share the first atom's label.
+    Rows from the same listed atom that are symmetry images of one another
+    keep their own labels (``Ga1_1`` … ``Ga1_4``).  When rows from *different*
+    listed atoms sit at the same position (periodic distance < 1e-4 in
+    fractional units) they form one mixed site and all rows in the group
+    share the ``site_label`` of the first listed atom at that position
+    (i.e. the lowest index in ``rows``, which is in file order).
     """
     if not rows:
         raise InteropError("no atoms found in CIF")
@@ -332,7 +337,38 @@ def _build_structure(
         species[i] = sp
         frac[i] = r["frac"]
         occupancy[i] = r["occ"]
-        site_label[i] = f"{r['label']}_{r['image_k']}" 
+        site_label[i] = f"{r['label']}_{r['image_k']}"
+
+    # Mixed-site pass: group rows by position (periodic distance < 1e-4).
+    # For each group containing rows from more than one distinct listed atom,
+    # overwrite all rows' site_label with the label of the first row in file
+    # order (lowest index).  Rows from the same listed atom (symmetry images)
+    # keep their own labels.
+    merge_tol = 1e-4
+    pos_groups: list[list[int]] = []
+    for i in range(n):
+        found = False
+        for g in pos_groups:
+            d = np.abs(frac[i] - frac[g[0]])
+            d = np.minimum(d, 1.0 - d)
+            if np.max(d) < merge_tol:
+                g.append(i)
+                found = True
+                break
+        if not found:
+            pos_groups.append([i])
+
+    for g in pos_groups:
+        labels_at_pos = {rows[i]["label"] for i in g}
+        if len(labels_at_pos) > 1:
+            first_label = rows[g[0]]["label"]
+            # All rows at this position share the first atom's label.
+            # Use the first row's image_k so that (site_label, cell_index)
+            # is identical for all rows at the position (required by the
+            # average-model validation in Structure).
+            shared_k = rows[g[0]]["image_k"]
+            for i in g:
+                site_label[i] = f"{first_label}_{shared_k}"
 
     # Check occupancy.
     _check_occupancy(rows)

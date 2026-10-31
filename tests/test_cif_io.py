@@ -277,6 +277,72 @@ def test_mixed_fixture():
         assert abs(total - 1.0) < 1e-9, f"occupancy sum {total} != 1.0 at {pos}"
         assert abs(oc[ga_i] - 0.7) < 1e-9
         assert abs(oc[in_i] - 0.3) < 1e-9
+        # The Ga and In rows at this position share (site_label, cell_index).
+        ga_global = idx[ga_i]
+        in_global = idx[in_i]
+        assert s.site_label[ga_global] == s.site_label[in_global], (
+            f"Ga/In site_label differs at {pos}: "
+            f"{s.site_label[ga_global]} vs {s.site_label[in_global]}"
+        )
+        assert np.array_equal(s.cell_index[ga_global], s.cell_index[in_global]), (
+            f"Ga/In cell_index differs at {pos}: "
+            f"{s.cell_index[ga_global]} vs {s.cell_index[in_global]}"
+        )
+
+    # The four cation labels are distinct from each other and from every As label.
+    cation_labels = set()
+    for pos in [
+        [0.0, 0.0, 0.0],
+        [0.0, 0.5, 0.5],
+        [0.5, 0.0, 0.5],
+        [0.5, 0.5, 0.0],
+    ]:
+        pos_arr = np.array(pos)
+        idx = [
+            i for i in range(s.n_atoms)
+            if np.allclose(s.frac[i], pos_arr, atol=1e-9)
+        ]
+        cation_labels.add(s.site_label[idx[0]])
+    assert len(cation_labels) == 4, (
+        f"expected 4 distinct cation labels, got {sorted(cation_labels)}"
+    )
+
+    as_labels = {s.site_label[i] for i in range(s.n_atoms) if s.species[i] == "As"}
+    assert not cation_labels & as_labels, (
+        f"cation labels overlap As labels: {sorted(cation_labels & as_labels)}"
+    )
+
+    # The Ga/In label equals Ga1_k (k = image index, 1-based).
+    for k, pos in enumerate(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 0.5, 0.5],
+            [0.5, 0.0, 0.5],
+            [0.5, 0.5, 0.0],
+        ]
+    ):
+        pos_arr = np.array(pos)
+        idx = [
+            i for i in range(s.n_atoms)
+            if np.allclose(s.frac[i], pos_arr, atol=1e-9)
+        ]
+        expected = f"Ga1_{k + 1}"
+        assert s.site_label[idx[0]] == expected, (
+            f"expected cation label {expected} at {pos}, "
+            f"got {s.site_label[idx[0]]}"
+        )
+
+    # Per-site occupancy sum is 1.0 for every site
+    # (group by (site_label, cell_index)).
+    groups: dict[tuple[str, tuple], float] = {}
+    for i in range(s.n_atoms):
+        key = (s.site_label[i], tuple(s.cell_index[i]))
+        groups[key] = groups.get(key, 0.0) + s.occupancy[i]
+    assert len(groups) == 8, f"expected 8 sites, got {len(groups)}"
+    for key, total in groups.items():
+        assert abs(total - 1.0) < 1e-9, (
+            f"occupancy sum {total} != 1.0 for site {key}"
+        )
 
     # model='configuration' → InteropError.
     with pytest.raises(InteropError, match="configuration"):
@@ -621,6 +687,110 @@ def test_roundtrip_mixed():
     assert np.allclose(s2.frac, s.frac, atol=1e-9)
     assert np.allclose(s2.occupancy, s.occupancy, atol=1e-9)
     assert (s2.site_label == s.site_label).all()
+
+
+def test_b_from_u_values():
+    """M3 check: B = 8π²·U with literal values (not u_to_b)."""
+    gemmi = pytest.importorskip("gemmi")
+    from discuspdf.cif_io import read_cif
+
+    cif_path = FIXTURES / "ga07in03as_mixed.cif"
+    result = read_cif(cif_path)
+    s = result.structure
+
+    # Ga and In rows: U = 0.0100 → B = 8π²·0.0100 = 0.789568352...
+    expected_b_ga_in = 8.0 * math.pi ** 2 * 0.0100
+    # As rows: U = 0.0080 → B = 8π²·0.0080 = 0.631654682...
+    expected_b_as = 8.0 * math.pi ** 2 * 0.0080
+
+    assert s.b_iso is not None, "expected b_iso to be present"
+    for i in range(s.n_atoms):
+        if s.species[i] in ("Ga", "In"):
+            assert abs(s.b_iso[i] - expected_b_ga_in) < 1e-6, (
+                f"{s.species[i]} b_iso={s.b_iso[i]}, expected {expected_b_ga_in}"
+            )
+        elif s.species[i] == "As":
+            assert abs(s.b_iso[i] - expected_b_as) < 1e-6, (
+                f"As b_iso={s.b_iso[i]}, expected {expected_b_as}"
+            )
+
+
+def test_roundtrip_mixed_labels():
+    """Round-trip preserves shared mixed-site labels."""
+    gemmi = pytest.importorskip("gemmi")
+    from discuspdf.cif_io import read_cif, format_cif, parse_cif
+
+    cif_path = FIXTURES / "ga07in03as_mixed.cif"
+    result = read_cif(cif_path)
+    s = result.structure
+
+    text = format_cif(s)
+    result2 = parse_cif(text)
+    s2 = result2.structure
+
+    assert s2.n_atoms == s.n_atoms
+    # Ga and In at the same position must share the same site_label.
+    for pos in [
+        [0.0, 0.0, 0.0],
+        [0.0, 0.5, 0.5],
+        [0.5, 0.0, 0.5],
+        [0.5, 0.5, 0.0],
+    ]:
+        pos_arr = np.array(pos)
+        idx = [
+            i for i in range(s2.n_atoms)
+            if np.allclose(s2.frac[i], pos_arr, atol=1e-9)
+        ]
+        assert len(idx) == 2, f"expected 2 atoms at {pos}, got {len(idx)}"
+        labels = [s2.site_label[i] for i in idx]
+        assert labels[0] == labels[1], (
+            f"mixed site labels differ after round-trip at {pos}: {labels}"
+        )
+        # The shared label must start with "Ga1" (first listed atom).
+        assert labels[0].startswith("Ga1"), (
+            f"expected shared label to start with 'Ga1', got {labels[0]}"
+        )
+
+
+def test_mixed_reversed_order():
+    """When In is listed before Ga, the shared label is In1_k."""
+    gemmi = pytest.importorskip("gemmi")
+    from discuspdf.cif_io import parse_cif
+
+    cif_path = FIXTURES / "ga07in03as_mixed.cif"
+    text = cif_path.read_text(encoding="ascii")
+
+    # Swap the Ga and In rows: move the In row before the Ga row.
+    lines = text.splitlines()
+    ga_line_idx = None
+    in_line_idx = None
+    for i, line in enumerate(lines):
+        if line.startswith("Ga1 "):
+            ga_line_idx = i
+        elif line.startswith("In1 "):
+            in_line_idx = i
+    assert ga_line_idx is not None and in_line_idx is not None
+    # Swap: put In before Ga.
+    ga_line = lines[ga_line_idx]
+    in_line = lines[in_line_idx]
+    lines[ga_line_idx] = in_line
+    lines[in_line_idx] = ga_line
+    swapped = "\n".join(lines) + "\n"
+
+    result = parse_cif(swapped)
+    s = result.structure
+
+    # At (0,0,0): the shared label must start with "In1".
+    origin_idx = [
+        i for i in range(s.n_atoms)
+        if np.allclose(s.frac[i], [0.0, 0.0, 0.0], atol=1e-9)
+    ]
+    assert len(origin_idx) == 2
+    labels = [s.site_label[i] for i in origin_idx]
+    assert labels[0] == labels[1], f"mixed site labels differ: {labels}"
+    assert labels[0].startswith("In1"), (
+        f"expected shared label to start with 'In1', got {labels[0]}"
+    )
 
 
 def test_roundtrip_precision_10_decimals():
