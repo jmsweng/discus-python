@@ -407,11 +407,12 @@ def test_cif_diffpy_cross_check():
     s = read_cif(FIXTURES / "gaas_cod_9008845.cif").structure
     ds = to_diffpy(s)
 
-    assert np.allclose(
-        ds.lattice.cell_parms(), s.lattice.parameters, rtol=1e-8
-    ), (
-        f"lattice parameters mismatch:\n"
-        f"{ds.lattice.cell_parms()}\n{s.lattice.parameters}"
+    # ``cell_parms`` is missing in diffpy < 3.3; use the individual
+    # attributes (present in all versions).
+    lat = ds.lattice
+    parms = (lat.a, lat.b, lat.c, lat.alpha, lat.beta, lat.gamma)
+    assert np.allclose(parms, s.lattice.parameters, rtol=1e-8), (
+        f"lattice parameters mismatch:\n{parms}\n{s.lattice.parameters}"
     )
 
 
