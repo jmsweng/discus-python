@@ -73,7 +73,7 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 |---|---|
 | `src/discuspdf/` | The Python package. |
 | `tests/` | Unit tests (`python -m pytest -q`; run by CI on every push). They use stubbed engines, so they do not validate a real DISCUS run; see the separately documented manual DISCUS integration check. |
-| `examples/`, `notebooks/` | Example unit cells, a recorded real 1D run, and the quick-start and synthetic 3D-ΔPDF notebooks. |
+| `examples/`, `notebooks/` | Example unit cells, a recorded real 1D run, and the quick-start, synthetic 3D-ΔPDF and feature walkthrough notebooks. |
 | `docs/` | Verified macro syntax, 3D integration notes, integration history and the [validation report](docs/SCIENTIFIC_VALIDATION_REPORT.md). |
 | `benchmarks/discus_6_23_01/` | The pre-registered validation of DISCUS 6.23.01 (Gates 1–3): inputs, predictions, analysis scripts, results and small evidence files. Large engine volumes are not committed; `regenerate_evidence.py` recreates them. |
 | `spike_discus_3d/` | The original 3D probe kit: verified macros (used by the 3D runner example and its tests), case runner and historical findings. |
@@ -118,6 +118,8 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 ## Mantid MDHisto files
 
 `discuspdf.read_mantid_mdhisto` / `write_mantid_mdhisto` convert between Mantid `SaveMD` (v2) MDHistoWorkspace files in the HKL frame and `ScatteringVolume`, including projections (`[H,H,0]`-style axes, `W_MATRIX`), errors² and masks. Checked against files written by Mantid 7.0.0, and Mantid loads the files we write. See [docs/MANTID_IO.md](docs/MANTID_IO.md).
+
+`notebooks/07_package_b.ipynb` walks through these reciprocal-space and data features (grids, DISCUS output loading, Fourier macros, Bragg subtraction and masking, xarray/HDF5, slices, isosurfaces and VTK, Mantid files) on data committed to this repository.
 
 ## Interoperability (CIF, ASE, DiffPy)
 
