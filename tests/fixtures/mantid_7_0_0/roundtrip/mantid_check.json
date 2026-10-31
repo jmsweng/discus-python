@@ -1,0 +1,412 @@
+{
+ "mantid_version": "7.0.0",
+ "files": {
+  "aligned_hkl": {
+   "ours": {
+    "dims": [
+     {
+      "name": "[H,0,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[0,K,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 12,
+      "min": -3.0,
+      "max": 3.0
+     }
+    ],
+    "lattice": [
+     4.999999999999999,
+     6.0,
+     6.999999999999998,
+     90.0,
+     105.00000000000001,
+     90.0
+    ]
+   },
+   "reference": {
+    "dims": [
+     {
+      "name": "[H,0,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[0,K,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 12,
+      "min": -3.0,
+      "max": 3.0
+     }
+    ],
+    "lattice": [
+     5.000000000000001,
+     6.0,
+     7.000000000000001,
+     90.0,
+     105.00000000000001,
+     90.00000000000001
+    ]
+   },
+   "mask_counts": {
+    "mantid": 0,
+    "nan": 0,
+    "ours": 0
+   },
+   "resaved": "aligned_hkl.resaved.nxs",
+   "checks": {
+    "dim_names": true,
+    "dim_frames": true,
+    "dim_bins": true,
+    "dim_extents": true,
+    "signal_unmasked": true,
+    "errors_squared_unmasked": true,
+    "mask": true,
+    "lattice": true
+   }
+  },
+  "histo_formula": {
+   "ours": {
+    "dims": [
+     {
+      "name": "[H,0,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 6,
+      "min": -1.5,
+      "max": 1.5
+     },
+     {
+      "name": "[0,K,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 5,
+      "min": -1.25,
+      "max": 1.25
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 4,
+      "min": 0.0,
+      "max": 2.0
+     }
+    ],
+    "lattice": [
+     4.999999999999999,
+     6.0,
+     6.999999999999998,
+     90.0,
+     105.00000000000001,
+     90.0
+    ]
+   },
+   "reference": {
+    "dims": [
+     {
+      "name": "[H,0,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 6,
+      "min": -1.5,
+      "max": 1.5
+     },
+     {
+      "name": "[0,K,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 5,
+      "min": -1.25,
+      "max": 1.25
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 4,
+      "min": 0.0,
+      "max": 2.0
+     }
+    ],
+    "lattice": [
+     5.000000000000001,
+     6.0,
+     7.000000000000001,
+     90.0,
+     105.00000000000001,
+     90.00000000000001
+    ]
+   },
+   "mask_counts": {
+    "mantid": 20,
+    "nan": 21,
+    "ours": 21
+   },
+   "resaved": "histo_formula.resaved.nxs",
+   "checks": {
+    "dim_names": true,
+    "dim_frames": true,
+    "dim_bins": true,
+    "dim_extents": true,
+    "signal_unmasked": true,
+    "errors_squared_unmasked": true,
+    "mask": true,
+    "lattice": true
+   }
+  },
+  "projected_hh0": {
+   "ours": {
+    "dims": [
+     {
+      "name": "[H,H,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[-H,H,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 12,
+      "min": -3.0,
+      "max": 3.0
+     }
+    ],
+    "lattice": [
+     4.999999999999999,
+     6.0,
+     6.999999999999998,
+     90.0,
+     105.00000000000001,
+     90.0
+    ]
+   },
+   "reference": {
+    "dims": [
+     {
+      "name": "[H,H,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[-H,H,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 24,
+      "min": -3.0,
+      "max": 3.0
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 12,
+      "min": -3.0,
+      "max": 3.0
+     }
+    ],
+    "lattice": [
+     5.000000000000001,
+     6.0,
+     7.000000000000001,
+     90.0,
+     105.00000000000001,
+     90.00000000000001
+    ]
+   },
+   "mask_counts": {
+    "mantid": 0,
+    "nan": 0,
+    "ours": 0
+   },
+   "resaved": "projected_hh0.resaved.nxs",
+   "checks": {
+    "dim_names": true,
+    "dim_frames": true,
+    "dim_bins": true,
+    "dim_extents": true,
+    "signal_unmasked": true,
+    "errors_squared_unmasked": true,
+    "mask": true,
+    "lattice": true
+   }
+  },
+  "skewed": {
+   "ours": {
+    "dims": [
+     {
+      "name": "[H,0,0.5H]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 6,
+      "min": -1.2361111640930176,
+      "max": 0.2638888955116272
+     },
+     {
+      "name": "[0,K,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 5,
+      "min": -1.125,
+      "max": 0.125
+     },
+     {
+      "name": "[-0.25H,0,H]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 4,
+      "min": -0.6944444179534912,
+      "max": 1.3055555820465088
+     }
+    ],
+    "lattice": [
+     4.999999999999999,
+     6.0,
+     6.999999999999999,
+     90.0,
+     105.00000000000001,
+     90.0
+    ]
+   },
+   "resaved": "skewed.resaved.nxs",
+   "checks": {
+    "signal_formula": true,
+    "errors_squared_formula": true,
+    "mask": true,
+    "dim_frames": true,
+    "lattice": true
+   }
+  },
+  "w_matrix_after": {
+   "ours": {
+    "dims": [
+     {
+      "name": "[H,H,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 20,
+      "min": -5.0,
+      "max": 5.0
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 20,
+      "min": -5.0,
+      "max": 5.0
+     },
+     {
+      "name": "[H,-H,0]",
+      "units": "r.l.u.",
+      "frame": "HKL",
+      "bins": 20,
+      "min": -5.0,
+      "max": 5.0
+     }
+    ],
+    "lattice": [
+     4.999999999999999,
+     6.0,
+     6.999999999999998,
+     90.0,
+     105.00000000000001,
+     90.0
+    ]
+   },
+   "reference": {
+    "dims": [
+     {
+      "name": "[H,H,0]",
+      "units": "in 1.67 A^-1",
+      "frame": "HKL",
+      "bins": 20,
+      "min": -5.0,
+      "max": 5.0
+     },
+     {
+      "name": "[0,0,L]",
+      "units": "in 0.929 A^-1",
+      "frame": "HKL",
+      "bins": 20,
+      "min": -5.0,
+      "max": 5.0
+     },
+     {
+      "name": "[H,-H,0]",
+      "units": "in 1.67 A^-1",
+      "frame": "HKL",
+      "bins": 20,
+      "min": -5.0,
+      "max": 5.0
+     }
+    ],
+    "lattice": [
+     5.000000000000001,
+     6.0,
+     7.000000000000001,
+     90.0,
+     105.00000000000001,
+     90.00000000000001
+    ]
+   },
+   "mask_counts": {
+    "mantid": 0,
+    "nan": 0,
+    "ours": 0
+   },
+   "resaved": "w_matrix_after.resaved.nxs",
+   "checks": {
+    "dim_names": true,
+    "dim_frames": true,
+    "dim_bins": true,
+    "dim_extents": true,
+    "signal_unmasked": true,
+    "errors_squared_unmasked": true,
+    "mask": true,
+    "lattice": true
+   }
+  }
+ },
+ "failures": []
+}
