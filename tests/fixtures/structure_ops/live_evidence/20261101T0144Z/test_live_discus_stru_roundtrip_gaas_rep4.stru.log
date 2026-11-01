@@ -1,0 +1,94 @@
+=== test_live_discus_stru_roundtrip_gaas_rep4.stru @ 2026-11-01T01:44:49Z ===
+command: discus_suite -noautorun -macro macro.mac
+workdir: C:\Users\jmswe\AppData\Local\Temp\pytest-of-user\pytest-173\test_live_discus_stru_roundtri0\live
+returncode: 0
+banner: *         D I S C U S - S U I T E  Version 6.23.01        *
+--- macro ---
+discus
+read
+  stru gaas_rep4.stru
+eval n[1]
+save back_gaas_rep4.stru
+exit
+exit
+
+--- files ---
+gaas_rep4.stru: sha256=0ff48075620b4bdf89f516868f5c2be0771d3da7ffb2b55af1de63730b6134a0
+--- stdout ---
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\Users\jmswe\AppData\Local\Temp\pytest-of-user\pytest-173\test_live_discus_stru_roundtri0\live\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmacro.mac
+ suite> discus
+ discus> read
+ discus/read> stru gaas_rep4.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    5.65370    5.65370    5.65370   90.00000   90.00000   90.00000    180.717    
+
+ Metric Tensor     :
+      31.96432      0.00000      0.00000
+       0.00000     31.96432      0.00000
+       0.00000      0.00000     31.96432
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.17688    0.17688    0.17688   90.00000   90.00000   90.00000   0.553352E-02
+
+ Reciprocal metric tensor     : 
+       0.03128     -0.00000     -0.00000
+      -0.00000      0.03128     -0.00000
+      -0.00000     -0.00000      0.03128
+
+ discus> eval n[1]
+ Value of n[1] =    512.000000000    
+ discus> save back_gaas_rep4.stru
+ discus> exit
+ suite> exit
+
+--- DISCUS saved back_gaas_rep4.stru ---
+n[1] = 512
+title discuspdf structure
+spcgr P 1             , setting:abc
+cell    5.653700,  5.653700,  5.653700, 90.000000, 90.000000, 90.000000
+format numbers,XYZBPMMOS
+atoms      x,              y,              z,             Biso,    Property,  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl
+GA         0.000000,       0.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         0.000000,       0.500000,       0.500000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         0.500000,       0.000000,       0.500000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         0.500000,       0.500000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         0.250000,       0.250000,       0.250000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         0.250000,       0.750000,       0.750000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         0.750000,       0.250000,       0.750000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         0.750000,       0.750000,       0.250000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         1.000000,       0.000000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         1.000000,       0.500000,       0.500000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         1.500000,       0.000000,       0.500000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+GA         1.500000,       0.500000,       0.000000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         1.250000,       0.250000,       0.250000,      1.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+AS         1.250000,       0.750000,       0.750000,      1.000000,       1,       0,       0,   1.000000

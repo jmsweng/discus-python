@@ -10,6 +10,7 @@ written under ``tests/fixtures/structure_ops/live_evidence/<timestamp>/`` when
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import time
@@ -32,9 +33,7 @@ from discuspdf import (
 )
 from discuspdf.cif_io import read_cif
 
-from tests.discus_live import evidence_log, run_discus
-
-pytestmark = pytest.mark.discus_live
+from tests.discus_live import evidence_log, evidence_note, run_discus
 
 FIX_GAAS = "tests/fixtures/interop/gaas_cod_9008845.cif"
 
@@ -61,6 +60,23 @@ def _gaas_configuration() -> object:
 def _gaas_repeated() -> object:
     """GaAs 8-atom configuration cell repeated 4x4x4 (512 atoms)."""
     return repeat(_gaas_configuration(), (4, 4, 4)).structure
+
+
+def _periodic_key(frac: np.ndarray) -> tuple:
+    """Periodic key of a fractional position: (frac mod 1) rounded to 1e-6.
+
+    DISCUS saves supercell coordinates centred (−n/2 …, see
+    docs/DISCUS_FORMATS.md), so positions are compared modulo 1 instead of
+    row by row.
+    """
+    return tuple(round(v % 1.0, 6) for v in frac)
+
+
+def _periodic_positions(structure: object, species: str) -> list[tuple]:
+    """Sorted list of periodic positions of ``species`` in ``structure``."""
+    mask = structure.species == species
+    keys = [_periodic_key(structure.frac[i]) for i in np.where(mask)[0]]
+    return sorted(keys)
 
 
 # -- 1. repeat round trip ---------------------------------------------------
@@ -149,14 +165,21 @@ def test_format_cll_unit_cell_parent():
 
 # -- 6. live DISCUS round trip (opt-in) ----------------------------------------
 @skip_live
+@pytest.mark.discus_live
 def test_live_discus_stru_roundtrip(tmp_path):
-    """DISCUS ``read stru`` on the Python-written 4x4x4 GaAs and the substituted
-    (25% Ga -> In) structure: atom count and species counts agree with Python.
+    """DISCUS ``read stru`` -> ``eval n[1]`` -> ``save back_<name>`` on the
+    Python-written 4x4x4 GaAs and the substituted (25% Ga -> In) structure.
+
+    The round trip is verified against DISCUS's own ``save`` output (not our
+    written file): the saved .stru is read back with ``parse_stru`` and its
+    atom count, species counts and (periodic) coordinates are compared with
+    the structure we wrote.
 
     Evidence is saved under
     ``tests/fixtures/structure_ops/live_evidence/<timestamp>/`` via
-    ``evidence_log`` (requires ``DISCUS_LIVE_EVIDENCE`` to point there) and a
-    ``MANIFEST.sha256`` is written into the evidence folder.
+    ``evidence_log``/``evidence_note`` (requires ``DISCUS_LIVE_EVIDENCE`` to
+    point there); a ``MANIFEST.sha256`` of the written .stru files is written
+    into the evidence folder.
     """
     rep = _gaas_repeated()
     sub = substitute(rep, old="Ga", new="In", seed=42, fraction=0.25).structure
@@ -170,24 +193,23 @@ def test_live_discus_stru_roundtrip(tmp_path):
     write_stru(os.path.join(workdir, sub_name), sub)
 
     # Evidence folder: tests/fixtures/structure_ops/live_evidence/<timestamp>/
-    ts = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    # (yyyyMMddTHHmmZ, e.g. 20261101T0111Z — no seconds).
+    ts = time.strftime("%Y%m%dT%H%MZ", time.gmtime())
     evidence_dir = os.path.join(
         "tests", "fixtures", "structure_ops", "live_evidence", ts
     )
     os.environ["DISCUS_LIVE_EVIDENCE"] = evidence_dir
 
-    rep_counts = rep.counts()
-    sub_counts = sub.counts()
-
-    for name, s, expected_counts in (
-        (rep_name, rep, rep_counts),
-        (sub_name, sub, sub_counts),
+    for name, s in (
+        (rep_name, rep),
+        (sub_name, sub),
     ):
         macro = (
             "discus\n"
             "read\n"
             f"  stru {name}\n"
             "eval n[1]\n"
+            f"save back_{name}\n"
             "exit\n"
             "exit\n"
         )
@@ -201,27 +223,62 @@ def test_live_discus_stru_roundtrip(tmp_path):
             f"DISCUS atom count {n_discus} != Python {s.n_atoms}"
         )
 
-        # Species counts: count the species column of the .stru (CIF) file we wrote.
-        # Atom lines: "  Ga  Ga1       1.0  0.0  0.0  0.0  1.0000"
-        with open(os.path.join(workdir, name), encoding="ascii") as fh:
-            written_counts = Counter()
-            for line in fh:
-                parts = line.split()
-                if len(parts) >= 7 and parts[0].isalpha() and len(parts[0]) <= 2:
-                    written_counts[parts[0].upper()] += 1
-        py_counts = {k.upper(): v for k, v in expected_counts.items()}
-        assert written_counts == py_counts, (
-            f"written species counts {dict(written_counts)} != "
-            f"Python {py_counts}"
+        # Read DISCUS's own saved file.  DISCUS `save` drops the ncell line
+        # and writes centred coordinates (−n/2 …, docs/DISCUS_FORMATS.md),
+        # so pass the supercell explicitly.
+        back_path = os.path.join(workdir, f"back_{name}")
+        assert os.path.exists(back_path), (
+            f"DISCUS did not write {back_path}: {result.stdout[:500]!r}"
+        )
+        back_text = Path(back_path).read_text(encoding="ascii")
+        back = parse_stru(back_text, supercell=(4, 4, 4)).structure
+
+        # Atom count of DISCUS's saved file.
+        assert back.n_atoms == s.n_atoms, (
+            f"saved-file atom count {back.n_atoms} != Python {s.n_atoms}"
         )
 
-        evidence_log(f"test_live_discus_stru_roundtrip_{name}", macro, None, result)
+        # Species counts: DISCUS upper-cases species names on save.
+        back_counts = {k.upper(): v for k, v in back.counts().items()}
+        py_counts = {k.upper(): v for k, v in s.counts().items()}
+        assert back_counts == py_counts, (
+            f"DISCUS species counts {back_counts} != Python {py_counts}"
+        )
 
-    # MANIFEST.sha256: sha256 of each committed .stru file in the evidence folder.
+        # Coordinates: compare sorted periodic positions per species
+        # ((frac mod 1) rounded to 1e-6) — the saved file is centred, so
+        # positions are compared modulo 1 instead of row by row.
+        # DISCUS upper-cases species names on save, so iterate the original
+        # (mixed-case) names from the Python structure and look them up in
+        # the saved structure by their upper-cased form.
+        for sp in s.counts():
+            ours = _periodic_positions(s, sp)
+            theirs = _periodic_positions(back, sp.upper())
+            assert len(ours) == len(theirs), (
+                f"species {sp}: {len(ours)} positions vs {len(theirs)}"
+            )
+            for o, t in zip(ours, theirs):
+                np.testing.assert_allclose(o, t, atol=1e-6)
+
+        # Evidence: macro, input file hash, DISCUS output (head of the
+        # saved file and the n[1] value).
+        evidence_log(
+            f"test_live_discus_stru_roundtrip_{name}",
+            macro,
+            {name: Path(workdir, name).read_bytes()},
+            result,
+        )
+        evidence_note(
+            f"test_live_discus_stru_roundtrip_{name}",
+            f"--- DISCUS saved {f'back_{name}'} ---\n"
+            f"n[1] = {n_discus}\n"
+            f"{back_text[:2000]}",
+        )
+
+    # MANIFEST.sha256: sha256 of each written .stru file in the evidence folder.
     manifest_lines = []
     for name in (rep_name, sub_name):
         data = Path(workdir, name).read_bytes()
-        import hashlib
         sha = hashlib.sha256(data).hexdigest()
         manifest_lines.append(f"{sha}  {name}")
     manifest_path = Path(evidence_dir) / "MANIFEST.sha256"

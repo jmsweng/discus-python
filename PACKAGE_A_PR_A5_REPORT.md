@@ -3,7 +3,7 @@
 ## 1. Base / head / PR / environment
 
 - **Base:** `origin/main` (contains `Lattice`, `Structure`, `discus_io`, `cif_io`, `ase_io`, `diffpy_io`)
-- **Head:** `TBD_HEAD` (branch `feat/structure-ops`; placeholder — to be updated with the final commit SHA at commit time)
+- **Head:** `dd32bf8` (branch `feat/structure-ops`)
 - **PR:** Draft PR (number assigned on creation)
 - **Measured on:** Windows 10, Python 3.14.7, NumPy (venv).
 
@@ -63,8 +63,13 @@
 
 ## 7. Live test
 
-- `test_live_discus_stru_roundtrip` ran successfully against DISCUS: **7 passed, 1.58s** (6 unit + 1 live).
-- Evidence folder: `tests/fixtures/structure_ops/live_evidence/20261101T011157Z/` with `MANIFEST.sha256` (2 entries: `gaas_rep4.stru`, `gaas_sub4.stru`).
+- `test_live_discus_stru_roundtrip` (marker `@pytest.mark.discus_live`, scoped to the single live test only) ran successfully against DISCUS: **1 passed, 6 deselected in 1.36s**.
+- The test writes two `.stru` files (4×4×4 GaAs parent and 25% Ga→In substituted), runs DISCUS `read stru` → `eval n[1]` → `save back_<name>` on each, then reads DISCUS's own saved file with `parse_stru(text, supercell=(4,4,4))` and compares atom count, species counts and centred periodic coordinates.
+- DISCUS `n[1]` values: `gaas_rep4.stru` → 512, `gaas_sub4.stru` → 512 (both match Python).
+- Species counts (DISCUS-saved, upper-cased): `gaas_rep4.stru` → GA: 256, AS: 256; `gaas_sub4.stru` → GA: 192, AS: 256, IN: 64 (25% of 256 Ga → 64 In).
+- Mutation check: substituting `py_counts` with the un-substituted `rep` counts causes the test to **fail** with `DISCUS species counts {'GA': 192, 'AS': 256, 'IN': 64} != Python {'GA': 256, 'AS': 256}`.
+- Evidence folder: `tests/fixtures/structure_ops/live_evidence/20261101T0143Z/` with `MANIFEST.sha256` (2 entries: `gaas_rep4.stru`, `gaas_sub4.stru`).
+- Previous evidence folder `20261101T011157Z` removed (superseded).
 
 ## 8. Full-suite comparison
 
