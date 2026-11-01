@@ -1,0 +1,53 @@
+{
+ "directory": "C:\\tmp\\mclive\\c1_b2_two_targets\\2c3dc567e238422da505ed4278783b9c",
+ "report": [
+  {
+   "neighborhood": 1,
+   "kind": "occupational",
+   "a": "AU",
+   "b": "CU",
+   "target": -0.4,
+   "achieved": -0.507,
+   "sigma": null,
+   "diff": 0.107,
+   "rel_diff": 0.267,
+   "pairs": 8192,
+   "mode": "CORR",
+   "reached": false
+  },
+  {
+   "neighborhood": 2,
+   "kind": "occupational",
+   "a": "AU",
+   "b": "CU",
+   "target": 0.0,
+   "achieved": 0.434,
+   "sigma": null,
+   "diff": -0.434,
+   "rel_diff": -0.434,
+   "pairs": 6144,
+   "mode": "ENER",
+   "reached": null
+  }
+ ],
+ "measure": [
+  {
+   "type": "OccupationalTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Au",
+   "pairs": 8192,
+   "value": -0.5068359375,
+   "pooled_alpha": -0.5068359375
+  },
+  {
+   "type": "OccupationalTarget",
+   "neighborhood": 1,
+   "a": "Au",
+   "b": "Cu",
+   "pairs": 6144,
+   "value": 0.43359375,
+   "pooled_alpha": 0.43359375
+  }
+ ]
+}
