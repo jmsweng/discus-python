@@ -258,19 +258,23 @@ def _occupancy_grid_from_file(path: Path) -> np.ndarray:
     return occ
 
 
-def total_direct(path: Path, mode: str = "engine") -> np.ndarray:
-    """Compute I(h) = |F(h)|² directly from the .stru file, with per-atom
-    f_el(s) and B from the file (no averaging, no site-level assumption).
+def total_direct(path: Path, mode: str = "engine",
+                 b_cu: float = 0.0, b_au: float = 0.0) -> np.ndarray:
+    """Compute I(h) = |F(h)|² directly from the .stru file.
 
     F(h) = Σ_n f_n e^{-B_n s²} e^{2πi h·x_n}
     I(h) = |F(h)|²
 
-    This is the ground-truth total intensity for a single realization.
+    B_n: from the file in arm B (b_cu/b_au non-zero), 0 in arm A (b_cu=b_au=0,
+    `temp ignore` means).
     """
     s = s_of_grid(mode)
     wk = coefficients_for(mode)
     f_au = wk_f(wk["AU"], s)
     f_cu = wk_f(wk["CU"], s)
+
+    # Determine B: 0 for arm A (temp ignore), per-atom from file for arm B
+    use_file_B = (b_cu != 0.0 or b_au != 0.0)
 
     # Parse all atoms from the .stru file (skip header lines)
     atoms = []
@@ -280,7 +284,8 @@ def total_direct(path: Path, mode: str = "engine") -> np.ndarray:
             continue
         sp = t[0]
         x, y, z = float(t[1]), float(t[2]), float(t[3])
-        B = float(t[4])
+        B_file = float(t[4])
+        B = B_file if use_file_B else 0.0
         atoms.append((sp, x, y, z, B))
 
     # Vectorized computation: process all atoms at once
@@ -381,8 +386,8 @@ def realization_exact(path: Path, mode: str = "engine",
         g_j = f_au * np.exp(-b_au * s ** 2) - f_cu * np.exp(-b_cu * s ** 2)
         D += g_j * dft * phase
 
-    # Total intensity: direct sum over atoms (per-atom f and per-atom B from the file)
-    I = total_direct(path, mode)
+    # Total intensity: direct sum over atoms (B from file in arm B, 0 in arm A)
+    I = total_direct(path, mode, b_cu=b_cu, b_au=b_au)
 
     return D, I
 

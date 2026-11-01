@@ -17,15 +17,18 @@ sys.path.insert(0, str(HERE))
 import oracle
 
 
-def brute_force_I(path: Path, mode: str) -> np.ndarray:
+def brute_force_I(path: Path, mode: str, b_cu: float = 0.0, b_au: float = 0.0) -> np.ndarray:
     """Independent brute-force I(h) = |F(h)|², no FFT, no site-level assumption.
 
     F(h) = Σ_n f_el(s) exp(-B_n s²) exp(2πi h·x_n)
+    B_n: from the file in arm B, 0 in arm A (temp ignore).
     """
     s = oracle.s_of_grid(mode)
     wk = oracle.coefficients_for(mode)
     f_au = oracle.wk_f(wk["AU"], s)
     f_cu = oracle.wk_f(wk["CU"], s)
+
+    use_file_B = (b_cu != 0.0 or b_au != 0.0)
 
     atoms = []
     for line in path.read_text().splitlines():
@@ -34,7 +37,8 @@ def brute_force_I(path: Path, mode: str) -> np.ndarray:
             continue
         sp = t[0]
         x, y, z = float(t[1]), float(t[2]), float(t[3])
-        B = float(t[4])
+        B_file = float(t[4])
+        B = B_file if use_file_B else 0.0
         atoms.append((sp, x, y, z, B))
 
     F = np.zeros(s.shape, complex)
@@ -53,15 +57,15 @@ def brute_force_I(path: Path, mode: str) -> np.ndarray:
 def main() -> int:
     rng = np.random.default_rng(42)
     tests = [
-        ("A_00", "engine"),
-        ("A_31", "engine"),
-        ("B_63", "engine"),
+        ("A_00", "engine", 0.0, 0.0),
+        ("A_31", "engine", 0.0, 0.0),
+        ("B_63", "engine", oracle.B_CU_B, oracle.B_AU_B),
     ]
     max_rel = 0.0
-    for name, mode in tests:
+    for name, mode, b_cu, b_au in tests:
         path = HERE / "inputs" / f"gate0_{name}.stru"
-        _, I_oracle = oracle.realization_exact(path, mode)
-        I_brute = brute_force_I(path, mode)
+        _, I_oracle = oracle.realization_exact(path, mode, b_cu=b_cu, b_au=b_au)
+        I_brute = brute_force_I(path, mode, b_cu=b_cu, b_au=b_au)
         # 20 seeded random voxels
         idx = rng.integers(0, 25, size=(20, 3))
         for i, j, k in idx:
@@ -73,7 +77,7 @@ def main() -> int:
 
     # Print the three anchor values for A_00
     path = HERE / "inputs" / "gate0_A_00.stru"
-    _, I_oracle = oracle.realization_exact(path, "engine")
+    _, I_oracle = oracle.realization_exact(path, "engine", b_cu=0.0, b_au=0.0)
     print(f"\nA_00 anchor values (arm A, engine mode):")
     print(f"  h=(1/8,0,0):    {I_oracle[1, 0, 0]:.2f}")
     print(f"  h=(3/8,2/8,1/8): {I_oracle[3, 2, 1]:.2f}")

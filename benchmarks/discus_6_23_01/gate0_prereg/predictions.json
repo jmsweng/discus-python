@@ -7,7 +7,7 @@
   "gate0_analyze.py": "3499402fd28a550c40052e196f4908ede559558a767afc09fc8f3cd11716bf6d",
   "gate0_generate.py": "d78fb1a18c3952a585f45774fcecc29893cd410c3d9a3c7951b59860b3bf7b32",
   "gate0_selftest.py": "fccfa1f8a1754ff7f0c8d923bbdb624994f0ca2453b983ddd05b9076e5c864be",
-  "oracle.py": "67fc2b7eafc94a0144bbf41546569860e4f8161f6b49adeadaef36334b61e838"
+  "oracle.py": "78bab9a55008dde66a1cc29628728b8c9ef620742082cba4f985edbb2d8ac927"
  },
  "design": {
   "B_iso": {
