@@ -45,6 +45,10 @@ def _radial(c: np.ndarray, s2: np.ndarray) -> np.ndarray:
 class MagneticFormFactor:
     """Dipole magnetic form factor ``f(Q) = ⟨j0⟩ + (1 − 2/g)⟨j2⟩``, ``s = |Q|/4π``.
 
+    ``g`` is the spectroscopic g-factor of a spin-dominated (3d) ion, where L = (g − 2)S. Rare-earth ions
+    described by a Landé g_J use the opposite sign, ⟨j0⟩ + (2/g_J − 1)⟨j2⟩; that convention is not provided
+    (``from_periodictable`` refuses g ≠ 2 for lanthanides and actinides).
+
     ``⟨j0⟩ = A e^{−a s²} + B e^{−b s²} + C e^{−c s²} + D`` and ``⟨j2⟩ = s² (same form)`` (International
     Tables C, Brown). ``j2`` may be omitted only for ``g = 2`` (spin only)."""
     j0: tuple
@@ -71,6 +75,10 @@ class MagneticFormFactor:
         except ImportError as exc:                                     # pragma: no cover - env specific
             raise ImportError("from_periodictable needs the optional package 'periodictable'") from exc
         el = getattr(periodictable, element)
+        if g != 2.0 and (57 <= el.number <= 71 or 89 <= el.number <= 103):
+            raise ValueError(f"{element}: rare-earth/actinide form factors use the Landé g_J convention "
+                             "(2/g_J − 1)⟨j2⟩, which this reference does not provide; use g = 2 or explicit "
+                             "coefficients with a stated convention")
         if charge not in el.magnetic_ff:
             raise ValueError(f"periodictable has no magnetic form factor for {element}{charge:+d}")
         ff = el.magnetic_ff[charge]

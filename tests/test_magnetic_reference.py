@@ -111,6 +111,13 @@ def test_form_factor_enters_squared():
     np.testing.assert_allclose(I, P2 * ff(2.2) ** 2, rtol=1e-12)
 
 
+def test_rare_earth_g_convention_refused():
+    pytest.importorskip("periodictable")
+    with pytest.raises(ValueError, match="Landé"):
+        MagneticFormFactor.from_periodictable("Gd", 3, g=1.9)
+    MagneticFormFactor.from_periodictable("Gd", 3)                # spin-only is fine
+
+
 def test_refusals():
     with pytest.raises(ValueError, match="j2"):
         MagneticFormFactor((1, 0, 0, 0, 0, 0, 0), source="x", g=1.9)

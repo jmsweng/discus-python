@@ -12,7 +12,7 @@ tests; it is not exported from `discuspdf` and is not a validated production fea
 | Symmetry | space-group expansion rotates the moment as a **polar** vector (`spcgr_apply.f90:2519-2524`): no det(R) factor (an axial vector needs one), no time reversal — magnetic space groups are not supported |
 | `.stru` read / save | read sets moments to 0 (`structur.f90:1483, 1494, 2887`, marked `MAGNETIC_WORK`); `save write magnetic` fills `wr_magn` but never writes it (`discus_save.f90:1002-1007`) |
 | HDF5 "unified" | read copies `/entry/data/magnetic_spins` (`structur.f90:7272`); write allocates zeros and never fills them (`discus_save.f90:1345-1347`) |
-| Scattering | no Fourier, powder, 3D-PDF or PDF routine refers to `cr_magn`; `element_data_mod.f90` has no ⟨j0⟩/⟨j2⟩ coefficients; no magnetic command in the help |
+| Scattering | no Fourier, powder, 3D-PDF or PDF routine uses `cr_magn` (`discus_exp2pdf_run.f90:339` only zeroes it); `element_data_mod.f90` has no ⟨j0⟩/⟨j2⟩ coefficients; no magnetic command in the help |
 
 **Verdict:** DISCUS can carry a moment per atom but cannot compute magnetic diffuse scattering, and its
 `.stru` files do not keep moments. discus-python therefore does not add moments to `Structure` or the
@@ -37,7 +37,7 @@ Elastic, unpolarised neutrons, spin-only dipole approximation (Squires, *Thermal
 |---|---|
 | Moments | Cartesian, in μB, in the **same frame as the positions** (Å). No fractional/crystal-axis moments are accepted, so the frame cannot be mixed up |
 | Q | Cartesian Å⁻¹ with 2π (`Lattice.hkl_to_q`) |
-| Form factor | `f = ⟨j0⟩ + (1 − 2/g)⟨j2⟩`, `⟨j0⟩ = A e^{−as²} + B e^{−bs²} + C e^{−cs²} + D`, `⟨j2⟩ = s² × (same form)`, `s = |Q|/4π`; coefficients given explicitly with a source, or from `periodictable` (Brown, Int. Tables C 4.4.5) via `MagneticFormFactor.from_periodictable(element, charge, g)`. `g ≠ 2` requires ⟨j2⟩ |
+| Form factor | `f = ⟨j0⟩ + (1 − 2/g)⟨j2⟩`, `⟨j0⟩ = A e^{−as²} + B e^{−bs²} + C e^{−cs²} + D`, `⟨j2⟩ = s² × (same form)`, `s = |Q|/4π`; coefficients given explicitly with a source, or from `periodictable` (Brown, Int. Tables C 4.4.5) via `MagneticFormFactor.from_periodictable(element, charge, g)`. `g ≠ 2` requires ⟨j2⟩. `g` is the spectroscopic g of a spin-dominated (3d) ion, L = (g − 2)S; the rare-earth Landé-g_J form ⟨j0⟩ + (2/g_J − 1)⟨j2⟩ has the opposite sign and is not provided (refused for lanthanides/actinides with g ≠ 2) |
 | Units | intensity in fm² for the whole sample (`p²` included); `magnetic_structure_factor` returns F⊥ in μB |
 | Q = 0 | Q̂ is undefined: intensity NaN and `valid` mask False for `|Q| < q_min` (default 1e-9 Å⁻¹) |
 | Refused | missing form factor for a species, non-(N,3) or non-finite inputs, `g ≠ 2` without ⟨j2⟩ |
@@ -60,7 +60,7 @@ I, valid = magnetic_intensity(positions_cartesian, moments_cartesian, lattice.hk
 | AF chain, N = 8 | peaks `p² N²` at h = ½, 3/2, zero at integer h; ferromagnetic chain the opposite |
 | Powder average | ⟨sin²θ⟩ = 2/3 (Fibonacci sphere, 2·10⁴ directions, 1e-4) |
 | Q = 0 | NaN + mask |
-| Form factor | `periodictable` j0/j2 values (V³⁺, Fe³⁺ with g = 1.9); Javelin's test value j0(V³⁺, 2π/5 Å⁻¹) = 0.88829 |
+| Form factor | `periodictable` j0/j2 values (V³⁺, Fe³⁺ with g = 1.9 — the same formula, so a consistency check, not an independent literature value); j0(V³⁺, 2π/5 Å⁻¹) = 0.88829, consistent with Javelin's expected intensity 493.1621 = 625·j0² (`tests/fourier_test.py`) |
 
 ## Before this could become a production feature
 
