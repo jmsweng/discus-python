@@ -11,22 +11,22 @@ Give researchers transparent Python measurements of local occupational and displ
 ## Planned features
 
 ### 12. Neighbor lists by sites, species, shells and geometry
-- [ ] Represent neighbor pairs as atom/site IDs plus lattice translations; preserve relation to a supercell and boundary conditions.
-- [ ] Select by source/target site, elemental species, exact lattice vector, Cartesian distance tolerance, first/second/etc. neighbor shell, and direction.
-- [ ] Use the **full lattice metric** for non-orthogonal crystals. Implement periodic minimum-image and boundary handling explicitly; avoid counting the same pair twice unless intended.
-- [ ] Add neighbor count/coordination number summaries and exportable tables.
+- [x] Represent neighbor pairs as atom/site IDs plus lattice translations; preserve relation to a supercell and boundary conditions.
+- [x] Select by source/target site, elemental species, exact lattice vector, Cartesian distance tolerance, first/second/etc. neighbor shell, and direction.
+- [x] Use the **full lattice metric** for non-orthogonal crystals. Implement periodic minimum-image and boundary handling explicitly; avoid counting the same pair twice unless intended.
+- [x] Add neighbor count/coordination number summaries and exportable tables.
 
 ### 13. Occupational correlation measurements
-- [ ] Implement and document at least one rigorously defined measure: e.g. pair probabilities and Warren–Cowley short-range-order coefficients, with clear species and sublattice conventions.
-- [ ] Support binary and, when mathematically defined, multicomponent occupancy; distinguish site-specific occupancies from global concentrations.
-- [ ] Handle pure end members and zero-denominator cases predictably (error or NaN with reason).
-- [ ] Provide both signed neighbor-vector and shell-averaged summaries, including sample counts and uncertainty where appropriate.
+- [x] Implement and document at least one rigorously defined measure: e.g. pair probabilities and Warren–Cowley short-range-order coefficients, with clear species and sublattice conventions.
+- [x] Support binary and, when mathematically defined, multicomponent occupancy; distinguish site-specific occupancies from global concentrations.
+- [x] Handle pure end members and zero-denominator cases predictably (error or NaN with reason).
+- [x] Provide both signed neighbor-vector and shell-averaged summaries, including sample counts and uncertainty where appropriate.
 
 ### 14. Displacement correlation measurements
-- [ ] Calculate displacements relative to a **specified average/reference structure**, with fractional/Cartesian conventions explicit.
-- [ ] Support directional projections, vector covariances, normalized cross-correlations and cross-species/site analysis.
-- [ ] Define behavior for zero variance, unoccupied sites, supercell wrapping and non-orthogonal cells.
-- [ ] Where DISCUS reports analogous correlation metrics, compare reference outputs while documenting differing definitions.
+- [x] Calculate displacements relative to a **specified average/reference structure**, with fractional/Cartesian conventions explicit.
+- [x] Support directional projections, vector covariances, normalized cross-correlations and cross-species/site analysis.
+- [x] Define behavior for zero variance, unoccupied sites, supercell wrapping and non-orthogonal cells.
+- [x] Where DISCUS reports analogous correlation metrics, compare reference outputs while documenting differing definitions.
 
 ## Suggested API (illustrative only)
 
@@ -45,11 +45,13 @@ disp = structure.displacement_correlation(neighbors, direction=(1, 0, 0))
 
 ## Acceptance criteria
 
-- [ ] Known cubic, tetragonal and triclinic toy cells produce independently checked neighbor distances and multiplicities.
-- [ ] Random occupational disorder approaches zero SRO within estimated uncertainty; ordered examples reproduce known sign/magnitude.
-- [ ] Constructed displacement fields reproduce analytic correlations along specified directions.
-- [ ] Correlation definitions, expected domains and zero-variance handling are documented and tested.
-- [ ] Tests pass across supported site/occupancy/PBC cases.
+- [x] Known cubic, tetragonal and triclinic toy cells produce independently checked neighbor distances and multiplicities.
+- [x] Random occupational disorder approaches zero SRO within estimated uncertainty; ordered examples reproduce known sign/magnitude.
+- [x] Constructed displacement fields reproduce analytic correlations along specified directions.
+- [x] Correlation definitions, expected domains and zero-variance handling are documented and tested.
+- [x] Tests pass across supported site/occupancy/PBC cases.
+
+**Evidence:** [`tests/test_neighbors.py`](../tests/test_neighbors.py) (brute-force oracle, textbook shells, triclinic cells), [`tests/test_correlations.py`](../tests/test_correlations.py) (B2/L1₂ values, random-occupation standard errors, analytic displacement waves), [`benchmarks/discus_6_23_01/c_probes/RESULT.md`](../benchmarks/discus_6_23_01/c_probes/RESULT.md) (29/29 DISCUS 6.23.01 `chem corr` values to 5 × 10⁻¹³). Mixed PBC is not supported and raises `NotImplementedError`, as elsewhere in the package. Remaining scope gaps are listed under Package C in [TASKS.md](TASKS.md).
 
 ## Dependencies / cautions
 
