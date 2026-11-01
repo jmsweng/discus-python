@@ -125,6 +125,10 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `notebooks/07_reciprocal_space_data.ipynb` walks through these reciprocal-space and data features (grids, DISCUS output loading, Fourier macros, Bragg subtraction and masking, xarray/HDF5, slices, isosurfaces and VTK, Mantid files) on data committed to this repository.
 
+## Neighbors and disorder correlations (Package C)
+
+`discuspdf.neighbor_list` lists every site pair within a cutoff on any lattice (all periodic images, exact for triclinic cells), with selection by site, species, shell, distance, direction and DISCUS-style neighbor vectors (`set vec`). `discuspdf.correlations` computes occupational correlations (pair probabilities, Warren–Cowley α, correlation coefficients, null-model standard errors) and displacement correlations (covariances, directional correlations, Pearson or DISCUS convention) on those pairs. The DISCUS `chem corr` definitions are reproduced and were checked against DISCUS 6.23.01 (29/29 values to 5 × 10⁻¹³, [probe result](benchmarks/discus_6_23_01/c_probes/RESULT.md)). See [docs/NEIGHBORS.md](docs/NEIGHBORS.md), [docs/CORRELATIONS.md](docs/CORRELATIONS.md) and `notebooks/09_neighbors_and_correlations.ipynb`.
+
 ## Interoperability (CIF, ASE, DiffPy)
 
 `discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:

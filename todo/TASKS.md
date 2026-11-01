@@ -102,9 +102,13 @@ The existing DISCUS engine may implement some of these physical methods already.
 
 ### Package C — [Disorder and correlations](03_disorder_and_correlations.md)
 
-- ⬜ **C12 / Feature 12:** Site/species/distance/shell-resolved periodic neighbor lists on a general lattice.
-- ⬜ **C13 / Feature 13:** Clearly defined occupational pair probabilities and short-range-order coefficients with reference tests.
-- ⬜ **C14 / Feature 14:** Reference-structure displacement covariances and normalized, directional correlations.
+- ✅ **C12 / Feature 12:** Site/species/distance/shell-resolved periodic neighbor lists on a general lattice. [`src/discuspdf/neighbors.py`](../src/discuspdf/neighbors.py); [PR #30](https://github.com/jmsweng/discus-python/pull/30) · [`tests/test_neighbors.py`](../tests/test_neighbors.py) · [`docs/NEIGHBORS.md`](../docs/NEIGHBORS.md); checked against an independent brute-force enumeration (cubic, tetragonal, triclinic, cutoff > cell, open boundaries) and textbook shells; DISCUS `set vec` pairs reproduced.
+  - *Open: mixed PBC, molecules, angle neighborhoods (`set ang`), symmetry-generated vectors (`apply_symmetry`).*
+- ✅ **C13 / Feature 13:** Clearly defined occupational pair probabilities and short-range-order coefficients with reference tests. [`src/discuspdf/correlations.py`](../src/discuspdf/correlations.py); [PR #31](https://github.com/jmsweng/discus-python/pull/31) · [`tests/test_correlations.py`](../tests/test_correlations.py) · [`docs/CORRELATIONS.md`](../docs/CORRELATIONS.md); Warren–Cowley and correlation coefficients with null-model standard errors; B2 and L1₂ textbook values; DISCUS `chem corr occ` reproduced to 5e-13 on DISCUS 6.23.01 ([probe](../benchmarks/discus_6_23_01/c_probes/RESULT.md)).
+  - *Open: ensemble averages over several configurations; `corr` with lots.*
+- ✅ **C14 / Feature 14:** Reference-structure displacement covariances and normalized, directional correlations. Same module and PR; analytic displacement waves (incl. cross terms and a triclinic cell); DISCUS `chem corr disp` (explicit directions, species filters) reproduced to 5e-13.
+  - *Open: DISCUS `dir all` mode; molecules.*
+- ✅ Example notebook for neighbors and correlations (Features 12–14). [`notebooks/09_neighbors_and_correlations.ipynb`](../notebooks/09_neighbors_and_correlations.ipynb).
 
 ### Package D — [Monte Carlo and advanced physics](04_monte_carlo_and_advanced_physics.md)
 

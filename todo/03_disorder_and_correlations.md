@@ -1,6 +1,6 @@
 # Package C — Neighbor analysis and disorder correlations
 
-**Status:** TODO · **Priority:** High · **Suggested PR family:** `feat/correlations-*`
+**Status:** Implemented (PRs #30, #31, #32; see [TASKS.md](TASKS.md)) · **Priority:** High · **Suggested PR family:** `feat/correlations-*`
 
 **Reference in Javelin:** [neighborlist.py](https://github.com/rosswhitfield/javelin/blob/master/javelin/neighborlist.py), [structure.py](https://github.com/rosswhitfield/javelin/blob/master/javelin/structure.py#L570-L694), [neighbors tutorial](https://github.com/rosswhitfield/javelin/blob/master/docs/tutorials/neighbors.rst).
 
