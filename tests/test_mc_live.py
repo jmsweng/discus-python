@@ -20,7 +20,7 @@ import pytest
 
 from discuspdf.discus_io import read_stru
 from discuspdf.fourier_macro import Seed
-from discuspdf.mc import (DisplacementTarget, MCConfig, MCRunner, Neighborhood, OccupationalTarget, Shift,
+from discuspdf.mc import (DisplacementTarget, LennardJonesTarget, MCConfig, MCRunner, Neighborhood, OccupationalTarget, Shift,
                           SpringTarget, Swap, SwapDisplacement, Vector, parse_mmc_log)
 
 pytestmark = pytest.mark.discus_live
@@ -72,3 +72,57 @@ def test_generated_macro_reproduces_probe(name):
     assert [f["rows"] for f in res.log["feedback"]] == [f["rows"] for f in probe_log["feedback"]]
     (WORK / f"{name}_result.json").write_text(json.dumps({"directory": str(run.directory), "measure": res.measure(),
                                                           "final": res.log["final"]}, indent=1) + "\n")
+
+
+# ---------------------------------------------------------------------------------- combinations not in the probe
+def _b2(n=8, seed=5):
+    from discuspdf.lattice import Lattice
+    from discuspdf.structure import Structure
+    from discuspdf.structure_ops import repeat
+    cell = Structure(Lattice.from_parameters(3.0, 3.0, 3.0, 90, 90, 90), ["Cu", "Cu"], [[0, 0, 0], [0.5, 0.5, 0.5]],
+                     model="configuration", b_iso=[0.5, 0.5])
+    st = repeat(cell, (n, n, n)).structure
+    sp = np.array(st.species, dtype=object)
+    sp[np.random.default_rng(seed).permutation(st.n_atoms)[: st.n_atoms // 2]] = "Au"
+    return st.replace(species=sp)
+
+
+EIGHT = [(0, 0, 0), (-1, 0, 0), (0, -1, 0), (0, 0, -1), (-1, -1, 0), (-1, 0, -1), (0, -1, -1), (-1, -1, -1)]
+COMBOS = {
+    # two neighbourhoods on a two-site cell, a feedback and a fixed-energy occupational target, local swaps
+    "c1_b2_two_targets": (_b2, "D MC combo B2", MCConfig(
+        (Neighborhood(tuple(Vector(1, 2, t) for t in EIGHT)),
+         Neighborhood((Vector(1, 1, (1, 0, 0)), Vector(1, 1, (0, 1, 0)), Vector(1, 1, (0, 0, 1)),
+                       Vector(2, 2, (1, 0, 0)), Vector(2, 2, (0, 1, 0)), Vector(2, 2, (0, 0, 1))))),
+        (OccupationalTarget(0, "Cu", "Au", correlation=-0.4), OccupationalTarget(1, "Au", "Cu", energy=-0.3)),
+        (Swap(1.0, "local"),), SEED, moves_per_atom=8, feedback_per_atom=1)),
+    # three energies on two neighbourhoods, two move types, kT != 1
+    "c2_disp_three_energies": (lambda: read_stru(EV / "work" / "cu_disp.stru").structure, "D MC combo disp",
+                               MCConfig((SIX, Neighborhood.from_translations([(1, 1, 0), (1, -1, 0), (1, 0, 1),
+                                                                              (1, 0, -1), (0, 1, 1), (0, 1, -1)])),
+                                        (SpringTarget(0, "Cu", "Cu", 3.0, 50.0),
+                                         DisplacementTarget(0, "Cu", "Cu", (1, 0, 0), energy=0.5),
+                                         LennardJonesTarget(1, "Cu", "Cu", 4.2426, 0.5)),
+                                        (Shift({"Cu": (0.005, 0.005, 0.005)}, 0.6), SwapDisplacement(0.4, "slocal")),
+                                        SEED, moves_per_atom=8, feedback_per_atom=2, temperature=0.5)),
+}
+
+
+@pytest.mark.parametrize("name", sorted(COMBOS))
+def test_generated_combination_runs_and_measures(name):
+    make, title, cfg = COMBOS[name]
+    structure = make()
+    runner = MCRunner(WORK / name, launcher=launcher(), timeout_seconds=900)
+    run = runner.prepare(cfg, structure, title=title)
+    res = runner.execute(run)                          # raises on any failure, incl. a missing target row
+    counts_in = {s: int(np.sum(structure.species == s)) for s in set(structure.species)}
+    counts_out = {s: int(np.sum(res.structure.species == s)) for s in set(res.structure.species)}
+    assert counts_in == counts_out
+    report = res.target_report()
+    measured = res.measure()
+    for rep, mea in zip(report, measured):
+        assert abs(rep["achieved"] - mea["value"]) <= 0.0015, (rep, mea)
+        if mea.get("std") is not None and rep["sigma"] is not None:
+            assert abs(rep["sigma"] - mea["std"]) <= 0.0015, (rep, mea)
+    (WORK / f"{name}_result.json").write_text(json.dumps({"directory": str(run.directory), "report": report,
+                                                          "measure": measured}, indent=1, default=str) + "\n")
