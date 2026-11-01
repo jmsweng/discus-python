@@ -1,0 +1,85 @@
+﻿=== _validated_direct_basis ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:35: def _validated_direct_basis(lengths, angles) -> np.ndarray:
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:94: _validated_direct_basis(self.cell_lengths, self.cell_angles)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:110: return _validated_direct_basis(self.cell_lengths, self.cell_angles)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:16: plane, right-handed) and uses the same rejection rules as ``discus_output._validated_direct_basis``.
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:37: ``discus_output._validated_direct_basis``."""
+=== reciprocal_basis ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:112: def reciprocal_basis(self, two_pi: bool = True) -> np.ndarray:
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:113: """Rows a*, b*, c*. Q (Å^-1) = h @ reciprocal_basis(two_pi=True); two_pi=False gives d* (Å^-1)."""
+=== direct_basis ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:35: def _validated_direct_basis(lengths, angles) -> np.ndarray:
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:94: _validated_direct_basis(self.cell_lengths, self.cell_angles)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:108: def direct_basis(self) -> np.ndarray:
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:110: return _validated_direct_basis(self.cell_lengths, self.cell_angles)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:114: b = np.linalg.inv(self.direct_basis()).T
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:119: return float(abs(np.linalg.det(self.direct_basis())))
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:189: direct_basis: np.ndarray           # rows a,b,c (Å)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:201: return float(np.linalg.norm(np.asarray(u, float) @ self.direct_basis))
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:238: result = FractionalFFTResult(c, u_axes, vol.direct_basis(), ratio, fr,
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:16: plane, right-handed) and uses the same rejection rules as ``discus_output._validated_direct_basis``.
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:37: ``discus_output._validated_direct_basis``."""
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:281: The result's ``direct_basis`` is in the canonical orientation (a ∥ x); fractional ``u``
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\viz.py:117: A = np.asarray(result.direct_basis, float)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\viz.py:123: metadata={"normalization": result.normalization, "direct_basis": A.tolist(),
+=== inv\( ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:114: b = np.linalg.inv(self.direct_basis()).T
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:7: * Reciprocal basis ``B = inv(A).T``: rows **a\\***, **b\\***, **c\\*** in Å⁻¹, **no 2π**
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:11: * Metric ``G = A @ A.T``; reciprocal metric ``G* = inv(G) = B @ B.T``.
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:90: Ainv = np.linalg.inv(A)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:138: """Reciprocal basis ``B = inv(A).T`` (rows a*, b*, c* in Å⁻¹, no 2π). Returns a copy."""
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:170: """Reciprocal metric tensor ``G* = inv(G) = B @ B.T``. Returns a copy."""
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:187: """Cartesian (Å) -> fractional: ``f = r @ inv(A)``.
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\mantid_io.py:100: U = UB @ np.linalg.inv(_busing_levy_b(lattice))
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\mantid_io.py:351: from_orig = np.linalg.inv(to_orig)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\reciprocal_grid.py:379: R = np.linalg.inv(self._axis_vectors).T
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\structure_ops.py:281: # Convert Cartesian noise to fractional: df = dcart @ inv(A)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\structure_ops.py:283: Ainv = np.linalg.inv(A)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\structure_ops.py:292: Ainv = np.linalg.inv(A)
+=== cell_volume ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:118: def cell_volume(self) -> float:
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:232: c = np.fft.fftshift(np.fft.fftn(np.fft.ifftshift(I))) * (np.prod(steps) / vol.cell_volume)
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:256: return rho * (np.prod(steps) / vol.cell_volume)
+=== np\.cos\(np\.radians ===
+=== DiscusVolume ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\diffuse3d.py:284
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:64
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:137
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:180
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:204
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:215
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:250
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\lattice.py:3
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\reciprocal_grid.py:8
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\reciprocal_grid.py:193
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:154
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:283
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:291
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:22
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:23
+=== read_discus_volume ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\diffuse3d.py:79
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\diffuse3d.py:80
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:137
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:155
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:165
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:22
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:23
+=== delta_pdf_fractional ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:14
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:129
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:215
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:251
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\reciprocal_grid.py:71
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\reciprocal_grid.py:375
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:279
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:283
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:286
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\scattering_data.py:295
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\viz.py:10
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:22
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:23
+=== evaluate_real_space ===
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\discus_output.py:250
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:22
+C:\Users\jmswe\.local\share\opencode\worktree\9d7e5c\calm-sailor\src\discuspdf\__init__.py:23
