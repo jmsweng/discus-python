@@ -132,10 +132,10 @@ def concentrations(neighbors: NeighborList, configuration: Structure | None = No
     """
     spec = node_species(neighbors, configuration, vacancy=vacancy).astype(str)
     site = neighbors.node_site.astype(str)
-    names = sorted(set(spec))
+    names = sorted({str(x) for x in spec})
     out = {"global": {s: float(np.mean(spec == s)) for s in names}, "by_site": {}, "n_nodes": len(spec),
            "n_by_site": {}}
-    for lab in sorted(set(site)):
+    for lab in sorted({str(x) for x in site}):
         m = site == lab
         out["by_site"][lab] = {s: float(np.mean(spec[m] == s)) for s in names}
         out["n_by_site"][lab] = int(m.sum())
@@ -543,7 +543,7 @@ class DisplacementCorrelation:
         vt = np.diag(self.target_covariance)
         with np.errstate(invalid="ignore", divide="ignore"):
             den = np.sqrt(np.outer(vo, vt))
-            ok = den > _ZERO_VARIANCE
+            ok = (vo[:, None] > _ZERO_VARIANCE) & (vt[None, :] > _ZERO_VARIANCE)
             return np.where(ok, self.covariance / np.where(ok, den, 1), np.nan)
 
 

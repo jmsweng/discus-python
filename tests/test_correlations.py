@@ -581,3 +581,13 @@ def test_vector_table_groups_match_individual_selections():
         res = occupational_correlation(sel)
         assert r["n_pairs"] == sel.n_pairs
         assert r["count"] == res.value("counts", r["a"], r["b"])
+
+
+def test_correlation_matrix_is_nan_for_a_zero_variance_component_and_concentration_keys_are_str():
+    ref, cfg, _ = _wave_configuration()
+    res = displacement_correlation(neighbor_list(ref, 3.1).select(translation=(1, 0, 0), symmetric=True), cfg)
+    cm = res.correlation_matrix
+    assert cm[0, 0] == pytest.approx(math.cos(2 * math.pi * 2 / 16))
+    assert np.isnan(cm[0, 1]) and np.isnan(cm[1, 0]) and np.isnan(cm[2, 2])
+    conc = concentrations(neighbor_list(ref, 3.1))
+    assert all(type(k) is str for k in conc["by_site"]) and all(type(k) is str for k in conc["global"])
