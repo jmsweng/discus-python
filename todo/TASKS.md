@@ -1,6 +1,6 @@
 # Development task tracker
 
-**Review snapshot:** 2026-10-22 (America/New_York) · **Evidence:** repository `main` at [`2e74868`](https://github.com/jmsweng/discus-python/commit/2e74868e3a05ec7b84aff8bceea85a21c309fd72), [PRs](https://github.com/jmsweng/discus-python/pulls?q=is%3Apr) and GitHub Actions. **This is a living checklist, not a promise that an agent is working on a task.**
+**Review snapshot:** 2026-11-01 (America/New_York) · **Evidence:** repository `main` at [`6888905`](https://github.com/jmsweng/discus-python/commit/68889053e31f0652fd9bc9fc1130d86c2bfef415), [PRs](https://github.com/jmsweng/discus-python/pulls?q=is%3Apr) and GitHub Actions. **This is a living checklist, not a promise that an agent is working on a task.**
 
 - ✅ means the specified deliverable has been **implemented or recorded with evidence**, **not** that all related science is verified.
 - ⬜ means still needed, insufficiently verified, or only partly built. When some groundwork exists, it is explicitly described.
@@ -48,11 +48,13 @@
 
 - ✅ **P1 — Integrate the new common/NeXus reader with the 3D runner** so a configured output filename is loaded with verified source metadata and invalid geometry is rejected. [Merged PR #7](https://github.com/jmsweng/discus-python/pull/7) includes the reviewed real-engine smoke test (C1 Bragg-subtracted, 65³, `native_nexus=True` → `complete`); this is engineering evidence, **not** independent physical 3D-ΔPDF calibration.
 
-### PR #8 independent scientific audit (in progress, not physically calibrated)
+### PR #8 independent scientific audit (merged; Gates 1–3 passed, Gate 0 partial; not physically calibrated)
 
-- ✅ **Gate 0 groundwork — Correct independent 3×3 reciprocal grid and direct-average oracle.** [Draft PR #8](https://github.com/jmsweng/discus-python/pull/8) adds synthetic skew/2×2×2/origin-shift tests, opt-in frozen-C1 oracle test, and true 33³ archived HDF5 observed-versus-predicted metrics. **Only this reference-code and archived-evidence groundwork is complete**, not Gate 0 scientific acceptance.
-- ⬜ **Gate 0/1 — Resolve C1 independent ensemble, Waasmaier–Kirfel factors and DISCUS 6.23.01 `set aver` full-grid discrepancy.** Archived empirical IT92 diffuse candidate relative L2 is ≈1.77%; several low-signal voxels differ greatly. Do not mark calibrated.
-- ⬜ **Gate 2/3 — Correlated-disorder signed off-origin 3D-ΔPDF validation and absolute-scale audit.** Require independent predicted correlations, new real-engine evidence and coordinate/normalization checks; see [PR #8 report](../docs/SCIENTIFIC_VALIDATION_REPORT.md).
+- ✅ **Gate 0 groundwork — Correct independent 3×3 reciprocal grid and direct-average oracle.** [PR #8](https://github.com/jmsweng/discus-python/pull/8) (merged) adds synthetic skew/2×2×2/origin-shift tests, opt-in frozen-C1 oracle test, and true 33³ archived HDF5 observed-versus-predicted metrics. **Only this reference-code and archived-evidence groundwork is complete**, not Gate 0 scientific acceptance.
+- ⬜ **Gate 0 — partial: forward model verified for total intensity.** DISCUS total intensity matches Σ f_W–K(s) e^{−Bs²} e^{2πi h·x} to ≤ 7×10⁻¹⁵ rel L2; the C1 ensemble model is still empirical. See [PR #8 report](../docs/SCIENTIFIC_VALIDATION_REPORT.md).
+- ✅ **Gate 1 — DISCUS `set aver` passed on a dyadic grid.** Pre-registered dyadic C1 run: total 7.7×10⁻¹⁵, diffuse 6.9×10⁻¹² rel L2 vs the independent oracle; archived macro rerun bit-identical. The earlier ≈1.77 % residual on non-dyadic grids is diagnosed (supported, not proven) as a phase-increment effect. Do not mark calibrated.
+- ✅ **Gate 2 — Correlated-disorder off-origin 3D-ΔPDF passed (pre-registered v4, 0/37 criteria failed).** Blind fresh-seed structures; ΔPDF peaks match the independent prediction to 4.5×10⁻⁶ (positions, signs, amplitudes); random control clean. [`RESULT_v4.md`](../benchmarks/discus_6_23_01/gate2_prereg/RESULT_v4.md)
+- ✅ **Gate 3 — Absolute normalization and native `value 3DPDF` convention passed (pre-registered v2, 0/15 criteria failed).** `delta_pdf_fractional` is absolute (e² Å⁻³, whole crystal); native `value 3DPDF` = unitary FFT/√N, and its written axes are mislabelled by n/(n−1). [`RESULT.md`](../benchmarks/discus_6_23_01/gate3/RESULT.md)
 
 ### Real 3D DISCUS pipeline (critical path)
 
