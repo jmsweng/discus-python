@@ -98,6 +98,30 @@ def _site_nodes(structure: Structure, position_tol: float):
     return first_row_arr, counts, site_of
 
 
+def _node_images(structure: Structure, first_row: np.ndarray) -> np.ndarray:
+    """(n_nodes, 3) integer cell offset of each node's stored position, in parent cells.
+
+    ``cell_index`` names the parent cell of a site, but the stored ``frac`` may sit a
+    whole number of **supercells** away (``Structure.wrapped()``, DISCUS centred files,
+    hand-made offsets).  For every site label a canonical parent-cell position ``r``
+    is taken from its first node, moved by whole supercells to lie within half a
+    supercell of the structure's first node (along an axis with one cell, the first
+    node's position is used as is).  A node whose parent-cell position
+    ``frac * supercell - cell_index`` differs from ``r`` by about ``k`` supercells gets
+    the image ``k * supercell``.  Displacements smaller than half a supercell are
+    therefore never mistaken for a different cell.
+    """
+    sc = structure.supercell.astype(float)
+    par = structure.frac[first_row] * sc - structure.cell_index[first_row]
+    labels = structure.site_label[first_row]
+    _, first, inverse = np.unique(labels.astype(str), return_index=True, return_inverse=True)
+    r = par[first]
+    # bring every label's reference within half a supercell of the first node's position
+    r = np.where(sc > 1, r - sc * np.rint((r - par[0]) / sc), r)
+    k = np.rint((par - r[inverse.reshape(-1)]) / sc)
+    return (k * sc).astype(np.int64)
+
+
 def _offsets(m: np.ndarray) -> np.ndarray:
     ranges = [np.arange(-int(m[k]), int(m[k]) + 1) for k in range(3)]
     return np.stack(np.meshgrid(*ranges, indexing="ij"), axis=-1).reshape(-1, 3)
@@ -246,6 +270,7 @@ def neighbor_list(structure: Structure, cutoff: float, *, position_tol: float = 
         structure=structure,
         cutoff=cutoff,
         node_row=first_row,
+        node_image=_node_images(structure, first_row),
         node_members=member_count,
         i=i[order],
         j=j[order],
@@ -295,13 +320,15 @@ class NeighborList:
     :attr:`cell_vector`, and the origin/target views of the node arrays.
     """
 
-    __slots__ = ("_structure", "_cutoff", "_node_row", "_node_members", "_i", "_j",
+    __slots__ = ("_structure", "_cutoff", "_node_row", "_node_image", "_node_members", "_i", "_j",
                  "_shift", "_vector", "_distance")
 
-    def __init__(self, *, structure, cutoff, node_row, node_members, i, j, shift, vector, distance):
+    def __init__(self, *, structure, cutoff, node_row, node_image, node_members, i, j, shift, vector,
+                 distance):
         object.__setattr__(self, "_structure", structure)
         object.__setattr__(self, "_cutoff", float(cutoff))
         object.__setattr__(self, "_node_row", _readonly(np.asarray(node_row, dtype=np.int64)))
+        object.__setattr__(self, "_node_image", _readonly(np.asarray(node_image, dtype=np.int64).reshape(-1, 3)))
         object.__setattr__(self, "_node_members", _readonly(np.asarray(node_members, dtype=np.int64)))
         object.__setattr__(self, "_i", _readonly(np.asarray(i, dtype=np.int64)))
         object.__setattr__(self, "_j", _readonly(np.asarray(j, dtype=np.int64)))
@@ -316,7 +343,7 @@ class NeighborList:
         mask = np.asarray(mask)
         return NeighborList(
             structure=self._structure, cutoff=self._cutoff, node_row=self._node_row,
-            node_members=self._node_members, i=self._i[mask], j=self._j[mask],
+            node_image=self._node_image, node_members=self._node_members, i=self._i[mask], j=self._j[mask],
             shift=self._shift[mask], vector=self._vector[mask], distance=self._distance[mask],
         )
 
@@ -372,6 +399,15 @@ class NeighborList:
     def node_row(self) -> np.ndarray:
         """(n_nodes,) row of the first member atom of each node in ``structure``."""
         return self._node_row
+
+    @property
+    def node_image(self) -> np.ndarray:
+        """(n_nodes, 3) whole-supercell offset (in parent cells) of each node's stored position.
+
+        Zero unless the coordinates were wrapped or offset by whole supercells
+        relative to ``cell_index``; used to keep :attr:`translation` independent of wrapping.
+        """
+        return self._node_image
 
     @property
     def node_site(self) -> np.ndarray:
@@ -431,12 +467,14 @@ class NeighborList:
     def translation(self) -> np.ndarray:
         """(P, 3) integer translation between the two **parent** unit cells.
 
-        ``cell_index[target] + shift * supercell - cell_index[origin]``: the target
-        site sits in the parent cell displaced by this many unit cells from the
-        origin's cell.  ``(origin site, target site, translation)`` is the same
+        ``cell_index[target] + shift * supercell - cell_index[origin]``, where the
+        cell index of each node is corrected for stored coordinates that sit whole
+        supercells away from it (see :attr:`node_image`): the target site sits in the
+        parent cell displaced by this many unit cells from the origin's cell, whatever
+        way the coordinates were wrapped.  ``(origin site, target site, translation)`` is the same
         description of a pair that DISCUS uses in ``set vec``.
         """
-        ci = self.node_cell_index
+        ci = self.node_cell_index + self._node_image
         return ci[self._j] + self._shift * self._structure.supercell - ci[self._i]
 
     @property
@@ -479,6 +517,13 @@ class NeighborList:
         mask = np.ones(self.n_pairs, dtype=bool)
         osite = _as_set(origin_site, "origin_site")
         tsite = _as_set(target_site, "target_site")
+        known = None
+        for given, name in ((osite, "origin_site"), (tsite, "target_site")):
+            if given is not None:
+                known = set(self.node_site.astype(str)) if known is None else known
+                unknown = sorted(given - known)
+                if unknown:
+                    raise ValueError(f"{name}: unknown site label(s) {unknown}; the structure has {sorted(known)[:10]}")
         if osite is not None:
             mask &= np.isin(self.origin_site.astype(str), list(osite))
         if tsite is not None:
@@ -493,7 +538,7 @@ class NeighborList:
                 mask &= np.isin(species[self._j], list(tspec))
         if translation is not None:
             t = np.asarray(translation)
-            if t.shape != (3,) or not np.all(t == np.round(t)):
+            if t.shape != (3,) or t.dtype.kind not in "iuf" or not np.all(t == np.round(t)):
                 raise ValueError(f"translation must be 3 integers, got {translation!r}")
             mask &= np.all(self.translation == t.astype(np.int64), axis=1)
         if cell_vector is not None:
@@ -502,6 +547,8 @@ class NeighborList:
                 raise ValueError(f"cell_vector must be 3 numbers, got {cell_vector!r}")
             mask &= np.all(np.abs(self.cell_vector - cv) <= vector_tol, axis=1)
         if direction is not None:
+            if not (0 <= angle_tol <= 180):
+                raise ValueError(f"angle_tol must be between 0 and 180 degrees, got {angle_tol!r}")
             u = self._direction_unit(direction, frame)
             with np.errstate(invalid="ignore", divide="ignore"):
                 cosang = (self._vector @ u) / self._distance
@@ -511,6 +558,8 @@ class NeighborList:
                 mask &= np.abs(self._distance - float(distance)) <= distance_tol
             else:
                 lo, hi = (float(x) for x in distance)
+                if lo > hi:
+                    raise ValueError(f"distance range must be (min, max) with min <= max, got {distance!r}")
                 mask &= (self._distance >= lo - distance_tol) & (self._distance <= hi + distance_tol)
         return mask
 
@@ -536,7 +585,8 @@ class NeighborList:
         """Return the pairs that satisfy **all** given criteria.
 
         Args:
-            origin_site, target_site: site label or iterable of labels.
+            origin_site, target_site: site label or iterable of labels (an
+                unknown label raises ``ValueError``, so typos are not silent).
             origin_species, target_species: species or iterable of species
                 (needs one atom per site, i.e. a configuration).
             distance: a value (kept if ``|d - value| <= distance_tol``) or a
@@ -615,7 +665,8 @@ class NeighborList:
         A pair ``(i, j, s)`` is kept when ``i < j``, or ``i == j`` and ``s`` is
         lexicographically positive; its reverse ``(j, i, -s)`` is dropped.  If a
         pair's reverse is not in this list (an asymmetric selection), the pair is
-        kept as it is, so the result never loses an unordered pair.
+        kept as it is, so the result never loses an unordered pair.  Costs about as
+        much as building the list (a sort over the pair keys).
         """
         i, j, s = self._i, self._j, self._shift
         canonical = (i < j) | ((i == j) & (
@@ -639,20 +690,32 @@ class NeighborList:
         ``n_pairs``, ``n_origins`` (origin nodes of that site in the structure)
         and ``coordination`` (= n_pairs / n_origins).
         """
+        if self.n_pairs == 0:
+            return []
+        names, node_code = np.unique(self.node_site.astype(str), return_inverse=True)
+        node_code = node_code.reshape(-1)
+        n_orig = np.bincount(node_code, minlength=len(names))
+        key = node_code[self._i] * len(names) + node_code[self._j]
+        order = np.lexsort((self._distance, key))
+        k = key[order]
+        d = self._distance[order]
+        new_group = np.concatenate(([True], k[1:] != k[:-1]))
+        new_shell = new_group | np.concatenate(([False], np.diff(d) > tol))
+        starts = np.flatnonzero(new_shell)
+        counts = np.diff(np.append(starts, len(d)))
+        sums = np.add.reduceat(d, starts)
+        group_id = np.cumsum(new_group) - 1
+        # 1-based shell number within each (origin, target) group
+        first_shell_of_group = np.searchsorted(starts, np.flatnonzero(new_group))
+        shell_index = np.arange(len(starts)) - first_shell_of_group[group_id[starts]] + 1
         rows = []
-        node_site = self.node_site.astype(str)
-        osite = node_site[self._i]
-        tsite = node_site[self._j]
-        for o in sorted(set(osite)):
-            n_orig = int(np.sum(node_site == o))
-            for t in sorted(set(tsite[osite == o])):
-                sub = self._subset((osite == o) & (tsite == t))
-                for sh in sub.shells(tol):
-                    rows.append({
-                        "origin_site": str(o), "target_site": str(t), "shell": sh.index,
-                        "distance": sh.distance, "n_pairs": sh.n_pairs,
-                        "n_origins": n_orig, "coordination": sh.n_pairs / n_orig,
-                    })
+        for s_k, c_k, sum_k, idx in zip(starts, counts, sums, shell_index):
+            o, t = divmod(int(k[s_k]), len(names))
+            rows.append({
+                "origin_site": str(names[o]), "target_site": str(names[t]), "shell": int(idx),
+                "distance": float(sum_k / c_k), "n_pairs": int(c_k),
+                "n_origins": int(n_orig[o]), "coordination": float(c_k / n_orig[o]),
+            })
         return rows
 
     def to_table(self) -> dict[str, np.ndarray]:
