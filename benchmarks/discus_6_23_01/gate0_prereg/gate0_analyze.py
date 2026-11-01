@@ -111,7 +111,13 @@ def analyze_arm(run_dir: Path, arm: str, pred: dict) -> dict:
         e1 = O.rel_l2(I_eng, I_orc)
         e1_vals.append(e1)
         # E2: diffuse vs realization engine oracle
-        e2 = O.rel_l2(D_eng, np.abs(D_orc) ** 2)
+        # The engine's diffuse has D=0 at integer h (set aver subtracts the average)
+        # So we must zero out the oracle's D at integer h before comparing
+        h_int = np.isclose(O.H_AXIS, np.rint(O.H_AXIS))
+        is_int = h_int[:, None, None] & h_int[None, :, None] & h_int[None, None, :]
+        D_orc_zeroed = D_orc.copy()
+        D_orc_zeroed[is_int] = 0
+        e2 = O.rel_l2(D_eng, np.abs(D_orc_zeroed) ** 2)
         e2_vals.append(e2)
         # E3: diffuse at integer h
         h_int = np.isclose(O.H_AXIS, np.rint(O.H_AXIS))
