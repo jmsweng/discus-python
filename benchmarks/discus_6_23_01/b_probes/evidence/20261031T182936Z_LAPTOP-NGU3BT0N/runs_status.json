@@ -1,0 +1,574 @@
+{
+ "stamp": "20261031T182936Z_LAPTOP-NGU3BT0N",
+ "launcher": "wsl",
+ "distro": "Ubuntu-22.04",
+ "python": "3.14.7",
+ "engine": {
+  "executable": null,
+  "executable_sha256": null
+ },
+ "runs": [
+  {
+   "id": "p1a_hk0",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.6,
+   "error_lines": [],
+   "outputs_present": [
+    "p1a_hk0_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "tests/fixtures/discus_6_23_01/gaas.cll": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p1b_h00",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.48,
+   "error_lines": [],
+   "outputs_present": [
+    "p1b_h00_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "tests/fixtures/discus_6_23_01/gaas.cll": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p1c_hhl",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.43,
+   "error_lines": [
+    "\u001b[31m ***MAC *** Error in macro line:    26 Level   1          ***\u001b[39m",
+    "\u001b[31m ***COMM***  Error occured in fourier menu                *** -10 ***\u001b[39m",
+    "\u001b[31m ***FOUR*** Component of increment vector is zero         ***  -4 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Sub menu returned with error                  *** -10 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Program section returned with error           ***  -9 ***\u001b[39m"
+   ],
+   "outputs_present": [],
+   "outputs_missing": [
+    "p1c_hhl_int.h5"
+   ],
+   "inputs_sha256": {
+    "tests/fixtures/discus_6_23_01/gaas.cll": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691"
+   },
+   "as_expected": false
+  },
+  {
+   "id": "p1d_tloff",
+   "expect": "either",
+   "returncode": 0,
+   "seconds": 0.54,
+   "error_lines": [],
+   "outputs_present": [
+    "p1d_tloff_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "tests/fixtures/discus_6_23_01/gaas.cll": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p1e_h0l",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.46,
+   "error_lines": [],
+   "outputs_present": [
+    "p1e_h0l_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "tests/fixtures/discus_6_23_01/gaas.cll": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p2_aver0",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.62,
+   "error_lines": [],
+   "outputs_present": [
+    "p2_aver0_int.h5",
+    "p2_aver0_real.h5",
+    "p2_aver0_imag.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru": "1822d81446ba4bbdebb2c35329a7e25b72af1c00488c6afb9842efca6ae10be7"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p2_aver100",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.72,
+   "error_lines": [],
+   "outputs_present": [
+    "p2_aver100_int.h5",
+    "p2_aver100_real.h5",
+    "p2_aver100_imag.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru": "1822d81446ba4bbdebb2c35329a7e25b72af1c00488c6afb9842efca6ae10be7"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p2_aver50_s8a",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.71,
+   "error_lines": [],
+   "outputs_present": [
+    "p2_aver50_s8a_int.h5",
+    "p2_aver50_s8a_real.h5",
+    "p2_aver50_s8a_imag.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru": "1822d81446ba4bbdebb2c35329a7e25b72af1c00488c6afb9842efca6ae10be7"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p2_aver50_s8b",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.76,
+   "error_lines": [],
+   "outputs_present": [
+    "p2_aver50_s8b_int.h5",
+    "p2_aver50_s8b_real.h5",
+    "p2_aver50_s8b_imag.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru": "1822d81446ba4bbdebb2c35329a7e25b72af1c00488c6afb9842efca6ae10be7"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p2_aver50_s8c",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.72,
+   "error_lines": [],
+   "outputs_present": [
+    "p2_aver50_s8c_int.h5",
+    "p2_aver50_s8c_real.h5",
+    "p2_aver50_s8c_imag.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru": "1822d81446ba4bbdebb2c35329a7e25b72af1c00488c6afb9842efca6ae10be7"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p2_aver50_s1a",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.63,
+   "error_lines": [],
+   "outputs_present": [
+    "p2_aver50_s1a_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru": "1822d81446ba4bbdebb2c35329a7e25b72af1c00488c6afb9842efca6ae10be7"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p2_aver50_s1b",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.58,
+   "error_lines": [],
+   "outputs_present": [
+    "p2_aver50_s1b_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_random.stru": "1822d81446ba4bbdebb2c35329a7e25b72af1c00488c6afb9842efca6ae10be7"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_off",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.56,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_off_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box4_all_y",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 5.04,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_box4_all_y_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box4_all_n",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 2.89,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_box4_all_n_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box4_n64_s8a",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.58,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_box4_n64_s8a_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box4_n64_s8b",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.61,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_box4_n64_s8b_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box4_n64_s8c",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.63,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_box4_n64_s8c_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_ell4_all_y",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 4.06,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_ell4_all_y_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box4_all_y_aver100",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 5.11,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_box4_all_y_aver100_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box16_n2_y",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.6,
+   "error_lines": [],
+   "outputs_present": [
+    "p3_box16_n2_y_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box4_amp",
+   "expect": "either",
+   "returncode": 0,
+   "seconds": 0.51,
+   "error_lines": [
+    "\u001b[31m ***MAC *** Error in macro line:    31 Level   1          ***\u001b[39m",
+    "\u001b[31m ***COMM***  Error occured in output menu                 *** -10 ***\u001b[39m",
+    "\u001b[31m ***APPL*** Output value NOT allowed using lots           *** -60 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Sub menu returned with error                  *** -10 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Program section returned with error           ***  -9 ***\u001b[39m"
+   ],
+   "outputs_present": [],
+   "outputs_missing": [
+    "p3_box4_amp_amp.h5"
+   ],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p3_box17_err",
+   "expect": "error",
+   "returncode": 0,
+   "seconds": 0.5,
+   "error_lines": [
+    "\u001b[31m ***MAC *** Error in macro line:    23 Level   1          ***\u001b[39m",
+    "\u001b[31m ***COMM***  Error occured in fourier menu                *** -10 ***\u001b[39m",
+    "\u001b[31m ***APPL*** Dimension of lots < 0 or > than crystal       ***-101 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Sub menu returned with error                  *** -10 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Program section returned with error           ***  -9 ***\u001b[39m"
+   ],
+   "outputs_present": [],
+   "outputs_missing": [
+    "p3_box17_err_int.h5"
+   ],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_turbo_g32_a0",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.55,
+   "error_lines": [],
+   "outputs_present": [
+    "p4_turbo_g32_a0_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_nufft_g32_a0",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.54,
+   "error_lines": [],
+   "outputs_present": [
+    "p4_nufft_g32_a0_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_turbo_g32_a100",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.64,
+   "error_lines": [],
+   "outputs_present": [
+    "p4_turbo_g32_a100_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_nufft_g32_a100",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.52,
+   "error_lines": [],
+   "outputs_present": [
+    "p4_nufft_g32_a100_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_turbo_gnc_a0",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.55,
+   "error_lines": [],
+   "outputs_present": [
+    "p4_turbo_gnc_a0_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_nufft_gnc_a0",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.55,
+   "error_lines": [],
+   "outputs_present": [
+    "p4_nufft_gnc_a0_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_turbo_gnc_a100",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.56,
+   "error_lines": [],
+   "outputs_present": [
+    "p4_turbo_gnc_a100_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p4_nufft_gnc_a100",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.51,
+   "error_lines": [
+    "\u001b[31m ***APPL*** Increment vector along abscissa               ***-188 ***\u001b[39m",
+    "\u001b[31m ***APPL*** Shift corners by h =   0.200000               ***-188 ***\u001b[39m",
+    "\u001b[31m ***MAC *** Error in macro line:    27 Level   1          ***\u001b[39m",
+    "\u001b[31m ***COMM***  Error occured in fourier menu                *** -10 ***\u001b[39m",
+    "\u001b[31m ***APPL*** Reciprocal grid does not include zero point   ***-188 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Sub menu returned with error                  *** -10 ***\u001b[39m",
+    "\u001b[31m ***COMM*** Program section returned with error           ***  -9 ***\u001b[39m"
+   ],
+   "outputs_present": [],
+   "outputs_missing": [
+    "p4_nufft_gnc_a100_int.h5"
+   ],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": false
+  },
+  {
+   "id": "p5_default",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.6,
+   "error_lines": [],
+   "outputs_present": [
+    "p5_default_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p5_symm_ignore",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.62,
+   "error_lines": [],
+   "outputs_present": [
+    "p5_symm_ignore_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p5_symm_friedel",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.6,
+   "error_lines": [],
+   "outputs_present": [
+    "p5_symm_friedel_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  },
+  {
+   "id": "p5_symm_apply",
+   "expect": "ok",
+   "returncode": 0,
+   "seconds": 0.59,
+   "error_lines": [],
+   "outputs_present": [
+    "p5_symm_apply_int.h5"
+   ],
+   "outputs_missing": [],
+   "inputs_sha256": {
+    "benchmarks/discus_6_23_01/gate2_prereg/inputs/gate2_block.stru": "64b743bc00b6f72be713b742b9daa9a012a82bc29275fc0e402c9dce6dec7ede"
+   },
+   "as_expected": true
+  }
+ ],
+ "all_as_expected": false
+}

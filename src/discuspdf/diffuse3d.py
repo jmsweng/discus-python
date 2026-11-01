@@ -32,7 +32,12 @@ import numpy as np
 # "xdpyinfo: unable to open display" or "pgxwin_server: cannot connect" is
 # harmless for headless macro runs and must NOT be treated as fatal.
 _ENGINE_ERROR_PATTERN = re.compile(
-    r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)",
+    r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)"
+    # DISCUS error lines carry a tag such as ***APPL***, ***FOUR***, ***MAC *** (the start-up banner
+    # is a row of bare asterisks and does not match).
+    r"|\*\*\*(?:[A-Z]{3,4} ?)\*\*\*"
+    # DISCUS 6.23.01 nufft: FINUFFT reports 'setpts error (ier=4)', exits 0 and writes zeros.
+    r"|\bFINUFFT\b[^\n]*\berror\b",
 )
 
 
@@ -73,6 +78,22 @@ class Diffuse3DRun:
         """Load verified DISCUS 6.23.01 common/NeXus hkl metadata from this job."""
         from .discus_output import read_discus_volume
         return read_discus_volume(self.output, expect_content=expect_content)
+
+    def load_scattering_volume(self, filename: str | None = None, *, units: str | None = None):
+        """Read a DISCUS 6.23.01 NeXus output of this run (default: the runner's output file) as a
+        :class:`~discuspdf.scattering_data.ScatteringVolume`; planes and lines included. If the run
+        was staged by :func:`~discuspdf.fourier_macro.prepare_fourier_run`, the file is checked against
+        its ``fourier_config.json`` and the configuration is kept in the provenance."""
+        from .scattering_data import ScatteringVolume
+        name = filename or self.output_filename
+        if Path(name).name != name:
+            raise ValueError("filename must be a plain file name inside the run directory")
+        config = None
+        cfg_path = self.directory / "fourier_config.json"
+        if cfg_path.is_file():
+            from .fourier_macro import FourierConfig
+            config = FourierConfig.from_dict(json.loads(cfg_path.read_text(encoding="utf-8")))
+        return ScatteringVolume.from_discus_file(self.directory / name, config=config, units=units)
 
     def load_volume(self, *, intensity_dataset: str, q_datasets: tuple[str, str, str],
                     coordinate_system: str, units: str, preprocessing: tuple[str, ...]):
@@ -260,15 +281,21 @@ class Diffuse3DRunner:
 
         try:
             if native_nexus:
-                from .discus_output import read_discus_volume
-                volume = read_discus_volume(output)
+                # Reads volumes, planes and lines (DiscusVolume refuses planes: singular increments).
+                volume = run.load_scattering_volume()
+                if not np.any(np.nan_to_num(volume.intensity)):
+                    # DISCUS 6.23.01 nufft failure mode: exit 0, valid file, every value zero.
+                    raise ValueError("every data value is zero; DISCUS wrote an empty result")
                 report = {
                     "valid_hdf5": True,
                     "native_nexus": True,
-                    "intensity_shape": list(volume.values.shape),
+                    "intensity_shape": list(volume.intensity.shape),
                     "grid_frame": "hkl",
-                    "with_bragg": volume.with_bragg,
+                    "grid_dimensionality": volume.grid.ndim,
+                    "content": volume.provenance["content"],
+                    "with_bragg": volume.bragg,
                     "source_sha256": volume.provenance["sha256"],
+                    "fourier_config_checked": "fourier_config" in volume.provenance,
                     "physical_validation": False,
                 }
             else:

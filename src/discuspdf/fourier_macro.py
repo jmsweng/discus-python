@@ -1,0 +1,350 @@
+"""Python control of DISCUS 6.23.01 single-crystal Fourier runs: Bragg subtraction and LOTS (Package B, 8–9).
+
+:class:`FourierConfig` writes the ``fourier`` and ``output`` blocks of a DISCUS macro using only
+commands whose behaviour was observed on DISCUS_SUITE 6.23.01
+(``benchmarks/discus_6_23_01/b_probes/RESULT.md``, Gates 2–3):
+
+* ``set aver,<p>`` subtracts the **average amplitude**: intensity = |F − ⟨F⟩|²; ``value real/imag``
+  are F − ⟨F⟩. For ``0 < p < 100`` the unit cells used for ⟨F⟩ are drawn at random, so an explicit
+  8-value seed is required (a 1-value ``seed`` was not reproducible).
+* ``lots {box|ell},lx,ly,lz,{n|all},{y|n}``: per-lot intensities are summed and scaled to the whole
+  crystal; random lot origins need an 8-value seed; only ``value int`` may be written.
+* ``set technique:nufft`` is **not offered**: in 6.23.01 it wrote all-zero files with exit code 0
+  (FINUFFT ``setpts error``). Only ``turbo`` is generated.
+* ``set symm:{friedel|ignore|apply}``; ``friedel`` is the engine default.
+
+The macro is plain text you can read before running it (``render``). Nothing here runs DISCUS;
+:func:`prepare_fourier_run` stages the macro for :class:`~discuspdf.diffuse3d.Diffuse3DRunner`.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from itertools import permutations
+from pathlib import Path
+from typing import Any
+import json
+import re
+import tempfile
+
+import numpy as np
+
+from .reciprocal_grid import ReciprocalGrid
+
+SCHEMA_NAME = "discuspdf.FourierConfig"
+SCHEMA_VERSION = 1
+OUTPUT_VALUES = ("int", "real", "imag", "3DPDF")
+SYMMETRY = ("friedel", "ignore", "apply")
+WAVELENGTHS = ("moa1",)
+_NAME_RE = re.compile(r"^[A-Za-z0-9_.\-]+$")
+_LABELS = ("h", "k", "l")
+
+
+def _fmt(v) -> str:
+    return ",".join(f"{float(x):.6g}" for x in v)
+
+
+def _check_name(kind: str, name: str, suffixes: tuple[str, ...]) -> str:
+    if not isinstance(name, str) or not _NAME_RE.match(name) or name in (".", ".."):
+        raise ValueError(f"{kind} must be a plain file name (letters, digits, '_', '-', '.'), got {name!r}")
+    if not name.lower().endswith(suffixes):
+        raise ValueError(f"{kind} {name!r} must end with one of {suffixes}")
+    return name
+
+
+@dataclass(frozen=True)
+class Seed:
+    """Eight-value DISCUS seed (``seed v1,…,v8``). A single value was not reproducible in 6.23.01."""
+    values: tuple[int, int, int, int, int, int, int, int]
+
+    def __post_init__(self) -> None:
+        vals = tuple(self.values)
+        if len(vals) != 8:
+            raise ValueError("Seed needs exactly 8 values; DISCUS 6.23.01 fills missing words from the clock")
+        for v in vals:
+            if isinstance(v, (bool, np.bool_)) or not isinstance(v, (int, np.integer)) or not 1 <= v <= 99999:
+                raise ValueError(f"seed values must be integers in 1..99999 (exact in DISCUS's real parser), got {v!r}")
+        object.__setattr__(self, "values", tuple(int(v) for v in vals))
+
+    def command(self) -> str:
+        return "seed " + ",".join(str(v) for v in self.values)
+
+
+@dataclass(frozen=True)
+class Lots:
+    """LOTS sampling: ``shape`` 'box' or 'ellipsoid', ``size`` in unit cells, ``count`` an integer or
+    ``'all'`` (one lot per origin cell), ``periodic`` boundary conditions."""
+    shape: str
+    size: tuple[int, int, int]
+    count: int | str
+    periodic: bool
+
+    def __post_init__(self) -> None:
+        if self.shape not in ("box", "ellipsoid"):
+            raise ValueError("lots shape must be 'box' or 'ellipsoid'")
+        size = tuple(self.size)
+        if len(size) != 3 or any(isinstance(n, bool) or not isinstance(n, (int, np.integer)) or n < 1 for n in size):
+            raise ValueError("lots size must be three integers >= 1 (unit cells)")
+        object.__setattr__(self, "size", tuple(int(n) for n in size))
+        if self.count != "all" and (isinstance(self.count, bool) or not isinstance(self.count, (int, np.integer))
+                                    or self.count < 1):
+            raise ValueError("lots count must be a positive integer or 'all'")
+        if not isinstance(self.periodic, bool):
+            raise ValueError("lots periodic must be True or False")
+
+    @property
+    def random(self) -> bool:
+        return self.count != "all"
+
+    def command(self) -> str:
+        shape = "box" if self.shape == "box" else "ell"
+        count = "all" if self.count == "all" else str(int(self.count))
+        return f"lots {shape},{self.size[0]},{self.size[1]},{self.size[2]},{count},{'y' if self.periodic else 'n'}"
+
+    def n_lots(self, crystal_cells) -> int:
+        """Number of lots DISCUS uses: ``count``, or for 'all' the number of possible origins
+        (all cells if periodic, else (N − l + 1) per axis; both observed in 6.23.01)."""
+        if self.random:
+            return int(self.count)
+        cells = np.asarray(crystal_cells, int)
+        per = cells if self.periodic else cells - np.asarray(self.size) + 1
+        return int(np.prod(per))
+
+
+@dataclass(frozen=True)
+class StructureSource:
+    """How the macro loads the crystal: ``read stru <file>`` or ``read cell <file>,n1,n2,n3``.
+
+    ``crystal_cells`` is the crystal size in unit cells; it is required for 'stru' if LOTS are used
+    (DISCUS refuses lots larger than the crystal). For a ``.stru`` written by DISCUS it is the
+    ``ncell`` line."""
+    kind: str
+    file: str
+    crystal_cells: tuple[int, int, int] | None = None
+
+    def __post_init__(self) -> None:
+        if self.kind not in ("stru", "cell"):
+            raise ValueError("kind must be 'stru' or 'cell'")
+        _check_name("structure file", self.file, (".stru",) if self.kind == "stru" else (".cll", ".cell"))
+        if self.kind == "cell" and self.crystal_cells is None:
+            raise ValueError("read cell needs crystal_cells (n1, n2, n3)")
+        if self.crystal_cells is not None:
+            c = tuple(self.crystal_cells)
+            if len(c) != 3 or any(isinstance(n, bool) or not isinstance(n, (int, np.integer)) or n < 1 for n in c):
+                raise ValueError("crystal_cells must be three integers >= 1")
+            object.__setattr__(self, "crystal_cells", tuple(int(n) for n in c))
+
+    @classmethod
+    def stru(cls, file: str, crystal_cells=None) -> "StructureSource":
+        return cls("stru", file, crystal_cells)
+
+    @classmethod
+    def cell(cls, file: str, crystal_cells) -> "StructureSource":
+        return cls("cell", file, crystal_cells)
+
+    def lines(self) -> list[str]:
+        if self.kind == "stru":
+            arg = f"stru {self.file}"
+        else:
+            n = self.crystal_cells
+            arg = f"cell {self.file},{n[0]},{n[1]},{n[2]}"
+        return ["read", f"  {arg}", "eval n[1]", "eval n[2]", "eval n[3]"]
+
+
+def axis_labels(grid: ReciprocalGrid, tol: float = 1e-12) -> tuple[str, str, str]:
+    """``abs/ord/top`` labels for DISCUS: each active axis must have a nonzero hkl component along its
+    label (6.23.01 refused an hhl plane labelled ``ord k``: 'Component of increment vector is zero').
+    Prefers (h, k, l); otherwise the first permutation that satisfies the rule."""
+    V = grid.axis_vectors
+    scale = float(np.max(np.abs(V))) or 1.0
+    active = grid.active_axes
+    candidates = [_LABELS] + [p for p in permutations(_LABELS) if p != _LABELS]
+    for labels in candidates:
+        if all(abs(V[k, _LABELS.index(labels[k])]) > tol * scale for k in active):
+            return tuple(labels)  # type: ignore[return-value]
+    raise ValueError("no abs/ord/top labelling gives every active axis a nonzero labelled hkl component")
+
+
+@dataclass(frozen=True)
+class FourierConfig:
+    """One DISCUS single-crystal Fourier calculation and its outputs.
+
+    Parameters
+    ----------
+    grid: the reciprocal-space grid (``ll/lr/ul/tl/na/no/nt`` come from it).
+    outputs: ``((value, file), ...)`` with value in ``int``, ``real``, ``imag``, ``3DPDF`` and an
+        ``.h5`` file name; written in that order with ``form nexus``.
+    aver_percent: ``set aver`` percentage, 0 (Bragg present) … 100.
+    lots: :class:`Lots` or ``None`` (``lots off``).
+    seed: :class:`Seed`; required when ``0 < aver_percent < 100`` or for random lots.
+    temperature: ``'ignore'`` or ``'use'`` (``temp``). DISCUS 6.23.01 replaces B < 0.001 by 1.0 when
+        reading, so ``'use'`` with B = 0 in the file gives B = 1 Å².
+    symmetry: ``set symm:`` value, or ``None`` to keep the engine default (Friedel merging).
+    """
+    grid: ReciprocalGrid
+    outputs: tuple[tuple[str, str], ...]
+    aver_percent: float = 0.0
+    lots: Lots | None = None
+    seed: Seed | None = None
+    temperature: str = "ignore"
+    symmetry: str | None = None
+    wavelength: str = "moa1"
+    labels: tuple[str, str, str] | None = field(default=None)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.grid, ReciprocalGrid):
+            raise TypeError("grid must be a ReciprocalGrid")
+        p = float(self.aver_percent)
+        if not np.isfinite(p) or not 0.0 <= p <= 100.0:
+            raise ValueError("aver_percent must be in [0, 100]")
+        object.__setattr__(self, "aver_percent", p)
+        if self.lots is not None and not isinstance(self.lots, Lots):
+            raise TypeError("lots must be a Lots instance or None")
+        if self.seed is not None and not isinstance(self.seed, Seed):
+            raise TypeError("seed must be a Seed (8 values) or None")
+        if 0.0 < p < 100.0 and self.seed is None:
+            raise ValueError(f"set aver,{p:g} draws unit cells at random; give an explicit 8-value Seed")
+        if self.lots is not None and self.lots.random and self.seed is None:
+            raise ValueError("random lot origins need an explicit 8-value Seed")
+        if self.temperature not in ("ignore", "use"):
+            raise ValueError("temperature must be 'ignore' or 'use'")
+        if self.symmetry is not None and self.symmetry not in SYMMETRY:
+            raise ValueError(f"symmetry must be one of {SYMMETRY} or None")
+        if self.wavelength not in WAVELENGTHS:
+            raise ValueError(f"wavelength must be one of {WAVELENGTHS} (only these were verified)")
+        outs = tuple(tuple(o) for o in self.outputs)
+        if not outs:
+            raise ValueError("at least one output is required")
+        names = set()
+        for o in outs:
+            if len(o) != 2:
+                raise ValueError("each output is (value, file)")
+            value, name = o
+            if value not in OUTPUT_VALUES:
+                hint = " ('amp' was not verified in 6.23.01)" if value == "amp" else ""
+                raise ValueError(f"output value {value!r} not offered; use one of {OUTPUT_VALUES}{hint}")
+            _check_name("output file", name, (".h5", ".hdf5"))
+            if name in names:
+                raise ValueError(f"output file {name!r} used twice")
+            names.add(name)
+            if self.lots is not None and value != "int":
+                raise ValueError(f"with lots DISCUS writes only 'int' (6.23.01 refused {value!r}, error -60)")
+        object.__setattr__(self, "outputs", outs)
+        labels = axis_labels(self.grid) if self.labels is None else tuple(self.labels)
+        if sorted(labels) != sorted(_LABELS):
+            raise ValueError("labels must be a permutation of ('h', 'k', 'l')")
+        V = self.grid.axis_vectors
+        for k in self.grid.active_axes:
+            if V[k, _LABELS.index(labels[k])] == 0:
+                raise ValueError(f"axis {k} is labelled {labels[k]!r} but has no {labels[k]} component; "
+                                 "DISCUS refuses this ('Component of increment vector is zero')")
+        object.__setattr__(self, "labels", labels)
+
+    # -- facts derived from the configuration ---------------------------------------
+    @property
+    def bragg(self) -> str:
+        """Label for the written intensity: 'bragg_subtracted' if ⟨F⟩ is subtracted, else 'bragg_present'."""
+        return "bragg_subtracted" if self.aver_percent > 0 else "bragg_present"
+
+    @property
+    def labels_verified(self) -> bool:
+        """True when the labels are (h, k, l) on an hkl-aligned grid — the case run in the probes."""
+        return self.labels == _LABELS and self.grid.is_hkl_axis_aligned()
+
+    def check_crystal(self, crystal_cells) -> None:
+        """Refuse lots larger than the crystal (DISCUS error -101)."""
+        if self.lots is None or crystal_cells is None:
+            return
+        cells = np.asarray(crystal_cells, int)
+        if np.any(np.asarray(self.lots.size) > cells):
+            raise ValueError(f"lot size {self.lots.size} exceeds the crystal {tuple(int(n) for n in cells)} "
+                             "(DISCUS error -101)")
+
+    def fourier_lines(self) -> list[str]:
+        c = self.grid.discus_corners()
+        lines = ["fourier", "  xray", f"  wvle {self.wavelength}",
+                 f"  ll {_fmt(c['ll'])}", f"  lr {_fmt(c['lr'])}", f"  ul {_fmt(c['ul'])}", f"  tl {_fmt(c['tl'])}",
+                 f"  na {c['na']}", f"  no {c['no']}", f"  nt {c['nt']}",
+                 f"  abs {self.labels[0]}", f"  ord {self.labels[1]}", f"  top {self.labels[2]}",
+                 f"  temp {self.temperature}", "  disp off",
+                 f"  {self.lots.command() if self.lots else 'lots off'}",
+                 "  set technique:turbo", f"  set aver,{self.aver_percent:.1f}"]
+        if self.symmetry is not None:
+            lines.append(f"  set symm:{self.symmetry}")
+        lines += ["  show", "  run", "exit"]
+        return lines
+
+    def output_lines(self) -> list[str]:
+        lines = ["output"]
+        for value, name in self.outputs:
+            lines += [f"  value {value}", "  form nexus", f"  outf {name}", "  run"]
+        lines.append("exit")
+        return lines
+
+    def render(self, structure: StructureSource, *, title: str | None = None) -> str:
+        """Complete DISCUS macro text (LF line endings), ready to inspect and stage."""
+        if not isinstance(structure, StructureSource):
+            raise TypeError("structure must be a StructureSource")
+        if self.lots is not None:
+            if structure.crystal_cells is None:
+                raise ValueError("lots need the crystal size: give StructureSource(crystal_cells=...)")
+            self.check_crystal(structure.crystal_cells)
+        head = []
+        if title is not None:
+            if "\n" in title:
+                raise ValueError("title must be one line")
+            head.append(f"# {title}")
+        body = head + ["discus"]
+        if self.seed is not None:
+            body.append(self.seed.command())
+        body += structure.lines() + self.fourier_lines() + self.output_lines() + ["exit", "exit", ""]
+        return "\n".join(body)
+
+    # -- persistence / provenance ---------------------------------------------------
+    def to_dict(self) -> dict[str, Any]:
+        return {"schema": SCHEMA_NAME, "version": SCHEMA_VERSION, "grid": self.grid.to_dict(),
+                "outputs": [list(o) for o in self.outputs], "aver_percent": self.aver_percent,
+                "lots": None if self.lots is None else {"shape": self.lots.shape, "size": list(self.lots.size),
+                                                       "count": self.lots.count, "periodic": self.lots.periodic},
+                "seed": None if self.seed is None else list(self.seed.values),
+                "temperature": self.temperature, "symmetry": self.symmetry, "wavelength": self.wavelength,
+                "labels": list(self.labels), "technique": "turbo", "engine": "DISCUS_SUITE 6.23.01",
+                "bragg": self.bragg, "labels_verified": self.labels_verified}
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "FourierConfig":
+        if d.get("schema") != SCHEMA_NAME or d.get("version") != SCHEMA_VERSION:
+            raise ValueError(f"not a {SCHEMA_NAME} v{SCHEMA_VERSION} description")
+        lots = None if d["lots"] is None else Lots(d["lots"]["shape"], tuple(d["lots"]["size"]),
+                                                   d["lots"]["count"], d["lots"]["periodic"])
+        return cls(ReciprocalGrid.from_dict(d["grid"]), tuple(tuple(o) for o in d["outputs"]),
+                   aver_percent=d["aver_percent"], lots=lots,
+                   seed=None if d["seed"] is None else Seed(tuple(d["seed"])),
+                   temperature=d["temperature"], symmetry=d["symmetry"], wavelength=d["wavelength"],
+                   labels=tuple(d["labels"]))
+
+
+def prepare_fourier_run(runner, config: FourierConfig, structure: StructureSource, structure_path,
+                        *, title: str | None = None):
+    """Stage a generated macro, the structure file and ``fourier_config.json`` with
+    :meth:`Diffuse3DRunner.prepare`. The runner's ``output_filename`` must be one of the config's
+    output files (it is the file the runner validates)."""
+    structure_path = Path(structure_path)
+    if structure_path.name != structure.file:
+        raise ValueError(f"structure_path {structure_path.name!r} does not match the macro's {structure.file!r}")
+    if runner.output_filename not in {name for _, name in config.outputs}:
+        raise ValueError(f"runner.output_filename {runner.output_filename!r} is not an output of this config")
+    text = config.render(structure, title=title)
+    raw = structure_path.read_bytes()
+    if b"\0" in raw[:4096]:
+        raise ValueError(f"{structure_path} is not a text file")
+    with tempfile.TemporaryDirectory() as tmp:
+        macro = Path(tmp) / "run.mac"
+        macro.write_bytes(text.encode("ascii"))
+        # A Windows checkout (core.autocrlf) has CRLF; DISCUS would read the CR as part of each line.
+        staged = Path(tmp) / structure.file
+        staged.write_bytes(raw.replace(b"\r\n", b"\n"))
+        cfg = Path(tmp) / "fourier_config.json"
+        cfg.write_text(json.dumps({**config.to_dict(), "structure": {
+            "kind": structure.kind, "file": structure.file, "crystal_cells": structure.crystal_cells,
+            "staged_with_lf": raw != staged.read_bytes()}}, indent=1) + "\n", encoding="utf-8")
+        return runner.prepare(macro, assets=(staged, cfg))
