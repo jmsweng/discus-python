@@ -1,0 +1,7 @@
+Original: n_atoms=8, frac range=[0.0000, 0.7500]
+frac_shifted range=[-0.3000, 1.9500]
+with_frac accepted: n_atoms=8, frac range=[-0.3000, 1.9500]
+frac_neg[0] = [-0.01 -0.01 -0.01]
+with_frac(-0.01) accepted: n_atoms=8, frac[0]=[-0.01 -0.01 -0.01]
+wrapped() frac range=[0.0500, 0.9500]
+distance_matrix shape=(8, 8), min=0.0000

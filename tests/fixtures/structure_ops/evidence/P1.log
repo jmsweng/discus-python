@@ -1,0 +1,5 @@
+numpy.__version__ = 2.5.4
+default_rng(1234).choice(np.arange(10), size=4, replace=False) = [7 3 8 6]
+default_rng(1234).normal(0,1,(2,3)) = [[-1.60383681  0.06409991  0.7408913 ]
+ [ 0.15261919  0.86374389  2.91309922]]
+default_rng(1234).random(3) = [0.97669977 0.38019574 0.92324623]

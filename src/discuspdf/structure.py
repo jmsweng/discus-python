@@ -993,6 +993,22 @@ class Structure:
                 return False
         return True
 
+    def repeat(self, reps, **kw):
+        from . import structure_ops
+        return structure_ops.repeat(self, reps, **kw).structure
+
+    def substitute(self, **kw):
+        from . import structure_ops
+        return structure_ops.substitute(self, **kw).structure
+
+    def displace(self, **kw):
+        from . import structure_ops
+        return structure_ops.displace(self, **kw).structure
+
+    def sample_configuration(self, *, seed):
+        from . import structure_ops
+        return structure_ops.sample_configuration(self, seed=seed).structure
+
     __hash__ = None  # type: ignore
 
     def __repr__(self) -> str:
