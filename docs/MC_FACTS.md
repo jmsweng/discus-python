@@ -1,6 +1,6 @@
 # DISCUS 6.23.01 MMC menu — source-cited facts (Package D)
 
-Source tree: `/home/claude/dc6231` (read-only). All paths below are relative to `discus/prog/` unless they start with `lib_f90/`.
+Source: DiffuseCode tag `v.6.23.01` (identical MMC sources at upstream master `6fa06d4`). All paths below are relative to `discus/prog/` unless they start with `lib_f90/`.
 Abbreviations: `mmc.f90:N` = line N. "UNCONFIRMED" = inferred, not verified by running the code.
 
 ---

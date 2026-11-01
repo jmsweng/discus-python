@@ -33,7 +33,7 @@ from .structure import Structure
 __all__ = [
     "Vector", "Neighborhood", "OccupationalTarget", "DisplacementTarget", "SpringTarget",
     "LennardJonesTarget", "Swap", "Shift", "SwapDisplacement", "MCConfig", "MCRunner", "MCRun", "MCResult",
-    "parse_mmc_log",
+    "parse_mmc_log", "replica_summary",
 ]
 
 _NAME = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,3}$")
@@ -610,11 +610,114 @@ class MCResult:
         fb = self.log["feedback"]
         return np.array([[f["gen"], f["tries"], *f["accepted"]] for f in fb], dtype=np.int64).reshape(-1, 5)
 
+    def measure(self, reference: Structure | None = None) -> list[dict]:
+        """Independent measurement of every target on the final structure with Package C.
+
+        Pairs are exactly the neighbourhood's directed vectors (as DISCUS counts them). ``reference`` gives
+        the undisplaced site positions; by default the per-site average cell positions of the final
+        structure are used (DISCUS measures displacements from the site averages). Occupational:
+        ``OccupationalCorrelation.discus(a, b)`` — equal to DISCUS's printed value for a binary system with
+        symmetric pair counts (DISCUS prints the mean of the two Warren–Cowley α of the pair). Displacement:
+        uncentred correlation of the components along the direction. Spring / Lennard-Jones: mean and
+        standard deviation of the a–b pair distances (Å)."""
+        from .correlations import displacement_correlation, occupational_correlation
+        from .neighbors import neighbor_list
+        st = self.structure
+        ref = _site_average_reference(st) if reference is None else reference
+        out = []
+        for t in self.config.targets:
+            nb = self.config.neighborhoods[t.neighborhood]
+            pairs = _neighborhood_pairs(neighbor_list, ref, nb)
+            rec = {"type": type(t).__name__, "neighborhood": t.neighborhood, "a": t.a, "b": t.b,
+                   "pairs": pairs.n_pairs}
+            if isinstance(t, OccupationalTarget):
+                rec["value"] = float(occupational_correlation(pairs, st).discus(_spelling(st, t.a),
+                                                                                 _spelling(st, t.b)))
+            elif isinstance(t, DisplacementTarget):
+                dc = displacement_correlation(pairs, st, direction=t.direction, direction_frame="fractional",
+                                              reference="site_average", centered=False,
+                                              origin_species=_spelling(st, t.a), target_species=_spelling(st, t.b))
+                rec["value"] = float(dc.correlation)
+            else:
+                d = _pair_distances(pairs, ref, st, _spelling(st, t.a), _spelling(st, t.b))
+                rec["value"] = float(d.mean()) if len(d) else float("nan")
+                rec["std"] = float(d.std()) if len(d) else float("nan")
+            out.append(rec)
+        return out
+
     def history(self, target_index: int = 0) -> np.ndarray:
         """(n_feedback, 3): gen, target, achieved for one target (feedback lines)."""
         rows = [(f["gen"], f["rows"][target_index]["target"], f["rows"][target_index]["achieved"])
                 for f in self.log["feedback"] if len(f["rows"]) > target_index]
         return np.array(rows, dtype=float).reshape(-1, 3)
+
+
+def _site_average_reference(st: Structure) -> Structure:
+    """Undisplaced reference: cell origin + per-site average position within the cell."""
+    n = st.supercell
+    local = st.frac * n - st.cell_index
+    avg = {lab: local[st.site_label == lab].mean(axis=0) for lab in set(st.site_label)}
+    frac = (st.cell_index + np.array([avg[lab] for lab in st.site_label])) / n
+    return st.replace(frac=frac, min_separation=None)
+
+
+def _neighborhood_pairs(neighbor_list, ref: Structure, nb: Neighborhood):
+    lengths = [np.linalg.norm((np.array(v.translation, float)) @ (ref.lattice.matrix / ref.supercell[:, None]))
+               for v in nb.vectors]
+    cell = ref.lattice.matrix / ref.supercell[:, None]
+    cutoff = max(lengths) + 2.0 * float(np.max(np.linalg.norm(cell, axis=1)))
+    nl = neighbor_list(ref, cutoff)
+    mask = np.zeros(nl.n_pairs, bool)
+    for v in nb.vectors:
+        mask |= ((nl.origin_site == f"site{v.origin_site}") & (nl.target_site == f"site{v.target_site}")
+                 & np.all(nl.translation == np.array(v.translation), axis=1))
+    return nl._subset(mask)
+
+
+def _spelling(st: Structure, name: str) -> str:
+    """The structure's own spelling of a species name (DISCUS names are case-insensitive)."""
+    for s in set(st.species):
+        if s.upper() == name.upper():
+            return s
+    raise ValueError(f"species {name!r} is not in the structure")
+
+
+def _pair_distances(pairs, ref: Structure, st: Structure, a: str, b: str) -> np.ndarray:
+    """Distances (Å) of the a–b pairs in ``st``; the pair image comes from ``ref`` (minimum-image
+    correction of each end's displacement, so atoms that crossed a boundary are handled)."""
+    from .correlations import node_species
+    spec = node_species(pairs, st)
+    rows = pairs.node_row
+    so, sj = spec[pairs.i], spec[pairs.j]
+    keep = ((so == a) & (sj == b)) | ((so == b) & (sj == a))
+    io, it = rows[pairs.i[keep]], rows[pairs.j[keep]]
+    d_ref = ref.frac[it] + pairs.shift[keep] - ref.frac[io]
+    du = st.lattice.minimum_image(st.frac[it] - ref.frac[it])[0] - st.lattice.minimum_image(st.frac[io] - ref.frac[io])[0]
+    return np.linalg.norm((d_ref + du) @ st.lattice.matrix, axis=1)
+
+
+def replica_summary(results: list["MCResult"]) -> list[dict]:
+    """Seed-to-seed spread: mean and standard deviation over replicas of DISCUS's final achieved value and
+    of the independent measurement, per target. All results must come from the same configuration
+    apart from the seed."""
+    if len(results) < 2:
+        raise ValueError("give at least two replicas")
+    base = results[0].config.to_dict()
+    for r in results[1:]:
+        d = r.config.to_dict()
+        if {**d, "seed": None} != {**base, "seed": None}:
+            raise ValueError("replicas differ in more than the seed")
+    if len({tuple(r.config.seed.values) for r in results}) != len(results):
+        raise ValueError("replicas must use different seeds")
+    out = []
+    for k, t in enumerate(results[0].config.targets):
+        ach = np.array([r.log["final"]["rows"][k]["achieved"] for r in results], float)
+        mea = np.array([r.measure()[k]["value"] for r in results], float)
+        out.append({"target_index": k, "type": type(t).__name__, "mode": t.mode,
+                    "target": getattr(t, "correlation", None), "n": len(results),
+                    "achieved_mean": float(ach.mean()), "achieved_std": float(ach.std(ddof=1)),
+                    "measured_mean": float(mea.mean()), "measured_std": float(mea.std(ddof=1))})
+    return out
 
 
 # ------------------------------------------------------------------------------------------- runner
@@ -656,6 +759,8 @@ class MCRunner:
         files = {"mc_in.stru": text_stru, "run.mac": macro,
                  "mc_config.json": json.dumps({**config.to_dict(), "cautions": config.cautions(),
                                                "n_atoms": structure.n_atoms,
+                                               "supercell": [int(x) for x in structure.supercell],
+                                               "species": sorted(set(structure.species)),
                                                "counts": config.counts(structure.n_atoms)}, indent=1) + "\n"}
         hashes = {}
         for name, text in files.items():
@@ -716,7 +821,20 @@ class MCRunner:
         if problems:
             self._status(run, "failed", returncode=returncode, reasons=problems)
             raise RuntimeError("DISCUS MC run failed: " + "; ".join(problems) + f" (see {run.directory})")
-        structure = label_sites_by_slot(read_stru(out).structure)
+        staged = json.loads((run.directory / "mc_config.json").read_text())
+        # DISCUS 'save' writes no ncell line (the crystal size is the input's) and upper-cases atom names
+        raw = read_stru(out, supercell=tuple(staged["supercell"])).structure
+        names = {s.upper(): s for s in staged["species"]}
+        unknown = sorted({s for s in raw.species if s.upper() not in names})
+        if unknown:
+            self._status(run, "failed", returncode=returncode, reasons=[f"unexpected species {unknown}"])
+            raise RuntimeError(f"DISCUS output contains species {unknown} that were not in the input")
+        raw = raw.replace(species=np.array([names[s.upper()] for s in raw.species], dtype=object),
+                          min_separation=None)
+        if raw.n_atoms != staged["n_atoms"]:
+            self._status(run, "failed", returncode=returncode, reasons=["atom count changed"])
+            raise RuntimeError(f"{raw.n_atoms} atoms in the output, {staged['n_atoms']} in the input")
+        structure = label_sites_by_slot(raw)
         self._status(run, "complete", returncode=returncode, moves=cyc,
                      output_sha256=hashlib.sha256(out.read_bytes()).hexdigest())
         return MCResult(run.directory, run.config, structure, log, "complete", run.n_atoms)

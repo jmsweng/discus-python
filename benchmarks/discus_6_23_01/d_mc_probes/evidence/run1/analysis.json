@@ -1,0 +1,54 @@
+{
+ "P1": {
+  "ok": true,
+  "text": "serial runs with the same seed: saved structures and final tables identical"
+ },
+ "P2": {
+  "ok": null,
+  "text": "4 threads: outputs identical = False; moves 45056 / 45056 (requested 40960); achieved -0.335 / -0.334"
+ },
+ "P3": {
+  "ok": true,
+  "text": "swchem conserves composition {'Cu': 2048, 'Au': 2048} in all occupational runs"
+ },
+ "P4": {
+  "ok": true,
+  "text": "final Gen = 40960 for set cyc 40960"
+ },
+ "P5": {
+  "ok": true,
+  "text": "printed achieved -0.306 (pairs 24576) vs Package C -0.306315 (pairs 24576)"
+ },
+ "P6": {
+  "ok": null,
+  "text": "CORR target -0.3, final achieved -0.306"
+ },
+ "P7": {
+  "ok": true,
+  "text": "r2_occ_ener_zero: accepted 0/10001/0 of 20000 = 0.5000; accepted share of non-downhill moves 0.5000"
+ },
+ "P8": {
+  "ok": false,
+  "text": "r3_occ_ener_hot: accepted 5813/2070/4901 of 20000 = 0.6392; accepted share of non-downhill moves 0.4914"
+ },
+ "P9": {
+  "ok": true,
+  "text": "J=+0.5: achieved -0.658"
+ },
+ "P10": {
+  "ok": true,
+  "text": "no set move: max position change 0.00e+00 cell"
+ },
+ "P11": {
+  "ok": false,
+  "text": "atoms moved (max 0.102 cell); NN distance sigma initial -> final: r4_shift_spring: 0.072 -> 0.096, r5_shift_lennard: 0.072 -> 0.094"
+ },
+ "P12": {
+  "ok": true,
+  "text": "printed cd achieved 0.052 (pairs 10368) vs Package C uncentred 0.052257"
+ },
+ "P13": {
+  "ok": true,
+  "text": "exit codes ['0']"
+ }
+}
