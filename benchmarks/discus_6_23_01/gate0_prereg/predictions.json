@@ -4,8 +4,8 @@
  "E_B_engine": "6895addb3b0724276928635049ad9938a6e61604b7d02f626366fb3bf6a9b64e",
  "E_B_physics": "b8448b5636e42cbb3ece7853eb668937d8b8b21ce727874c6ae9f0876aa079b0",
  "code_sha256": {
-  "gate0_analyze.py": "3499402fd28a550c40052e196f4908ede559558a767afc09fc8f3cd11716bf6d",
-  "gate0_generate.py": "d78fb1a18c3952a585f45774fcecc29893cd410c3d9a3c7951b59860b3bf7b32",
+  "gate0_analyze.py": "11ea6d000e5e4efb7e766b3c397d61db50a4231d06b33da12d7b92b072cfe244",
+  "gate0_generate.py": "a0c1e199b2575c516f60ec5a2a040bcfe4769b5a41255d4e304feef41223449b",
   "gate0_selftest.py": "f84ae033f0457d2ca0968ccddc7e9c4fcc1da29e84aefbd3baad89b469dc2632",
   "oracle.py": "78bab9a55008dde66a1cc29628728b8c9ef620742082cba4f985edbb2d8ac927"
  },
@@ -105,12 +105,12 @@
  },
  "gamma_quantiles": {
   "S3_half_integer": [
-   0.3836860006719487,
-   2.0352196362086423
+   0.3162396617508871,
+   2.2652883587843853
   ],
   "S3_standard": [
-   0.5249398164249849,
-   1.6854120828345822
+   0.46380956418997366,
+   1.828601303915559
   ]
  },
  "input_sha256": {
@@ -579,5 +579,6 @@
   "S2_var_x_within": 0.11135885079684349,
   "S3_bonferroni_fwer": 0.001,
   "S4_physics_vs_engine_rel_max": 0.005
- }
+ },
+ "n_s3_tested": 15561
 }

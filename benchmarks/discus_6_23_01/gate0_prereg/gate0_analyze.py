@@ -198,21 +198,25 @@ def analyze_arm(run_dir: Path, arm: str, pred: dict) -> dict:
         x_mean_vox += x
     x_mean_vox /= K
 
-    # Check each voxel (only where E > 0, i.e., off integer h)
+    # Check each voxel (only where E > 0, i.e., off integer h) — vectorised
     b_cu, b_au = (O.B_CU_A, O.B_AU_A) if arm == "A" else (O.B_CU_B, O.B_AU_B)
     E_eng = O.expectation("engine", b_cu=b_cu, b_au=b_au)
     valid = off_int & (E_eng > 0)
-    for idx in np.where(valid)[0]:
-        v = np.unravel_index(idx, x_mean_vox.shape)
-        if two_int[v]:
-            lo, hi = lo_half, hi_half
-        else:
-            lo, hi = lo_std, hi_std
-        n_tested += 1
-        if not (lo <= x_mean_vox[v] <= hi):
-            s3_violations += 1
 
-    crit.append(_crit(f"S3 {arm}: n_voxels outside Gamma interval", float(s3_violations), 0.0))
+    # Standard voxels (valid and NOT 2h integer)
+    std_mask = valid & ~two_int
+    half_mask = valid & two_int
+    n_tested = int(std_mask.sum() + half_mask.sum())
+
+    # Count violations: standard voxels vs standard interval, half-integer vs half interval
+    std_vals = x_mean_vox[std_mask]
+    half_vals = x_mean_vox[half_mask]
+    s3_violations = int(
+        np.sum(~(lo_std <= std_vals) & ~(std_vals <= hi_std)) +
+        np.sum(~(lo_half <= half_vals) & ~(half_vals <= hi_half))
+    )
+
+    crit.append(_crit(f"S3 {arm}: n_voxels outside Gamma interval ({n_tested} tested)", float(s3_violations), 0.0))
 
     # S4: physics vs engine expectation agree to ≤ 1e-6 relative
     b_cu, b_au = (O.B_CU_A, O.B_AU_A) if arm == "A" else (O.B_CU_B, O.B_AU_B)

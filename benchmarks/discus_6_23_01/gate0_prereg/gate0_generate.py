@@ -171,11 +171,11 @@ def main():
 
     # Compute Gamma quantiles for S3
     from scipy.stats import gamma as gamma_dist
-    # For each voxel in the independent set, compute the two-sided Gamma(K, 1/K) interval
-    # Bonferroni: alpha = 1e-3 / n_tested_voxels
-    # For voxels with 2h integer (q ≡ -q mod 1), use Gamma(K/2, 2/K)
-    mask_S = O.independent_set_mask()
-    n_tested = int(mask_S.sum())
+    # S3 tests ALL off-integer-h voxels on the full 25³ grid.
+    # n_tested = 25³ − 64 integer-h voxels = 15 561
+    # Bonferroni: alpha = 1e-3 / n_tested (two-sided: alpha/2 per tail)
+    n_tested = 25 ** 3 - 64  # 15 561
+    pred["n_s3_tested"] = n_tested
     alpha = 1e-3 / n_tested
     lo = gamma_dist.ppf(alpha / 2, K, scale=1.0 / K)
     hi = gamma_dist.ppf(1.0 - alpha / 2, K, scale=1.0 / K)
