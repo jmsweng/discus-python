@@ -97,3 +97,7 @@ __all__ += ["to_diffpy", "from_diffpy"]
 # Structure editing operations (Package A, Feature A4).
 from .structure_ops import EditResult, repeat, substitute, displace, check_composition, sample_configuration
 __all__ += ["EditResult", "repeat", "substitute", "displace", "check_composition", "sample_configuration"]
+
+# Neighbor lists (Package C, Feature 12).
+from .neighbors import NeighborList, Shell, neighbor_list
+__all__ += ["NeighborList", "Shell", "neighbor_list"]
