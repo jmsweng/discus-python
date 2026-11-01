@@ -31,15 +31,41 @@ def wk_f(coef, s):
     return coef["c"] + sum(a * np.exp(-b * s2) for a, b in zip(coef["a"], coef["b"]))
 
 
-def factors(radiation: str, mode: str, species) -> ScatteringFactors:
-    if radiation == "neut":
-        return ScatteringFactors.neutron({s: B_DISCUS[s] for s in species}, source="DISCUS 6.23.01 per_bcoh")
-    if mode == "physics":       # independent: DABAX coefficients, exact s
-        return ScatteringFactors.xray_wk({s: WK[s.upper()]["dabax"] for s in species}, source="DABAX W-K")
-    # engine emulation: DISCUS's own coefficients, f at s rounded to 0.001 with NINT (four_formtab)
-    return ScatteringFactors.xray_functions(
-        {s: (lambda x, c=WK[s.upper()]["discus"]: wk_f(c, np.floor(np.asarray(x) / CFINC + 0.5) * CFINC))
-         for s in species}, source="DISCUS W-K table, s rounded to 0.001 (emulation)")
+def _round_s(s):
+    return np.floor(np.asarray(s, float) / CFINC + 0.5) * CFINC     # Fortran NINT for s >= 0
+
+
+def factors(radiation: str, mode: str, b_iso: dict) -> tuple[ScatteringFactors, bool]:
+    """(factors, debye_waller flag) for one reference mode.
+
+    physics: X-ray DABAX W-K at the exact s, neutron DISCUS lengths; DW exp(-B s^2) at the exact s.
+    engine:  as DISCUS 6.23.01 four_formtab for isotropic B: the whole factor exp(-B s_r^2) * f(s_r) is
+             tabulated at s_r = NINT(s / 0.001) * 0.001 (fourier_sup.f90, cfact; four_dbwtab runs only for
+             anisotropic ADPs). X-ray uses DISCUS's own W-K coefficients."""
+    species = sorted(b_iso)
+    if mode == "physics":
+        if radiation == "neut":
+            return ScatteringFactors.neutron({s: B_DISCUS[s] for s in species}, "DISCUS 6.23.01 per_bcoh"), True
+        return ScatteringFactors.xray_wk({s: WK[s.upper()]["dabax"] for s in species}, "DABAX W-K"), True
+    funcs = {}
+    for s in species:
+        if radiation == "neut":
+            funcs[s] = lambda x, b=B_DISCUS[s], B=b_iso[s]: b * np.exp(-B * _round_s(x) ** 2)
+        else:
+            funcs[s] = lambda x, c=WK[s.upper()]["discus"], B=b_iso[s]: (
+                wk_f(c, _round_s(x)) * np.exp(-B * _round_s(x) ** 2))
+    # container label 'xray' only means "s-dependent factor"; the source string says what it is
+    return ScatteringFactors.xray_functions(funcs, f"DISCUS {radiation} table emulation: f(s_r)·exp(-B s_r^2)"), False
+
+
+def species_b(st) -> dict:
+    out = {}
+    for sp in set(st.species):
+        b = np.unique(st.b_iso[np.asarray(st.species) == sp])
+        if len(b) != 1:
+            raise ValueError(f"{sp}: B differs between atoms; DISCUS has one B per atom type")
+        out[sp] = float(b[0])
+    return out
 
 
 def main(argv=None) -> int:
@@ -47,9 +73,22 @@ def main(argv=None) -> int:
     ap.add_argument("evidence", type=Path)
     ap.add_argument("--json", type=Path)
     a = ap.parse_args(argv)
-    runs = json.loads((HERE / "runs.json").read_text())["runs"]
+    spec = json.loads((HERE / "runs.json").read_text())
+    runs, GRIDS = spec["runs"], spec["grids"]
     work = a.evidence / "work"
     out, failed = {}, []
+    # integrity: every run exited 0, inputs are the committed ones, outputs exist
+    codes = dict(l.split(" exit=") for l in (a.evidence / "exit_codes.txt").read_text().split("\n") if " exit=" in l)
+    bad = {k: v for k, v in codes.items() if v.strip() != "0"}
+    if bad or set(codes) != {r["id"] for r in runs}:
+        print(f"engine exit codes not all 0 / runs missing: {codes}")
+        failed.append("exit_codes")
+    import hashlib
+    for line in (a.evidence / "input_sha256.txt").read_text().splitlines():
+        h, name = line.split()
+        if hashlib.sha256((HERE / "inputs" / name).read_bytes()).hexdigest() != h:
+            print(f"input {name} differs from the committed file")
+            failed.append(f"input:{name}")
     for r in runs:
         st = label_sites_by_slot(read_stru(work / r["structure"]).structure)
         vol = read_discus_volume(work / r["output"])
@@ -57,9 +96,15 @@ def main(argv=None) -> int:
             + vol.corner
         fn = diffuse_intensity if r["aver"] > 0 else intensity
         row = {"bragg_meta": vol.with_bragg, "max_discus": float(vol.values.max())}
-        modes = ("physics",) if r["radiation"] == "neut" else ("physics", "engine")
+        want_bragg = "bragg_subtracted" if r["aver"] > 0 else "bragg_present"
+        if vol.with_bragg != want_bragg or list(vol.values.shape) != list(GRIDS[r["grid"]]["n"]):
+            print(f"{r['id']}: metadata {vol.with_bragg} / shape {vol.values.shape} not as requested")
+            failed.append(f"meta:{r['id']}")
+        modes = ("physics", "engine")
+        bmap = species_b(st)
         for mode in modes:
-            ref = fn(st, factors(r["radiation"], mode, set(st.species)), hkl=hkl, debye_waller=True)
+            fac, dw = factors(r["radiation"], mode, bmap)
+            ref = fn(st, fac, hkl=hkl, debye_waller=dw)
             d = vol.values - ref
             row[mode] = {"rel_l2": float(np.linalg.norm(d) / np.linalg.norm(ref)),
                          "max_abs_over_max": float(np.abs(d).max() / np.abs(ref).max())}

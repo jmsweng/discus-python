@@ -25,7 +25,7 @@ I_diffuse = ref.diffuse_intensity(structure, fac, hkl=hkl, debye_waller=True)   
 | Scattering vector | `Q = 2π · hkl @ B` (Å⁻¹), `B = inv(A)ᵀ`; `hkl` in r.l.u. of the **parent cell** (default, DISCUS convention) or of the supercell (`cell="supercell"`); or pass Cartesian `q=` |
 | s | `sin θ / λ = |Q| / 4π` (Å⁻¹) |
 | Amplitude | `F(Q) = Σ_j occ_j f_j(s) exp(−B_j s²) exp(+i Q·r_j)`; the Debye–Waller factor only with `debye_waller=True` (needs `b_iso`) |
-| Average structure | `⟨F⟩ = L(Q) Σ_sites ⟨f e^{−Bs²} e^{iQ·(r − R_c)}⟩_cells`, `R_c` = origin of the atom's parent cell (`cell_index`), `L(Q) = Σ_c e^{iQ·R_c}` over all cells; a vacancy contributes zero to its site's average. Needs a periodic configuration model |
+| Average structure | `⟨F⟩ = L(Q) Σ_sites ⟨f e^{−Bs²} e^{iQ·(r − R_c)}⟩_cells`, `R_c` = origin of the atom's parent cell (`cell_index`), `L(Q) = Σ_c e^{iQ·R_c}` over all cells; a vacancy contributes zero to its site's average. Needs a periodic configuration model of more than one cell (a single cell is refused: its diffuse part would be zero). ⟨F⟩ follows `cell_index`, not the position: re-wrapping coordinates without updating `cell_index` changes ⟨F⟩ off the Bragg points, as in DISCUS |
 | Diffuse | `|F − ⟨F⟩|²` — amplitude subtraction, as DISCUS `set aver,100` |
 | Units | X-ray `f` in electrons → electrons²; neutron `b` in fm → fm². `normalize="per_atom"` divides by Σ occ, `"per_cell"` by the number of parent cells |
 
@@ -42,19 +42,20 @@ complex must be given explicitly. Note that tables differ: DISCUS 6.23.01 uses b
 | Phase sign | one atom at x = ¼: F(100) = +i f | 1e-12 |
 | Single atom | `f(s)² e^{−2Bs²}` from the DABAX W-K transcription (PR #8); neutron `b²` flat | 1e-13 rel |
 | Two atoms | `f₁² + f₂² + 2 f₁ f₂ cos(Q·d)` | 1e-12 rel |
-| Perfect crystal | Laue function `Π sin²(πN_k h_k)/sin²(πh_k)` at 300 random hkl; fcc Bragg and extinctions | 1e-9 rel |
+| Perfect crystal (cubic) | Laue function `Π sin²(πN_k h_k)/sin²(πh_k)` at 300 random hkl; fcc Bragg and extinctions | 1e-9 rel |
 | Average of a perfect crystal | ⟨F⟩ = F, diffuse = 0 | 1e-10 |
 | Correlated disorder (random and Ising-ordered binary alloy) | Warren–Cowley sum `Δf² Σ_R C(R) e^{−iQ·R}` with C(R) from rolled occupation grids, on the commensurate grid | 1e-9 rel |
 | Off-grid disorder | brute-force pair sum `Δf² |Σ σ_j e^{iQ·r_j}|²` | 1e-9 rel |
 | Package C cross-check | C(100)/c(1−c) from the rolled grid = Package C Pearson r_AA | 1e-12 |
+| Triclinic cell, 3 sites, displacements, B, vacancies | independent loops over atoms and cells (parent-fraction phases, s from the reciprocal metric) for F and ⟨F⟩; supercell r.l.u.; per-atom/per-cell normalisation | 1e-10 |
 | Optional tables | `xraydb` f₀ vs DABAX for Cu, Au (≤ 2e-6); `periodictable` b(Cu) = 7.718 fm | |
 
 ### Against DISCUS 6.23.01
 
 `benchmarks/discus_6_23_01/d_reference/` compares the reference with DISCUS intensities (X-ray and neutron,
 total and `set aver,100`, cubic and monoclinic cells, B ≠ 0). Criteria were fixed before the run in
-[`PREREG.md`](../benchmarks/discus_6_23_01/d_reference/PREREG.md); the result is recorded in that folder's
-`RESULT.md`.
+[`PREREG.md`](../benchmarks/discus_6_23_01/d_reference/PREREG.md); the outcome will be recorded in that folder's `RESULT.md`.
+DISCUS evaluates f and, for isotropic B, the Debye–Waller factor at s rounded to 0.001 Å⁻¹; the reference uses the exact s, a difference of about 1e-4 … 2e-3 relative.
 
 ## Performance
 
@@ -64,6 +65,8 @@ e.g. 13 824 atoms × 10 000 Q points in 4.2 s. Cost is O(N_atoms × N_Q); a 64³
 crystal takes ~80 s. No Numba/Cython path: correctness first (Feature 10's rule), DISCUS for big jobs.
 
 ## Not covered
+
+W-K coefficients are fitted for s ≤ 6 Å⁻¹; beyond that the reference evaluates the formula without warning (DISCUS stops at s > 9.999).
 
 Anomalous dispersion (f′, f″), anisotropic ADPs, electron scattering, magnetic scattering (Feature 11),
 partial `set aver`, lots, instrument resolution, absorption, absolute cross-section units.

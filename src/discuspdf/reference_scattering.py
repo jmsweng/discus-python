@@ -195,13 +195,13 @@ def scattering_vectors(structure: Structure, *, hkl=None, q=None, cell: str = "p
     """Cartesian Q (Å⁻¹, 2π included) for ``hkl`` in r.l.u. of the parent cell or supercell, or ``q``."""
     if (hkl is None) == (q is None):
         raise ValueError("give exactly one of hkl= or q=")
+    if cell not in ("parent", "supercell"):
+        raise ValueError("cell must be 'parent' or 'supercell'")
     if q is not None:
         Q = np.asarray(q, float)
         if Q.shape[-1:] != (3,) or not np.isfinite(Q).all():
             raise ValueError("q must be finite with last dimension 3")
         return Q
-    if cell not in ("parent", "supercell"):
-        raise ValueError("cell must be 'parent' or 'supercell'")
     h = np.asarray(hkl, float)
     if h.shape[-1:] != (3,) or not np.isfinite(h).all():
         raise ValueError("hkl must be finite with last dimension 3")
@@ -295,12 +295,19 @@ def average_structure_factor(structure: Structure, factors: ScatteringFactors, *
     ``R_c = cell_index @ A_parent`` is the origin of the atom's parent cell and ``L(Q) = Σ_c e^{iQ·R_c}``
     runs over all ``prod(supercell)`` cells; a site missing in a cell (vacancy) contributes zero to the
     cell average.  This is the full (100 %) average of DISCUS ``set aver``; it needs a periodic
-    configuration model."""
+    configuration model of more than one cell.
+
+    The average follows the ``cell_index`` metadata, not the stored position: re-wrapping coordinates
+    without updating ``cell_index`` (as ``Structure.wrapped()`` does) changes ⟨F⟩ off the Bragg positions,
+    as it would in DISCUS."""
     _check_inputs(structure, factors, debye_waller)
     if structure.model != "configuration":
         raise ValueError("the average structure needs a configuration model (one realised crystal)")
     if not all(structure.pbc):
         raise ValueError("the average structure needs periodic boundaries in all three directions")
+    if int(np.prod(structure.supercell)) == 1:
+        raise ValueError("the structure is a single cell (supercell (1, 1, 1)): its average is itself and the "
+                         "diffuse part would be zero; give the supercell and cell_index of the crystal")
     Q = scattering_vectors(structure, hkl=hkl, q=q, cell=cell)
     shape = Q.shape[:-1]
     Qf = Q.reshape(-1, 3)

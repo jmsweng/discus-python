@@ -137,7 +137,7 @@ def test_average_equals_total_for_perfect_crystal():
     hkl = _random_hkl(80, seed=11)
     np.testing.assert_allclose(average_structure_factor(st, NEUTRON, hkl=hkl),
                                structure_factor(st, NEUTRON, hkl=hkl), rtol=1e-10, atol=1e-9)
-    assert np.max(diffuse_intensity(st, NEUTRON, hkl=hkl)) < 1e-15 * 1e6
+    assert np.max(diffuse_intensity(st, NEUTRON, hkl=hkl)) < 1e-9
 
 
 # ------------------------------------------------------------------------------------- correlated disorder
@@ -291,3 +291,74 @@ def test_diffuse_off_grid_equals_brute_force_pair_sum():
     ph = np.exp(1j * (Q @ r.T))                              # (M, N)
     expected = 8.0 ** 2 * np.abs(ph @ sig) ** 2              # Σ_ij σ_i σ_j e^{iQ(ri−rj)} = |Σ σ e^{iQr}|²
     np.testing.assert_allclose(diffuse_intensity(st, NEUTRON, hkl=hkl), expected, rtol=1e-9, atol=1e-8)
+
+
+# ------------------------------------------------------------------------------------- general geometry
+def _triclinic_crystal(seed=21, vacancies=3):
+    """3 sites in a triclinic cell, 3×2×4 cells, B ≠ 0, displacements, a few vacancies."""
+    lat = Lattice.from_parameters(4.3, 5.1, 3.9, 77, 103, 95)
+    cell = Structure(lat, ["A", "B", "A"], [[0.05, 0.1, 0.2], [0.55, 0.45, 0.6], [0.3, 0.8, 0.1]],
+                     model="configuration", site_label=["s1", "s2", "s3"], b_iso=[0.4, 0.9, 0.4])
+    st = repeat(cell, (3, 2, 4)).structure
+    rng = np.random.default_rng(seed)
+    st = st.with_cartesian(st.cartesian + rng.normal(0, 0.08, (st.n_atoms, 3)))
+    drop = rng.choice(st.n_atoms, vacancies, replace=False)
+    return st.remove(st.atom_id[drop])
+
+
+def _brute(st, hkl, fac, average=False):
+    """Independent loops: parent-fraction phases exp(2πi h·x_parent), s from the reciprocal metric."""
+    n = st.supercell
+    Ap = st.lattice.matrix / n[:, None]
+    Gstar = np.linalg.inv(Ap @ Ap.T)
+    xpar = st.frac * n                                    # parent-cell fractional coordinates
+    out = np.zeros(len(hkl), complex)
+    for m, h in enumerate(hkl):
+        s = 0.5 * np.sqrt(h @ Gstar @ h)
+        if not average:
+            for sp, x, b in zip(st.species, xpar, st.b_iso):
+                out[m] += fac.factor(sp, s) * np.exp(-b * s * s) * np.exp(2j * np.pi * h @ x)
+            continue
+        ncell = int(np.prod(n))
+        cellsum = 0j
+        for sp, x, b, ci in zip(st.species, xpar, st.b_iso, st.cell_index):
+            cellsum += fac.factor(sp, s) * np.exp(-b * s * s) * np.exp(2j * np.pi * h @ (x - ci))
+        L = sum(np.exp(2j * np.pi * h @ np.array([i, j, k], float))
+                for i in range(n[0]) for j in range(n[1]) for k in range(n[2]))
+        out[m] = L * cellsum / ncell
+    return out
+
+
+def test_triclinic_vacancies_against_brute_force():
+    st = _triclinic_crystal()
+    hkl = _random_hkl(30, seed=8, scale=2.0)
+    np.testing.assert_allclose(structure_factor(st, NEUTRON, hkl=hkl, debye_waller=True),
+                               _brute(st, hkl, NEUTRON), rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(average_structure_factor(st, NEUTRON, hkl=hkl, debye_waller=True),
+                               _brute(st, hkl, NEUTRON, average=True), rtol=1e-10, atol=1e-10)
+
+
+def test_supercell_rlu_in_triclinic_cell():
+    st = _triclinic_crystal(vacancies=0)
+    hkl = _random_hkl(10, seed=9)
+    np.testing.assert_allclose(structure_factor(st, NEUTRON, hkl=hkl * st.supercell, cell="supercell"),
+                               structure_factor(st, NEUTRON, hkl=hkl), rtol=1e-10, atol=1e-10)
+
+
+def test_normalizations_multi_site():
+    st = _triclinic_crystal(vacancies=3)                  # 72 sites − 3 vacancies, 24 cells
+    hkl = _random_hkl(5)
+    I = intensity(st, NEUTRON, hkl=hkl)
+    np.testing.assert_allclose(intensity(st, NEUTRON, hkl=hkl, normalize="per_atom"), I / 69)
+    np.testing.assert_allclose(intensity(st, NEUTRON, hkl=hkl, normalize="per_cell"), I / 24)
+
+
+def test_single_cell_average_refused():
+    st = _alloy(n=1)[0]
+    with pytest.raises(ValueError, match="single cell"):
+        diffuse_intensity(st, NEUTRON, hkl=[[0.5, 0, 0]])
+
+
+def test_cell_argument_validated_with_q():
+    with pytest.raises(ValueError, match="cell"):
+        scattering_vectors(_single(), q=[[1, 0, 0]], cell="bogus")

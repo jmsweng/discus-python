@@ -1,8 +1,8 @@
 {
  "cuau_x_tot_c4": {"mode": "engine", "metric": "rel_l2", "max": 1e-9},
  "cuau_x_dif_c4": {"mode": "engine", "metric": "rel_l2", "max": 1e-9},
- "cuau_n_tot_c4": {"mode": "physics", "metric": "rel_l2", "max": 1e-9},
- "cuau_n_dif_c4": {"mode": "physics", "metric": "rel_l2", "max": 1e-9},
- "mono_x_tot_m": {"mode": "engine", "metric": "max_abs_over_max", "max": 1e-2},
- "mono_n_tot_m": {"mode": "physics", "metric": "max_abs_over_max", "max": 1e-2}
+ "cuau_n_tot_c4": {"mode": "engine", "metric": "rel_l2", "max": 1e-9},
+ "cuau_n_dif_c4": {"mode": "engine", "metric": "rel_l2", "max": 1e-9},
+ "mono_x_tot_m": {"mode": "engine", "metric": "rel_l2", "max": 2e-3},
+ "mono_n_tot_m": {"mode": "engine", "metric": "rel_l2", "max": 2e-3}
 }

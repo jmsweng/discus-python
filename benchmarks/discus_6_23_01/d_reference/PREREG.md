@@ -1,4 +1,4 @@
-# D reference probe — pre-registered comparison (DISCUS_SUITE 6.23.01 vs `discuspdf.reference_scattering`)
+# D reference probe — pre-registered comparison (v2, amended before the results were read) (DISCUS_SUITE 6.23.01 vs `discuspdf.reference_scattering`)
 
 Fixed **before** the engine run; the inputs (`inputs/`), `runs.json`, `criteria.json` and `analyze.py` are
 committed first and not changed afterwards. A failed criterion is reported as a finding, not tuned away.
@@ -23,20 +23,30 @@ with isotropic B (`temp use`) — and where exactly do they differ?
 ## Reference modes
 * **physics** — X-ray: DABAX Waasmaier–Kirfel coefficients at the exact s; neutron: DISCUS's own coherent
   lengths (Cu 7.718, Au 7.63, Ga 7.288, As 6.58 fm, = Sears 1992; stated, not hidden).
-* **engine** (X-ray only) — DISCUS's own W-K coefficients with f evaluated at s rounded to 0.001 Å⁻¹ by
-  Fortran NINT (as in `four_formtab`, established in PR #8 Gate 2). The Debye–Waller factor is exact in both
-  modes (`four_dbwtab` evaluates exp(−2π² hᵀU h) per voxel). Measured before the run: physics vs engine differ
-  by 4.5e-4 … 9.4e-4 relative L2 (`eps_tab`), which is why the tight criteria use engine mode.
+* **engine** (X-ray and neutron) — what DISCUS 6.23.01 computes for isotropic B: `four_formtab` tabulates
+  `cfact = exp(−B s_r²) · occ · f(s_r)` at `s_r = NINT(s/0.001)·0.001` (`fourier_sup.f90`, around line 2717;
+  `four_dbwtab`, the exact per-voxel DW, runs only when an atom has anisotropic ADPs, `cr_is_anis`). X-ray uses
+  DISCUS's own W-K coefficients. Physics and engine differ by 1e-4 … 2e-3 relative L2, which is why the tight
+  criteria use engine mode.
 
 ## Criteria (`criteria.json`)
 | Run | Mode | Metric | Pass if ≤ |
 |---|---|---|---|
-| `cuau_x_tot_c4`, `cuau_x_dif_c4` | engine | relative L2 | 1e-9 |
-| `cuau_n_tot_c4`, `cuau_n_dif_c4` | physics | relative L2 | 1e-9 |
-| `mono_x_tot_m` | engine | max abs diff / max | 1e-2 |
-| `mono_n_tot_m` | physics | max abs diff / max | 1e-2 |
+| `cuau_x_tot_c4`, `cuau_x_dif_c4`, `cuau_n_tot_c4`, `cuau_n_dif_c4` | engine | relative L2 | 1e-9 |
+| `mono_x_tot_m`, `mono_n_tot_m` | engine | relative L2 | 2e-3 |
 | `cuau_x_*_nc` | — | informational | (PR #8 Gate 1 saw a ≈1.8 % `set aver` residual on non-dyadic grids) |
 
-The monoclinic criterion is deliberately loose: it tests geometry (Q in a non-orthogonal cell, positions,
-B in a non-orthogonal metric) where an error would be of order 1, while DISCUS's turbo phase tables on a
-non-dyadic step are known to deviate at the 1e-3 level (DiffuseCode performance review).
+The monoclinic criterion tests geometry and factors in a non-orthogonal cell on a non-dyadic grid. Measured
+before the run against the engine reference (relative L2): Ga/As factors swapped 1.1e-2 (neutron) / 5.8e-3
+(X-ray), cell treated as orthogonal 1.9e-2 / 7.7e-2, no DW 0.14 / 0.11 — all fail the 2e-3 limit. DISCUS's
+turbo phase tables on a non-dyadic step are known to deviate at the 1e-3 level (DiffuseCode performance review),
+so a failure near the limit is a finding about that, to be examined, not a reason to move the limit.
+
+## Amendment log
+* **v1** (commit e74bf15): engine mode applied the Debye–Waller factor at the exact s and existed for X-ray
+  only; neutron runs used physics mode; monoclinic criterion was max-abs/max ≤ 1e-2.
+* **v2** (this version): an independent review of the kit, before anyone read the engine numbers, found from the
+  DISCUS source that isotropic DW is tabulated at the rounded s together with f, which would have made all four
+  tight criteria fail by 1e-4 … 2e-3 for a known reason; it also showed the 1e-2 max-abs monoclinic limit would
+  pass a Ga/As swap. The engine had already been run (task 001) but its results had not been read by the
+  overseer when v2 was committed. The v1 analysis output that the local agent printed is kept in the report.
