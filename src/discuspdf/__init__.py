@@ -101,3 +101,20 @@ __all__ += ["EditResult", "repeat", "substitute", "displace", "check_composition
 # Neighbor lists (Package C, Feature 12).
 from .neighbors import NeighborList, Shell, neighbor_list
 __all__ += ["NeighborList", "Shell", "neighbor_list"]
+
+# Occupational and displacement correlations (Package C, Features 13 and 14).
+from .correlations import (
+    OccupationalCorrelation,
+    DisplacementCorrelation,
+    occupational_correlation,
+    occupational_correlation_table,
+    displacement_correlation,
+    displacement_correlation_table,
+    displacements,
+    concentrations,
+)
+__all__ += [
+    "OccupationalCorrelation", "DisplacementCorrelation", "occupational_correlation",
+    "occupational_correlation_table", "displacement_correlation", "displacement_correlation_table",
+    "displacements", "concentrations",
+]
