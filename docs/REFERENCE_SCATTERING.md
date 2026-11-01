@@ -54,7 +54,7 @@ complex must be given explicitly. Note that tables differ: DISCUS 6.23.01 uses b
 
 `benchmarks/discus_6_23_01/d_reference/` compares the reference with DISCUS intensities (X-ray and neutron,
 total and `set aver,100`, cubic and monoclinic cells, B ≠ 0). Criteria were fixed before the run in
-[`PREREG.md`](../benchmarks/discus_6_23_01/d_reference/PREREG.md); the outcome will be recorded in that folder's `RESULT.md`.
+[`PREREG.md`](../benchmarks/discus_6_23_01/d_reference/PREREG.md). **Result: PASS** — 2.5e-15 … 1.8e-13 relative L2 on the commensurate grid with DISCUS's table rounding emulated, 9e-6 for a displaced monoclinic crystal on a non-commensurate grid ([`RESULT.md`](../benchmarks/discus_6_23_01/d_reference/RESULT.md)).
 DISCUS evaluates f and, for isotropic B, the Debye–Waller factor at s rounded to 0.001 Å⁻¹; the reference uses the exact s, a difference of about 1e-4 … 2e-3 relative.
 
 ## Performance
