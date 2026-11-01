@@ -122,9 +122,11 @@ def plot_structure(structure: Structure, *, ax=None, color_by: str = "species", 
 def displacement_vectors(configuration: Structure, reference: Structure) -> tuple[np.ndarray, np.ndarray]:
     """(reference Cartesian positions, Cartesian displacements) of ``configuration`` against ``reference``.
 
-    Atoms are matched by ``(site_label, cell_index)``; both structures need the same lattice, supercell
-    and pbc. The displacement is the minimum image in the supercell when all pbc are True, so an atom
-    that crossed the boundary does not show a supercell-long arrow."""
+    Atoms are matched by ``(site_label, cell_index)``, so the reference must have one atom per site
+    (a configuration, or an average model without shared sites); both structures need the same lattice,
+    supercell and pbc. With all pbc True the displacement is the true minimum image in the supercell
+    (``Lattice.minimum_image``), so an atom that crossed the boundary does not show a supercell-long arrow;
+    with all pbc False it is the plain difference. Mixed pbc is refused."""
     for name, s in (("configuration", configuration), ("reference", reference)):
         if not isinstance(s, Structure):
             raise TypeError(f"{name} must be a Structure")
@@ -132,6 +134,8 @@ def displacement_vectors(configuration: Structure, reference: Structure) -> tupl
         raise ValueError("configuration and reference have different lattices")
     if not np.array_equal(configuration.supercell, reference.supercell) or configuration.pbc != reference.pbc:
         raise ValueError("configuration and reference have different supercells or pbc")
+    if len(set(configuration.pbc)) != 1:
+        raise ValueError("mixed periodic boundaries are not supported for displacements")
     key = {}
     for row, (site, ci) in enumerate(zip(reference.site_label, map(tuple, reference.cell_index))):
         if (site, ci) in key:
@@ -147,7 +151,7 @@ def displacement_vectors(configuration: Structure, reference: Structure) -> tupl
         raise ValueError("two configuration atoms map to the same reference site")
     df = configuration.frac - reference.frac[rows]
     if all(configuration.pbc):
-        df = df - np.round(df)
+        df = configuration.lattice.minimum_image(df)[0]
     disp = df @ configuration.lattice.matrix
     return reference.cartesian[rows], disp
 
@@ -179,11 +183,15 @@ def plot_displacements(configuration: Structure, reference: Structure, *, ax=Non
     return ax
 
 
-def plot_bonds(neighbors, *, ax=None, color: str | None = None, linewidth: float = 1.0, draw_atoms: bool = True):
+def plot_bonds(neighbors, *, ax=None, color: str | None = None, linewidth: float = 1.0, draw_atoms: bool = True,
+               shell_tol: float = 0.05):
     """Draw the pairs of a (selected) :class:`~discuspdf.neighbors.NeighborList` as segments.
 
-    Each segment runs from the origin node to the origin + pair vector, i.e. to the periodic image that
-    makes the pair; it may therefore leave the supercell frame. Pairs are drawn once per direction."""
+    Each segment runs from the origin atom's stored position to origin + pair vector, i.e. to the periodic
+    image that makes the pair; it may therefore leave the supercell frame. Pairs are drawn once per
+    direction. Distances are grouped into colours where sorted distances jump by more than ``shell_tol``
+    Å (so a displaced configuration's spread shell stays one group); the legend (range and pair count per
+    group) is shown only for up to 8 groups."""
     from .neighbors import NeighborList
     if not isinstance(neighbors, NeighborList):
         raise TypeError("neighbors must be a NeighborList (e.g. nl.select(shell=1))")
@@ -193,16 +201,26 @@ def plot_bonds(neighbors, *, ax=None, color: str | None = None, linewidth: float
         plot_structure(st, ax=ax, size=25.0, alpha=0.6)
     origin = neighbors.node_frac[neighbors.i] @ st.lattice.matrix
     end = origin + neighbors.vector
-    shells = np.unique(np.round(neighbors.distance, 6))
-    palette = species_colors([f"{d:.6f}" for d in shells])
-    for d in shells:
-        k = np.isclose(neighbors.distance, d, atol=1e-6)
-        c = color or palette[f"{d:.6f}"]
+    # group distances into shells (gaps > shell_tol Å start a new group)
+    d = neighbors.distance
+    order = np.argsort(d)
+    group = np.zeros(len(d), np.int64)
+    if len(d):
+        group[order] = np.concatenate([[0], np.cumsum(np.diff(d[order]) > shell_tol)])
+    n_groups = int(group.max()) + 1 if len(d) else 0
+    palette = species_colors(range(n_groups)) if n_groups else {}
+    for g in range(n_groups):
+        k = group == g
+        c = color or palette[g]
         for a, b in zip(origin[k], end[k]):
             ax.plot(*np.array([a, b]).T, color=c, lw=linewidth)
-        ax.plot([], [], color=c, lw=linewidth, label=f"{d:.3f} Å ({int(k.sum())} pairs)")
+        if n_groups <= 8:
+            lo, hi = d[k].min(), d[k].max()
+            span = f"{lo:.3f} Å" if hi - lo < 5e-4 else f"{lo:.3f}–{hi:.3f} Å"
+            ax.plot([], [], color=c, lw=linewidth, label=f"{span} ({int(k.sum())} pairs)")
     _equal_aspect(ax, np.vstack([origin, end, st.cartesian]) if len(origin) else st.cartesian)
-    ax.legend(loc="upper left", fontsize="small")
+    if n_groups <= 8:
+        ax.legend(loc="upper left", fontsize="small")
     return ax
 
 
@@ -226,7 +244,11 @@ def export_structure(structure: Structure, path, *, format: str | None = None, c
         if len(back) != len(atoms):
             raise ValueError(f"{path.name}: {len(back)} atoms read back, {len(atoms)} written")
         if not np.allclose(back.cell.array, atoms.cell.array, atol=1e-5):
-            raise ValueError(f"{path.name}: the cell changed on write (format {format or path.suffix})")
+            if not any(structure.pbc) and not back.cell.any():
+                raise ValueError(f"{path.name}: format {format or path.suffix} drops the cell of a non-periodic "
+                                 "structure; use extxyz")
+            raise ValueError(f"{path.name}: the cell changed on write (format {format or path.suffix}); "
+                             "this format stores cell parameters only or re-orients the cell")
         if not np.allclose(back.get_positions(), atoms.get_positions(), atol=1e-5):
             raise ValueError(f"{path.name}: positions changed on write (format {format or path.suffix}); "
                              "this format re-orients or wraps — choose another one")

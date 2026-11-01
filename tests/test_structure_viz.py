@@ -156,3 +156,71 @@ def test_export_refuses_a_format_that_reorients(tmp_path):
     export_structure(st, tmp_path / "ok.xyz", format="extxyz")      # extxyz keeps the full cell matrix
     with pytest.raises(ValueError, match="cell changed|positions changed"):
         export_structure(st, tmp_path / "bad.cif", format="cif")     # CIF stores parameters only
+
+
+def _permuted(st, seed=3):
+    p = np.random.default_rng(seed).permutation(st.n_atoms)
+    return Structure(st.lattice, st.species[p], st.frac[p], model=st.model, site_label=st.site_label[p],
+                     atom_id=st.atom_id[p], cell_index=st.cell_index[p], supercell=tuple(st.supercell),
+                     pbc=st.pbc, b_iso=None if st.b_iso is None else st.b_iso[p])
+
+
+def test_displacements_match_atoms_by_site_not_by_row():
+    ref = _mono(2)
+    conf = _permuted(_displaced(ref))
+    start, d = displacement_vectors(conf, ref)
+    # expected: each configuration atom minus the reference atom with the same (site, cell)
+    want = {(s, tuple(c)): r for s, c, r in zip(ref.site_label, ref.cell_index, ref.cartesian)}
+    for s, c, r_c, st_, d_ in zip(conf.site_label, conf.cell_index, conf.cartesian, start, d):
+        np.testing.assert_allclose(st_, want[(s, tuple(c))], atol=1e-12)
+        np.testing.assert_allclose(d_, r_c - want[(s, tuple(c))], atol=1e-9)
+
+
+def test_mixed_pbc_refused():
+    lat = Lattice.from_parameters(4, 4, 4, 90, 90, 90)
+    st = Structure(lat, ["Ga"], [[0, 0, 0]], model="configuration", pbc=(True, True, False))
+    with pytest.raises(ValueError, match="mixed"):
+        displacement_vectors(st, st)
+
+
+def test_bond_segments_start_at_the_origin_atom():
+    ref = _mono(2)
+    nl = neighbor_list(ref, 4.0).select(shell=1)
+    ax = plot_bonds(nl, draw_atoms=False)
+    segs = np.array([np.array(l.get_data_3d()).T for l in ax.lines if len(l.get_xdata()) == 2])
+    want_start = nl.node_frac[nl.i] @ ref.lattice.matrix
+    order = lambda a: a[np.lexsort(a.reshape(len(a), -1).T)]       # noqa: E731
+    np.testing.assert_allclose(order(segs), order(np.stack([want_start, want_start + nl.vector], 1)), atol=1e-12)
+
+
+def test_bond_legend_groups_a_displaced_shell():
+    conf = _displaced(_mono(2), sigma=0.02)
+    nl = neighbor_list(conf, 3.8)
+    ax = plot_bonds(nl, draw_atoms=False)
+    leg = ax.get_legend()
+    assert leg is not None and len(leg.get_texts()) <= 8
+
+
+def test_marker_area_scales_with_occupancy():
+    lat = Lattice.from_parameters(4, 4, 4, 90, 90, 90)
+    st = Structure(lat, ["Ga", "Ga"], [[0, 0, 0], [0.5, 0.5, 0.5]], model="average", occupancy=[1.0, 0.25])
+    ax = plot_structure(st, size=40.0)
+    np.testing.assert_allclose(sorted(ax.collections[0].get_sizes()), [10.0, 40.0])
+
+
+def test_export_refuses_wrapping_format(tmp_path):
+    pytest.importorskip("ase.io")
+    lat = Lattice.from_parameters(4, 4, 4, 90, 90, 90)
+    st = Structure(lat, ["Ga", "As"], [[-0.05, 0.1, 0.2], [0.5, 1.2, 0.5]], model="configuration")
+    export_structure(st, tmp_path / "ok.xyz", format="extxyz")
+    with pytest.raises(ValueError, match="positions changed"):
+        export_structure(st, tmp_path / "bad.cif", format="cif")
+
+
+def test_export_nonperiodic_xsf_message(tmp_path):
+    pytest.importorskip("ase.io")
+    lat = Lattice.from_parameters(4, 4, 4, 90, 90, 90)
+    st = Structure(lat, ["Ga", "As"], [[0.1, 0.1, 0.2], [0.5, 0.6, 0.5]], model="configuration",
+                   pbc=(False, False, False))
+    with pytest.raises(ValueError, match="drops the cell"):
+        export_structure(st, tmp_path / "m.xsf", format="xsf")
