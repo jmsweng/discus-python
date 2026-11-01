@@ -86,7 +86,7 @@ def main(argv=None) -> int:
     import hashlib
     for line in (a.evidence / "input_sha256.txt").read_text().splitlines():
         h, name = line.split()
-        if hashlib.sha256((HERE / "inputs" / name).read_bytes()).hexdigest() != h:
+        if hashlib.sha256((HERE / "inputs" / name).read_bytes().replace(b"\r\n", b"\n")).hexdigest() != h:
             print(f"input {name} differs from the committed file")
             failed.append(f"input:{name}")
     for r in runs:
