@@ -223,7 +223,7 @@ def test_select_criteria():
     along = first.select(direction=(1, 1, 0), direction_frame="fractional")
     assert np.all(along.coordination() == 1)
     np.testing.assert_allclose(along.cell_vector, [[0.5, 0.5, 0.0]] * along.n_pairs, atol=1e-12)
-    # Cartesian direction with an angular tolerance: the cone of 30° around +x holds the 4 neighbours with x = +a/2
+    # Cartesian direction with an angular tolerance: the cone of 46° around +x (45° needed) holds the 4 neighbours with x = +a/2
     cone = first.select(direction=(1, 0, 0), angle_tol=46.0)
     assert np.all(cone.coordination() == 4)
     # distance range and value
@@ -251,6 +251,75 @@ def test_fractional_direction_uses_the_lattice_in_a_skewed_cell():
     # the Cartesian direction (1, 1, 0) is a different line in this cell
     cart = nl.select(direction=(1, 1, 0))
     assert not np.array_equal(np.sort(cart.distance), np.sort(sel.distance))
+
+
+def test_translation_does_not_depend_on_wrapping():
+    """Stored coordinates whole supercells away from cell_index (wrapped(), offsets) keep the translations."""
+    s = _cubic("fcc").repeat((4, 4, 4))
+    rng = np.random.default_rng(1)
+    off = s.frac.copy()
+    idx = rng.choice(s.n_atoms, 20, replace=False)
+    off[idx] += rng.integers(-1000, 1000, size=(20, 3))
+    ref = neighbor_list(s, 4.1)
+    want = {(int(i), int(j)) + tuple(int(x) for x in t) for i, j, t in zip(ref.i, ref.j, ref.translation)}
+    for variant in (s.wrapped(), s.replace(frac=s.frac - 0.5).wrapped(), s.replace(frac=off)):
+        nl = neighbor_list(variant, 4.1)
+        got = {(int(i), int(j)) + tuple(int(x) for x in t) for i, j, t in zip(nl.i, nl.j, nl.translation)}
+        assert got == want
+        assert nl.select(origin_site="S1", target_site="S1", translation=(1, 0, 0)).n_pairs == 64
+        assert nl.select(origin_site="S1", target_site="S2", translation=(0, 0, 0), symmetric=True).n_pairs == 128
+        base = {lab: f for lab, f in zip(s.site_label[:4], s.frac[:4] * 4)}
+        site_diff = np.array([base[t] - base[o] for o, t in zip(nl.origin_site, nl.target_site)])
+        np.testing.assert_allclose(nl.cell_vector, nl.translation + site_diff, atol=1e-9)
+
+
+def test_coordinate_just_below_zero_is_binned_correctly():
+    """frac = -1e-17 wraps to exactly 1.0 in floating point; the bin index must be clamped."""
+    s = _config(Lattice.from_parameters(4, 4, 4, 90, 90, 90), ["A", "B"],
+                [[-1e-17, 0, 0], [0.5, 0.5, 0.5]])
+    _assert_matches_brute_force(s, 3.5)
+    assert np.all(neighbor_list(s, 3.5).coordination() == 8)
+
+
+def test_symmetric_selection_negates_vector_and_direction():
+    s = _cubic("fcc").repeat((2, 2, 2))
+    nl = neighbor_list(s, 3.0)
+    fwd = nl.select(origin_site="S1", target_site="S2", cell_vector=(0.5, 0.5, 0.0))
+    both = nl.select(origin_site="S1", target_site="S2", cell_vector=(0.5, 0.5, 0.0), symmetric=True)
+    rev = both._subset(both.origin_site == "S2")
+    assert fwd.n_pairs == rev.n_pairs == both.n_pairs // 2 == 8
+    np.testing.assert_allclose(rev.cell_vector, [[-0.5, -0.5, 0.0]] * 8, atol=1e-12)
+    d = nl.select(origin_site="S1", direction=(1, 1, 0), direction_frame="fractional", symmetric=True)
+    signs = {tuple(np.sign(np.round(v, 9)).astype(int)) for v in d.cell_vector}
+    assert signs == {(1, 1, 0), (-1, -1, 0)}
+
+
+def test_shell_coordination_counts_all_origins_of_the_selection():
+    s = _cubic("bcc").repeat((2, 2, 2))
+    nl = neighbor_list(s, 4.1).select(origin_site="S1")
+    sh = nl.shells()
+    assert [(round(x.distance, 6), x.coordination, x.n_origins) for x in sh] == [
+        (round(2 * math.sqrt(3), 6), 8.0, 8), (4.0, 6.0, 8)]
+    part = nl.select(direction=(1, 1, 1), angle_tol=1.0)            # one first neighbour per origin
+    assert part.shells()[0].coordination == 1.0
+
+
+def test_distance_range_includes_both_ends():
+    s = _cubic("sc").repeat((3, 3, 3))
+    nl = neighbor_list(s, 6.0)
+    assert nl.select(distance=(4.0, 4 * math.sqrt(2))).n_pairs == 27 * (6 + 12)
+    assert nl.select(distance=(4.0 + 1e-3, 4 * math.sqrt(2) - 1e-3)).n_pairs == 0
+
+
+def test_summary_is_fast_with_unique_labels():
+    rng = np.random.default_rng(0)
+    s = _config(Lattice.from_parameters(30, 31, 32, 80, 95, 100), ["O"] * 2000, rng.random((2000, 3)),
+                min_separation=None)
+    nl = neighbor_list(s, 6.0)
+    t0 = time.perf_counter()
+    rows = nl.summary()
+    assert time.perf_counter() - t0 < 10.0
+    assert sum(r["n_pairs"] for r in rows) == nl.n_pairs
 
 
 def test_shell_numbering_follows_the_other_criteria():
@@ -326,6 +395,14 @@ def test_errors():
         nl.select(direction=(1, 0, 0), direction_frame="polar")
     with pytest.raises(ValueError, match="shell"):
         nl.select(shell=0)
+    with pytest.raises(ValueError, match="translation"):
+        nl.select(translation=np.array([True, False, False]))
+    with pytest.raises(ValueError, match="distance range"):
+        nl.select(distance=(5.0, 1.0))
+    with pytest.raises(ValueError, match="angle_tol"):
+        nl.select(direction=(1, 0, 0), angle_tol=-1.0)
+    with pytest.raises(ValueError, match="unknown site label"):
+        nl.select(origin_site="S9")
     with pytest.raises(AttributeError):
         nl.cutoff = 5.0
     with pytest.raises(ValueError):

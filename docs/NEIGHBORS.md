@@ -1,6 +1,6 @@
 # Neighbor lists (Package C, Feature 12)
 
-`discuspdf.neighbors` lists every pair of crystal sites closer than a cutoff, on any lattice
+`discuspdf.neighbors` lists every pair of crystal sites within a cutoff distance (`≤ cutoff`; the cutoff is always required), on any lattice
 (including triclinic) and with periodic images handled exactly. It is the basis of the
 occupational and displacement correlations of Package C.
 
@@ -44,6 +44,16 @@ target site − position of the origin site)` in the parent cell.
 `shift` refers to the coordinates **as stored**; coordinates outside [0, 1) (DISCUS writes
 centred crystals with negative fractions) are allowed and change only `shift`, not the pairs.
 
+`translation` must not depend on how the coordinates were wrapped. `cell_index` names a site's
+parent cell, but the stored position can sit whole **supercells** away from it (after
+`Structure.wrapped()`, or in hand-made files). For each node `node_image` records that offset:
+every site label gets a reference position (its first node, moved by whole supercells to within
+half a supercell of the structure's first node), and a node whose parent-cell position
+`frac · supercell − cell_index` is about *k* supercells from that reference gets `k · supercell`.
+`translation` uses `cell_index + node_image`. Displacements below half a supercell never change
+it. Along an axis with a single cell, `cell_index` carries no information and the stored
+positions define the translation.
+
 ## Which pairs are listed
 
 * Every pair with `distance ≤ cutoff` (relative tolerance 1e-12), in **both directions**:
@@ -67,7 +77,10 @@ corresponding image shift) reaches every image. The search is checked against an
 brute-force enumeration in `tests/test_neighbors.py` for cubic, tetragonal, two triclinic cells,
 cells smaller than the cutoff, unwrapped coordinates and open boundaries.
 
-Speed: an fcc 25×25×25 supercell (62 500 atoms) with cutoff 3 Å (750 000 pairs) takes about 1.5 s.
+Speed and memory scale with the number of pairs (about 225 bytes per directed pair at peak):
+an fcc 25×25×25 supercell (62 500 atoms) with cutoff 3 Å (750 000 pairs) takes about 1.5 s and
+170 MB; with 6 Å (3.4 million pairs) about 7 s and 760 MB. `unique()` costs about as much as
+building the list.
 
 ## Selecting pairs — `select(...)`
 
@@ -76,9 +89,9 @@ stay comparable between selections.
 
 | Argument | Keeps pairs whose … |
 |---|---|
-| `origin_site`, `target_site` | site label is in the given label(s) |
+| `origin_site`, `target_site` | site label is in the given label(s); an unknown label raises |
 | `origin_species`, `target_species` | species is in the given species (needs one atom per site) |
-| `distance=value` / `distance=(min, max)` | distance equals the value within `distance_tol` (1e-6 Å) / lies in the range |
+| `distance=value` / `distance=(min, max)` | distance equals the value within `distance_tol` (1e-6 Å) / lies in the range, both ends included and widened by `distance_tol` |
 | `translation=(da, db, dc)` | parent-cell translation equals the integers exactly |
 | `cell_vector=(x, y, z)` | parent-cell fractional vector matches within `vector_tol` |
 | `direction=…` | direction is within `angle_tol` degrees (default 1e-3°) of the given one; `direction_frame="fractional"` reads it as [uvw] of the **parent** cell, `"cartesian"` (default) as Cartesian |
