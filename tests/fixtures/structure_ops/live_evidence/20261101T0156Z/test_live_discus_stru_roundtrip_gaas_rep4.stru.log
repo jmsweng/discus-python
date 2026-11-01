@@ -1,19 +1,19 @@
-=== test_live_discus_stru_roundtrip_gaas_sub4.stru @ 2026-11-01T01:43:20Z ===
+=== test_live_discus_stru_roundtrip_gaas_rep4.stru @ 2026-11-01T01:56:21Z ===
 command: discus_suite -noautorun -macro macro.mac
-workdir: C:\Users\jmswe\AppData\Local\Temp\pytest-of-user\pytest-170\test_live_discus_stru_roundtri0\live
+workdir: C:\Users\jmswe\AppData\Local\Temp\pytest-of-user\pytest-174\test_live_discus_stru_roundtri0\live
 returncode: 0
 banner: *         D I S C U S - S U I T E  Version 6.23.01        *
 --- macro ---
 discus
 read
-  stru gaas_sub4.stru
+  stru gaas_rep4.stru
 eval n[1]
-save back_gaas_sub4.stru
+save back_gaas_rep4.stru
 exit
 exit
 
 --- files ---
-gaas_sub4.stru: sha256=dee91ce6889b5a130d9a2256eb6556dff0cc16a6a591c4e15db177ef828c2434
+gaas_rep4.stru: sha256=0ff48075620b4bdf89f516868f5c2be0771d3da7ffb2b55af1de63730b6134a0
 --- stdout ---
 [49m
 [39m
@@ -34,7 +34,7 @@ gaas_sub4.stru: sha256=dee91ce6889b5a130d9a2256eb6556dff0cc16a6a591c4e15db177ef8
           * (c) T. Proffen  (tproffen@ornl.gov    )                 *
           ***********************************************************
 
- Start directory  : C:\Users\jmswe\AppData\Local\Temp\pytest-of-user\pytest-170\test_live_discus_stru_roundtri0\live\
+ Start directory  : C:\Users\jmswe\AppData\Local\Temp\pytest-of-user\pytest-174\test_live_discus_stru_roundtri0\live\
  Access manuals at each section with   : manual
  Access help at each section/menu with : help  
  News at each section/Command_lang in  : help News
@@ -45,7 +45,7 @@ gaas_sub4.stru: sha256=dee91ce6889b5a130d9a2256eb6556dff0cc16a6a591c4e15db177ef8
 [31m ------ > Reading macro: [39mmacro.mac
  suite> discus
  discus> read
- discus/read> stru gaas_sub4.stru
+ discus/read> stru gaas_rep4.stru
  P 1                 1
  Lattice constants :
     a          b          c         alpha      beta       gamma      volume
@@ -67,11 +67,11 @@ gaas_sub4.stru: sha256=dee91ce6889b5a130d9a2256eb6556dff0cc16a6a591c4e15db177ef8
 
  discus> eval n[1]
  Value of n[1] =    512.000000000    
- discus> save back_gaas_sub4.stru
+ discus> save back_gaas_rep4.stru
  discus> exit
  suite> exit
 
---- DISCUS saved back_gaas_sub4.stru ---
+--- DISCUS saved back_gaas_rep4.stru ---
 n[1] = 512
 title discuspdf structure
 spcgr P 1             , setting:abc

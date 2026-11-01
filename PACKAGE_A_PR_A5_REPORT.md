@@ -68,8 +68,8 @@
 - DISCUS `n[1]` values: `gaas_rep4.stru` → 512, `gaas_sub4.stru` → 512 (both match Python).
 - Species counts (DISCUS-saved, upper-cased): `gaas_rep4.stru` → GA: 256, AS: 256; `gaas_sub4.stru` → GA: 192, AS: 256, IN: 64 (25% of 256 Ga → 64 In).
 - Mutation check: substituting `py_counts` with the un-substituted `rep` counts causes the test to **fail** with `DISCUS species counts {'GA': 192, 'AS': 256, 'IN': 64} != Python {'GA': 256, 'AS': 256}`.
-- Evidence folder: `tests/fixtures/structure_ops/live_evidence/20261101T0143Z/` with `MANIFEST.sha256` (2 entries: `gaas_rep4.stru`, `gaas_sub4.stru`).
-- Previous evidence folder `20261101T011157Z` removed (superseded).
+- Evidence folder: `tests/fixtures/structure_ops/live_evidence/20261101T0156Z/` with `MANIFEST.sha256` (2 entries: the two `.log` files in the folder; `--check` → all ok).
+- Previous evidence folders `20261101T011157Z` and `20261101T0143Z` removed (superseded).
 
 ## 8. Full-suite comparison
 
