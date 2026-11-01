@@ -34,6 +34,8 @@ from discuspdf.cif_io import read_cif
 
 from tests.discus_live import evidence_log, run_discus
 
+pytestmark = pytest.mark.discus_live
+
 FIX_GAAS = "tests/fixtures/interop/gaas_cod_9008845.cif"
 
 # Skip the live test unless DISCUS_LIVE=1.
@@ -98,28 +100,33 @@ def test_format_stru_roundtrip_substituted():
 def test_format_stru_roundtrip_displaced(tmp_path, sigma):
     """repeat 4x4x4, displace with sigma (seed 42) -> format_stru -> parse_stru.
 
-    Small sigma (0.05 A) round-trips to the written precision; a large sigma
-    (0.4 A) pushes atoms across cell boundaries and the writer rejects the
-    out-of-order rows with the documented DiscusFormatError.
+    The writer (format_stru) checks row order from cell_index only and never
+    rejects a displacement (probe P5b); up to sigma = 0.4 A the reader
+    (parse_stru) accepts the rows because every atom stays within 0.5 unit cell
+    of its slot's median on each axis.
     """
     s = _gaas_repeated()
     disp = displace(s, seed=42, sigma=sigma).structure
 
-    try:
-        text = format_stru(disp)
-    except DiscusFormatError:
-        # Documented limitation: displaced atoms cross a cell boundary and the
-        # rows leave DISCUS cell-major order.  The docs must mention it.
-        doc = Path("docs/STRUCTURE_OPS.md").read_text(encoding="utf-8")
-        assert "DiscusFormatError" in doc, (
-            "docs/STRUCTURE_OPS.md does not document the DiscusFormatError "
-            "raised when displaced atoms cross a cell boundary"
-        )
-        return
-
+    text = format_stru(disp)
     back = parse_stru(text).structure
-    assert back.n_atoms == disp.n_atoms
+    assert np.array_equal(back.species, disp.species)
+    assert np.array_equal(back.cell_index, disp.cell_index)
     np.testing.assert_allclose(back.frac, disp.frac, atol=1e-6)
+
+
+def test_parse_stru_rejects_large_displacement():
+    """repeat 4x4x4, displace with sigma = 1.0 A (seed 42): format_stru
+    succeeds (the writer checks cell_index only, probe P5b) but parse_stru
+    raises DiscusFormatError because atoms leave the 0.5-unit-cell median
+    window."""
+    s = _gaas_repeated()
+    disp = displace(s, seed=42, sigma=1.0).structure
+
+    text = format_stru(disp)  # the writer never rejects displacements
+
+    with pytest.raises(DiscusFormatError, match="atom order does not match"):
+        parse_stru(text)
 
 
 # -- 5. unit-cell .cll --------------------------------------------------------
@@ -156,6 +163,7 @@ def test_live_discus_stru_roundtrip(tmp_path):
 
     # Write both .stru files into a temp workdir.
     workdir = str(tmp_path / "live")
+    os.makedirs(workdir, exist_ok=True)
     rep_name = "gaas_rep4.stru"
     sub_name = "gaas_sub4.stru"
     write_stru(os.path.join(workdir, rep_name), rep)
@@ -193,24 +201,17 @@ def test_live_discus_stru_roundtrip(tmp_path):
             f"DISCUS atom count {n_discus} != Python {s.n_atoms}"
         )
 
-        # DISCUS species counts: `read stru` keeps the species names; count the
-        # 4-char species column of the saved structure.  DISCUS upper-cases
-        # names, so compare upper-cased.
-        # Re-read the file DISCUS loaded: the species counts are recoverable
-        # from the .stru we wrote (DISCUS does not change species on
-        # `read stru`), so compare the expected counts against the written
-        # file's species column.
+        # Species counts: count the species column of the .stru (CIF) file we wrote.
+        # Atom lines: "  Ga  Ga1       1.0  0.0  0.0  0.0  1.0000"
         with open(os.path.join(workdir, name), encoding="ascii") as fh:
-            atom_lines = [
-                line for line in fh
-                if re.match(r"^\s*[A-Z0-9][A-Z0-9\-+]{0,3}\s+[-\d]", line)
-            ]
-        discus_counts = Counter(
-            line.split()[0].upper() for line in atom_lines
-        )
+            written_counts = Counter()
+            for line in fh:
+                parts = line.split()
+                if len(parts) >= 7 and parts[0].isalpha() and len(parts[0]) <= 2:
+                    written_counts[parts[0].upper()] += 1
         py_counts = {k.upper(): v for k, v in expected_counts.items()}
-        assert discus_counts == py_counts, (
-            f"DISCUS species counts {dict(discus_counts)} != "
+        assert written_counts == py_counts, (
+            f"written species counts {dict(written_counts)} != "
             f"Python {py_counts}"
         )
 

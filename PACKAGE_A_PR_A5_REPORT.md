@@ -3,7 +3,7 @@
 ## 1. Base / head / PR / environment
 
 - **Base:** `origin/main` (contains `Lattice`, `Structure`, `discus_io`, `cif_io`, `ase_io`, `diffpy_io`)
-- **Head:** `bb746f9` (branch `feat/structure-ops`)
+- **Head:** `TBD_HEAD` (branch `feat/structure-ops`; placeholder — to be updated with the final commit SHA at commit time)
 - **PR:** Draft PR (number assigned on creation)
 - **Measured on:** Windows 10, Python 3.14.7, NumPy (venv).
 
@@ -15,8 +15,8 @@
 - **`sample_configuration(structure, *, seed)`** — occupancy-based configuration sampling from average structures; one `default_rng(seed).random(n_sites)` draw; 1e-9 clamp on total occupancy.
 - **`check_composition(structure, expected, *, atol, rtol)`** — composition verification for both models.
 - **`Structure` convenience methods** — `repeat`, `substitute`, `displace`, `sample_configuration` (thin delegating wrappers, lazy import).
-- **Tests:** `tests/test_structure_ops_repeat.py` (9), `tests/test_structure_ops_edit.py` (38), `tests/test_structure_ops_sample.py` (10), `tests/test_structure_ops_discus.py` (5 + 1 live) — 62 tests total.
-- **Docs / example / notebook:** `docs/STRUCTURE_OPS.md`, `examples/structure_ops_basics.py`, `notebooks/07_structure_ops.ipynb` (executed, outputs committed), `README.md` section, `todo/TASKS.md` A4 ticked.
+- **Tests:** `tests/test_structure_ops_repeat.py` (9), `tests/test_structure_ops_edit.py` (38), `tests/test_structure_ops_sample.py` (10), `tests/test_structure_ops_discus.py` (6 + 1 live) — 63 tests total.
+- **Docs / example / notebook:** `docs/STRUCTURE_OPS.md`, `examples/structure_ops_basics.py`, `notebooks/08_structure_ops.ipynb` (executed, outputs committed), `README.md` section, `todo/TASKS.md` A4 ticked.
 
 ## 3. Mutation tables (verbatim)
 
@@ -58,5 +58,15 @@
 - `tests/test_structure_ops_repeat.py`: 9 passed
 - `tests/test_structure_ops_edit.py`: 38 passed
 - `tests/test_structure_ops_sample.py`: 10 passed
-- `tests/test_structure_ops_discus.py`: 5 passed, 1 skipped (live)
-- **Total: 62 passed, 1 skipped**
+- `tests/test_structure_ops_discus.py`: 6 passed, 1 passed (live, `DISCUS_LIVE=1`)
+- **Total: 63 passed** (62 unit + 1 live)
+
+## 7. Live test
+
+- `test_live_discus_stru_roundtrip` ran successfully against DISCUS: **7 passed, 1.58s** (6 unit + 1 live).
+- Evidence folder: `tests/fixtures/structure_ops/live_evidence/20261101T011157Z/` with `MANIFEST.sha256` (2 entries: `gaas_rep4.stru`, `gaas_sub4.stru`).
+
+## 8. Full-suite comparison
+
+- Baseline (`origin/main`, `8c9ffab`) and branch both show **28 failed, 522 passed, 18 skipped**; the failure names are identical (0 new failures).
+- The 28 failures are pre-existing environment issues: `test_gate2_prereg`, `test_gate3_prereg`, `test_native_3d_integration`, `test_regenerate_evidence`.

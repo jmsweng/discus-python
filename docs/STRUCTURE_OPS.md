@@ -77,7 +77,9 @@ Check that the structure's composition matches `expected` (species → count).
 ## DISCUS round-trip limitations
 
 - `format_stru` / `parse_stru` round-trip works for repeated and substituted structures.
-- **Displaced structures may fail `parse_stru`** if atoms cross a cell boundary: DISCUS `.stru` files require cell-major atom ordering (probe P5), and displaced atoms that move across the cell boundary break this ordering. The `DiscusFormatError` is raised in this case.
+- The `.stru` **writer** (`format_stru`) checks row order from `cell_index` only and never rejects a displacement (probe P5b).
+- The `.stru` **reader** (`parse_stru`) requires every atom to be within 0.5 unit cell of its slot's median on each axis; it raises `DiscusFormatError: … atom order does not match ncell cell-major order …` when this is violated.
+- For GaAs (a = 5.6537 Å): σ ≤ 0.4 Å round-trips successfully; σ = 1.0 Å fails in the reader.
 - `format_cll` works only for unit-cell parents (`supercell == (1, 1, 1)`); it refuses supercells.
 
 ## What is not included
