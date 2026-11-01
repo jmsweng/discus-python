@@ -1,12 +1,13 @@
 # Gate 0 v2 — pre-registered prescribed-ensemble diffuse scattering experiment (DISCUS_SUITE 6.23.01)
 
-**Registered:** 2026-11-01. The current version is **v1.2**.
+**Registered:** 2026-11-01. The current version is **v1.3**.
 
 ## Registration history
 
 - **v1** (2026-11-01): Initial registration. 64 seeds, structures, macros, oracle, predictions.json.
 - **v1.1** (2026-11-01): Fix macros (256 files), LF line endings, arm B `temp use`, S4 informational.
 - **v1.2** (2026-11-01): Realization oracle fixed (before any engine run). `oracle.py` `realization_exact` now uses per-site mean subtraction (δc), computes total intensity directly from the .stru file (no model total), and fixes the 25-point grid indexing. `oracle_check.py` added (brute-force anchor check). `gate0_selftest.py` updated: clean case uses complex-Gaussian sampling (S-criteria pass), "known limitation" handling removed, `sample_fitted` is a static AST/grep check.
+- **v1.3** (2026-11-01): Arm A B = 0 in the oracle (B from file only in arm B); clean case uses the real realizations (diffuse = |D_orc|²); separate `gaussian_ensemble` selftest case for synthetic CN(0,E) diffuse; oracle caching (.npy) to speed up the selftest.
 
 **Why:** Gate 0 is PARTIAL: the forward model is verified, but C1's diffuse was only compared with occupancies **fitted from the sample itself**; the independently prescribed C1 ensemble is not documented. Gate 0 v2 replaces that with an ensemble that **is** prescribed before any engine run, so DISCUS's `set aver` diffuse can be compared with an *analytic ensemble expectation* that uses no sample information. It also extends coverage beyond Gates 2/3 (which were one-site cells, B = 0) to a **multi-site cell** and **B ≠ 0**. **C1 itself stays sample-conditional; the report must say so.**
 
