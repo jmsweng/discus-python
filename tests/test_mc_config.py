@@ -41,6 +41,7 @@ def test_render_matches_probe_macro_lines():
     text = _cfg().render("mc_in.stru", 4096)
     lines = text.splitlines()
     for expected in ["discus", "seed 11,22,33,44,55,66,77,88", "set parallel, useomp:off", "  stru mc_in.stru",
+                     "set vec, reset", "set output, feed:on, final:on",
                      "mmc", "set vec, 1, 1, 1, 1, 0, 0", "set vec, 4, 1, 1, -1, 0, 0",
                      "set neig, vec, 1, 2, 3, 4, 5, 6, number:1", "set mode, 1.0, swchem, all",
                      "set target, 1, corr, Cu, Au, -0.3, 0.0, CORR", "set temp, 1.0", "set cyc, 40960",
@@ -55,13 +56,13 @@ def test_all_target_and_move_lines():
     nb2 = Neighborhood((Vector(1, 2, (0, 0, 0)),))
     cfg = MCConfig((NN, nb2),
                    (OccupationalTarget(0, "Cu", "Au", energy=0.5),
-                    DisplacementTarget(0, "Cu", "Cu", (1, 0, 0), correlation=0.3),
+                    DisplacementTarget(0, "Au", "Cu", (1, 0, 0), correlation=0.3),
                     SpringTarget(1, "Cu", "Au", 2.6, 1.0),
                     LennardJonesTarget(1, "Au", "Au", 2.9, 1.0)),
                    (Swap(0.5, "site"), Shift({"Cu": (0.01, 0.01, 0.02)}, 0.3), SwapDisplacement(0.2)), SEED)
     lines = cfg.render("in.stru", 100).splitlines()
     for expected in ["set target, 1, corr, Cu, Au, 0.0, 0.5, ENER",
-                     "set target, 1, cd, Cu, Cu, 0.3, 0.0, CORR, dir:[1.0,0.0,0.0]",
+                     "set target, 1, cd, Au, Cu, 0.3, 0.0, CORR, dir:[1.0,0.0,0.0]",
                      "set target, 2, spring, Cu, Au, 2.6, 1.0",
                      "set target, 2, lennard, Au, Au, 2.9, 1.0, 12.0, 6.0",
                      "set mode, 0.5, swchem, site", "set mode, 0.3, shift, all", "set move, Cu, 0.01, 0.01, 0.02",
@@ -84,8 +85,12 @@ def test_counts():
 
 @pytest.mark.parametrize("kw,match", [
     (dict(seed=None), "seed"),
-    (dict(targets=(OccupationalTarget(0, "Cu", "Au", correlation=-0.3),
-                   OccupationalTarget(0, "Cu", "Ni", correlation=0.2))), "at most one"),
+    (dict(neighborhoods=(NN, NN), targets=(OccupationalTarget(0, "Cu", "Au", correlation=-0.3),
+                                           OccupationalTarget(1, "Cu", "Ni", correlation=0.2))), "at most one"),
+    (dict(targets=(OccupationalTarget(0, "Cu", "Au", energy=1.0),
+                   OccupationalTarget(0, "Cu", "Ni", energy=0.5))), "only the last occupational"),
+    (dict(targets=(DisplacementTarget(0, "Cu", "Cu", (1, 0, 0), energy=1.0),
+                   DisplacementTarget(0, "Au", "Au", (0, 1, 0), energy=1.0))), "one displacement direction"),
     (dict(targets=(OccupationalTarget(1, "Cu", "Au", energy=1.0),)), "out of range"),
     (dict(moves=(Swap(), Swap(0.5))), "once"),
     (dict(feedback_per_atom=20), "exceed"),
@@ -137,3 +142,12 @@ def test_cautions_name_known_engine_behaviour():
     c = " ".join(_cfg(targets=(OccupationalTarget(0, "Cu", "Au", correlation=0.05),)).cautions())
     assert "heat-bath" in c and "0.005" in c
     assert "J = 0" in " ".join(_cfg(targets=(OccupationalTarget(0, "Cu", "Au", correlation=0.0),)).cautions())
+
+
+def test_numbers_are_written_without_exponents():
+    cfg = _cfg(targets=(SpringTarget(0, "Cu", "Cu", 3.0, 1e-5),), moves=(Shift({"Cu": (1e-4, 0.01, 0.02)}),),
+               temperature=2e-3)
+    text = cfg.render("in.stru", 10)
+    assert "set target, 1, spring, Cu, Cu, 3.0, 0.00001" in text
+    assert "set move, Cu, 0.0001, 0.01, 0.02" in text and "set temp, 0.002" in text
+    assert "e-" not in text and "e+" not in text

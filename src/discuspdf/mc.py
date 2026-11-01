@@ -33,7 +33,7 @@ from .structure import Structure
 __all__ = [
     "Vector", "Neighborhood", "OccupationalTarget", "DisplacementTarget", "SpringTarget",
     "LennardJonesTarget", "Swap", "Shift", "SwapDisplacement", "MCConfig", "MCRunner", "MCRun", "MCResult",
-    "parse_mmc_log", "replica_summary",
+    "parse_mmc_log", "match_row", "replica_summary",
 ]
 
 _NAME = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,3}$")
@@ -57,7 +57,9 @@ def _finite(x, what: str) -> float:
 
 
 def _fmt(v: float) -> str:
-    return repr(float(v))
+    """Plain decimal (no exponent), shortest round-trip digits; e.g. 1e-05 -> '0.00001'."""
+    s = np.format_float_positional(float(v), trim="-")
+    return s + ".0" if "." not in s else s
 
 
 # ------------------------------------------------------------------------------------------- neighbourhoods
@@ -341,6 +343,11 @@ class MCConfig:
             if isinstance(t.neighborhood, bool) or not isinstance(t.neighborhood, (int, np.integer)) \
                     or not 0 <= t.neighborhood < len(nbs):
                 raise ValueError(f"target neighborhood index {t.neighborhood!r} out of range 0..{len(nbs) - 1}")
+        for kind, why in ((OccupationalTarget, "DISCUS keeps only the last occupational target of a neighbourhood"),
+                          (DisplacementTarget, "DISCUS keeps one displacement direction per neighbourhood")):
+            used = [t.neighborhood for t in tg if isinstance(t, kind)]
+            if len(used) != len(set(used)):
+                raise ValueError(f"two {kind.__name__}s on one neighbourhood: {why}; use separate neighbourhoods")
         n_feedback = sum(1 for t in tg if t.mode == "CORR")
         if n_feedback > 1:
             raise ValueError("at most one target may use correlation= (feedback); DISCUS runs one independent "
@@ -507,12 +514,37 @@ class MCConfig:
 # ------------------------------------------------------------------------------------------- log parsing
 _GEN = re.compile(r"Gen:\s*(\d+)\s+try:\s*(\d+)\s+acc:\s*\(g/n/b\):\s*(\d+)\s*/\s*(\d+)\s*/\s*(\d+)\s+MC moves\s*([0-9.]*)")
 _NUM = r"([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|\*+)"
-_ROW_CORR = re.compile(r"^\s*(\d+)\s+(Occupancy|Disp\.Cor\.)\s*(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 4) + r"\s+(\d+)\s*$")
-_ROW_DIST = re.compile(r"^\s*(\d+)\s+(Hooke|Lennard)\s+(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 5) + r"\s+(\d+)\s*$")
+_ROW_CORR = re.compile(r"^\s*(\d+)\s+(Occupancy|Disp\.Cor\.)\s*(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 4) + r"\s+(\d+|\*+)\s*$")
+_ROW_DIST = re.compile(r"^\s*(\d+)\s+(Hooke|Lennard)\s+(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 5) + r"\s+(\d+|\*+)\s*$")
 
 
 def _val(s: str) -> float:
     return float("nan") if s.startswith("*") else float(s)
+
+
+def _count(s: str) -> int | None:
+    return None if s.startswith("*") else int(s)
+
+
+_KIND = {OccupationalTarget: "occupational", DisplacementTarget: "displacement", SpringTarget: "spring",
+         LennardJonesTarget: "lennard_jones"}
+
+
+def match_row(rows: list[dict], target, *, required: bool = True) -> dict | None:
+    """The row of ``target`` in one printed table: same neighbourhood, energy type and species pair.
+
+    DISCUS prints rows by neighbourhood, then energy type, then atom-type index — not in the order the
+    targets were given — and skips rows without pairs; so rows are matched, never taken by position."""
+    want = (target.neighborhood + 1, _KIND[type(target)], frozenset({target.a.upper(), target.b.upper()}))
+    hits = [r for r in rows if (r["neighborhood"], r["kind"], frozenset({r["a"].upper(), r["b"].upper()})) == want]
+    if len(hits) > 1:
+        raise ValueError(f"{len(hits)} rows match {type(target).__name__} on neighbourhood {target.neighborhood}")
+    if not hits:
+        if required:
+            raise ValueError(f"no printed row for {type(target).__name__} {target.a}-{target.b} on neighbourhood "
+                             f"{target.neighborhood} (DISCUS skips a target without pairs)")
+        return None
+    return hits[0]
 
 
 def _row(line: str) -> dict | None:
@@ -521,13 +553,13 @@ def _row(line: str) -> dict | None:
         ic, kind, a, b, tgt, ach, diff, rel, n = m.groups()
         return {"neighborhood": int(ic), "kind": "occupational" if kind == "Occupancy" else "displacement",
                 "a": a, "b": b, "target": _val(tgt), "achieved": _val(ach), "sigma": None,
-                "diff": _val(diff), "rel_diff": _val(rel), "pairs": int(n)}
+                "diff": _val(diff), "rel_diff": _val(rel), "pairs": _count(n)}
     m = _ROW_DIST.match(line)
     if m:
         ic, kind, a, b, tgt, ach, sig, diff, rel, n = m.groups()
         return {"neighborhood": int(ic), "kind": "spring" if kind == "Hooke" else "lennard_jones",
                 "a": a, "b": b, "target": _val(tgt), "achieved": _val(ach), "sigma": _val(sig),
-                "diff": _val(diff), "rel_diff": _val(rel), "pairs": int(n)}
+                "diff": _val(diff), "rel_diff": _val(rel), "pairs": _count(n)}
     return None
 
 
@@ -599,7 +631,8 @@ class MCResult:
         if final is None:
             raise ValueError("the log has no final table")
         rows = []
-        for r, t in zip(final["rows"], self.config.targets):
+        for t in self.config.targets:
+            r = match_row(final["rows"], t)
             rec = dict(r, mode=t.mode)
             rec["reached"] = bool(abs(r["achieved"] - r["target"]) <= tol) if t.mode == "CORR" else None
             rows.append(rec)
@@ -613,14 +646,15 @@ class MCResult:
     def measure(self, reference: Structure | None = None) -> list[dict]:
         """Independent measurement of every target on the final structure with Package C.
 
-        Pairs are exactly the neighbourhood's directed vectors (as DISCUS counts them). ``reference`` gives
-        the undisplaced site positions; by default the per-site average cell positions of the final
-        structure are used (DISCUS measures displacements from the site averages). Occupational:
-        ``OccupationalCorrelation.discus(a, b)`` — equal to DISCUS's printed value for a binary system with
-        symmetric pair counts (DISCUS prints the mean of the two Warren–Cowley α of the pair). Displacement:
-        uncentred correlation of the components along the direction. Spring / Lennard-Jones: mean and
-        standard deviation of the a–b pair distances (Å)."""
-        from .correlations import displacement_correlation, occupational_correlation
+        Pairs are exactly the neighbourhood's directed vectors (as DISCUS counts them); ``reference`` gives
+        the undisplaced site positions (default: the per-site average cell positions of the final structure,
+        as DISCUS's ``chem_aver``). Each value follows DISCUS's own definition (``docs/MC_FACTS.md`` §3), computed
+        independently: occupational — the mean of the two Warren–Cowley α with centre-based compositions
+        (``pooled_alpha`` gives Package C's pooled-θ α as well; the two agree for a binary system with
+        symmetric pair counts); displacement — uncentred ⟨x_i x_j⟩/√(⟨x_i²⟩⟨x_j²⟩) of the components along the
+        direction, with (a→b) and (b→a) pairs pooled; spring / Lennard-Jones — mean and standard deviation of
+        the a–b pair distances (Å) and their number."""
+        from .correlations import displacements, node_species, occupational_correlation
         from .neighbors import neighbor_list
         st = self.structure
         ref = _site_average_reference(st) if reference is None else reference
@@ -628,28 +662,58 @@ class MCResult:
         for t in self.config.targets:
             nb = self.config.neighborhoods[t.neighborhood]
             pairs = _neighborhood_pairs(neighbor_list, ref, nb)
+            a, b = _spelling(st, t.a), _spelling(st, t.b)
+            spec = node_species(pairs, st)
+            so, sj = spec[pairs.i], spec[pairs.j]
             rec = {"type": type(t).__name__, "neighborhood": t.neighborhood, "a": t.a, "b": t.b,
                    "pairs": pairs.n_pairs}
             if isinstance(t, OccupationalTarget):
-                rec["value"] = float(occupational_correlation(pairs, st).discus(_spelling(st, t.a),
-                                                                                 _spelling(st, t.b)))
+                rec["value"] = _discus_occupational(so, sj, a, b)
+                rec["pooled_alpha"] = float(occupational_correlation(pairs, st).discus(a, b))
             elif isinstance(t, DisplacementTarget):
-                dc = displacement_correlation(pairs, st, direction=t.direction, direction_frame="fractional",
-                                              reference="site_average", centered=False,
-                                              origin_species=_spelling(st, t.a), target_species=_spelling(st, t.b))
-                rec["value"] = float(dc.correlation)
+                u = displacements(pairs, st, reference="site_average")
+                d = np.asarray(t.direction, float) @ (st.lattice.matrix / st.supercell[:, None])
+                x = u @ (d / np.linalg.norm(d))
+                rec["value"] = _discus_displacement(x[pairs.i], x[pairs.j], so, sj, a, b)
             else:
-                d = _pair_distances(pairs, ref, st, _spelling(st, t.a), _spelling(st, t.b))
-                rec["value"] = float(d.mean()) if len(d) else float("nan")
-                rec["std"] = float(d.std()) if len(d) else float("nan")
+                dist = _pair_distances(pairs, ref, st, a, b)
+                rec["value"] = float(dist.mean()) if len(dist) else float("nan")
+                rec["std"] = float(dist.std()) if len(dist) else float("nan")
+                rec["pairs"] = int(len(dist))
             out.append(rec)
         return out
 
     def history(self, target_index: int = 0) -> np.ndarray:
-        """(n_feedback, 3): gen, target, achieved for one target (feedback lines)."""
-        rows = [(f["gen"], f["rows"][target_index]["target"], f["rows"][target_index]["achieved"])
-                for f in self.log["feedback"] if len(f["rows"]) > target_index]
+        """(n_feedback, 3): gen, target, achieved of ``config.targets[target_index]`` (feedback lines)."""
+        t = self.config.targets[target_index]
+        rows = []
+        for f in self.log["feedback"]:
+            r = match_row(f["rows"], t, required=False)
+            if r is not None:
+                rows.append((f["gen"], r["target"], r["achieved"]))
         return np.array(rows, dtype=float).reshape(-1, 3)
+
+
+def _discus_occupational(so, sj, a: str, b: str) -> float:
+    """DISCUS ``mmc_correlations_occ``: groups 1 = a, 2 = b, 3 = other; mean of the two α."""
+    g = lambda s: np.where(s == a, 0, np.where(s == b, 1, 2))   # noqa: E731
+    p = np.zeros((3, 3))
+    np.add.at(p, (g(so), g(sj)), 1.0)
+    r = p.sum()
+    if r == 0 or p[0].sum() == 0 or p[1].sum() == 0:
+        return 1.0                                             # DISCUS's value for an empty group
+    m_left, m_right = p[0].sum() / r, p[1].sum() / r
+    return float(0.5 * ((1 - p[1, 0] / p[1].sum() / m_left) + (1 - p[0, 1] / p[0].sum() / m_right)))
+
+
+def _discus_displacement(xi, xj, so, sj, a: str, b: str) -> float:
+    """DISCUS cd achieved: Σ x_i x_j / √(Σ x_i² Σ x_j²) over (a→b) pairs, plus (b→a) pairs when a ≠ b."""
+    keep = (so == a) & (sj == b)
+    if a != b:
+        keep |= (so == b) & (sj == a)
+    xi, xj = xi[keep], xj[keep]
+    den = np.sqrt(np.sum(xi * xi) * np.sum(xj * xj))
+    return float(np.sum(xi * xj) / den) if den > 0 else float("nan")
 
 
 def _site_average_reference(st: Structure) -> Structure:
@@ -665,7 +729,7 @@ def _neighborhood_pairs(neighbor_list, ref: Structure, nb: Neighborhood):
     lengths = [np.linalg.norm((np.array(v.translation, float)) @ (ref.lattice.matrix / ref.supercell[:, None]))
                for v in nb.vectors]
     cell = ref.lattice.matrix / ref.supercell[:, None]
-    cutoff = max(lengths) + 2.0 * float(np.max(np.linalg.norm(cell, axis=1)))
+    cutoff = max(lengths) + float(np.linalg.norm(cell.sum(axis=0))) + float(np.linalg.norm(cell[0] - cell[1] + cell[2]))
     nl = neighbor_list(ref, cutoff)
     mask = np.zeros(nl.n_pairs, bool)
     for v in nb.vectors:
@@ -711,7 +775,7 @@ def replica_summary(results: list["MCResult"]) -> list[dict]:
         raise ValueError("replicas must use different seeds")
     out = []
     for k, t in enumerate(results[0].config.targets):
-        ach = np.array([r.log["final"]["rows"][k]["achieved"] for r in results], float)
+        ach = np.array([match_row(r.log["final"]["rows"], t)["achieved"] for r in results], float)
         mea = np.array([r.measure()[k]["value"] for r in results], float)
         out.append({"target_index": k, "type": type(t).__name__, "mode": t.mode,
                     "target": getattr(t, "correlation", None), "n": len(results),
@@ -729,7 +793,7 @@ class MCRun:
 
 
 _ENGINE_ERROR = re.compile(r"(?im)\b(?:unknown command|fatal error|segmentation fault)"
-                           r"|\*\*\*(?:[A-Z]{3,4} ?)\*\*\*|did not find a valid pair")
+                           r"|^(?!.*\bwarning\b).*\*\*\*(?:[A-Z]{3,4} ?)\*\*\*.*$|did not find a valid pair")
 
 
 class MCRunner:
@@ -799,42 +863,66 @@ class MCRunner:
         return self.load(run, returncode=proc.returncode)
 
     def load(self, run: MCRun, *, returncode: int | None = None) -> MCResult:
-        """Validate and load an executed run directory (also usable on a copied run)."""
+        """Validate and load an executed run directory. ``returncode`` defaults to the one recorded in
+        ``status.json`` by :meth:`execute`; a run whose exit code is unknown is not loaded."""
         from .discus_io import read_stru
         from .neighbors import label_sites_by_slot
-        text = (run.directory / "run.log").read_text(encoding="utf-8", errors="replace")
+        problems = []
+        try:
+            hashes = json.loads((run.directory / "inputs.json").read_text())
+            for name, digest in hashes.items():
+                if hashlib.sha256((run.directory / name).read_bytes()).hexdigest() != digest:
+                    problems.append(f"staged {name} was modified")
+            staged = json.loads((run.directory / "mc_config.json").read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            problems.append(f"run directory incomplete: {exc}")
+            staged = None
+        if returncode is None:
+            try:
+                returncode = json.loads((run.directory / "status.json").read_text()).get("returncode")
+            except (OSError, json.JSONDecodeError):
+                returncode = None
+        if returncode is None:
+            problems.append("exit code unknown")
+        elif returncode != 0:
+            problems.append(f"exit code {returncode}")
+        log_path = run.directory / "run.log"
+        text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.is_file() else ""
+        if not text:
+            problems.append("no run.log")
         log = parse_mmc_log(text)
         err = _ENGINE_ERROR.search(re.sub(r"\x1b\[[0-9;]*m", "", text))
-        cyc, _ = run.config.counts(run.n_atoms)
-        problems = []
-        if returncode not in (None, 0):
-            problems.append(f"exit code {returncode}")
         if err:
-            problems.append(f"engine error: {err.group(0)}")
+            problems.append(f"engine error: {err.group(0).strip()}")
+        cyc = staged["counts"][0] if staged else None
         if log["final"] is None:
             problems.append("no final table in the log")
-        elif log["final"]["gen"] != cyc:
+        elif cyc is not None and log["final"]["gen"] != cyc:
             problems.append(f"{log['final']['gen']} moves done, {cyc} requested")
         out = run.directory / run.config.output_file
         if not out.is_file():
             problems.append(f"{run.config.output_file} was not written")
+        structure = None
+        if not problems:
+            try:
+                # DISCUS 'save' writes no ncell line (the crystal size is the input's) and upper-cases names
+                raw = read_stru(out, supercell=tuple(staged["supercell"])).structure
+                names = {s.upper(): s for s in staged["species"]}
+                unknown = sorted({s for s in raw.species if s.upper() not in names})
+                if unknown:
+                    raise ValueError(f"species {unknown} were not in the input")
+                if raw.n_atoms != staged["n_atoms"]:
+                    raise ValueError(f"{raw.n_atoms} atoms in the output, {staged['n_atoms']} in the input")
+                raw = raw.replace(species=np.array([names[s.upper()] for s in raw.species], dtype=object),
+                                  min_separation=None)
+                structure = label_sites_by_slot(raw)
+                for t in run.config.targets:
+                    match_row(log["final"]["rows"], t)
+            except Exception as exc:                    # any reading problem is a failed run, recorded
+                problems.append(f"output not usable: {exc}")
         if problems:
             self._status(run, "failed", returncode=returncode, reasons=problems)
             raise RuntimeError("DISCUS MC run failed: " + "; ".join(problems) + f" (see {run.directory})")
-        staged = json.loads((run.directory / "mc_config.json").read_text())
-        # DISCUS 'save' writes no ncell line (the crystal size is the input's) and upper-cases atom names
-        raw = read_stru(out, supercell=tuple(staged["supercell"])).structure
-        names = {s.upper(): s for s in staged["species"]}
-        unknown = sorted({s for s in raw.species if s.upper() not in names})
-        if unknown:
-            self._status(run, "failed", returncode=returncode, reasons=[f"unexpected species {unknown}"])
-            raise RuntimeError(f"DISCUS output contains species {unknown} that were not in the input")
-        raw = raw.replace(species=np.array([names[s.upper()] for s in raw.species], dtype=object),
-                          min_separation=None)
-        if raw.n_atoms != staged["n_atoms"]:
-            self._status(run, "failed", returncode=returncode, reasons=["atom count changed"])
-            raise RuntimeError(f"{raw.n_atoms} atoms in the output, {staged['n_atoms']} in the input")
-        structure = label_sites_by_slot(raw)
         self._status(run, "complete", returncode=returncode, moves=cyc,
                      output_sha256=hashlib.sha256(out.read_bytes()).hexdigest())
         return MCResult(run.directory, run.config, structure, log, "complete", run.n_atoms)

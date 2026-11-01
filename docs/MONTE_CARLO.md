@@ -2,9 +2,12 @@
 
 `discuspdf.mc` writes, runs and reads DISCUS 6.23.01 `mmc` (multiple-energy Monte Carlo) simulations from
 Python. You describe the run with an `MCConfig`, read the generated macro, run it with `MCRunner`, and get an
-`MCResult` with the final structure, DISCUS's feedback history, and an independent measurement of every target
-with Package C. Only behaviour that was read in the DISCUS source **and** checked by the engine probe
-([`d_mc_probes/RESULT.md`](../benchmarks/discus_6_23_01/d_mc_probes/RESULT.md)) is offered.
+`MCResult` with the final structure, DISCUS's feedback history, and an independent measurement of every target.
+The commands come from the DISCUS source (`docs/MC_FACTS.md`); the engine probe
+([`d_mc_probes/RESULT.md`](../benchmarks/discus_6_23_01/d_mc_probes/RESULT.md)) ran swap, shift and swdisp moves,
+one target of each type and kT ≠ 1, and the opt-in live test (`tests/test_mc_live.py`) runs generated macros.
+Combinations the probe did not run (several targets/neighbourhoods/moves at once, `local`/`slocal`/`site`
+pairing) follow the parser in the source but are not yet engine-tested.
 
 ```python
 from discuspdf import read_stru
@@ -40,6 +43,8 @@ result.history(0), result.acceptance()             # feedback trajectory, accept
 | `set mode` with an atom list sets the wrong probability (bug) | moves never use atom lists |
 | `set valid` is a no-op; `set finish` thresholds unverified | not offered; convergence is judged from the history and `target_report` |
 | `save` drops `ncell`, upper-cases names | `MCRunner.load` restores supercell and spelling |
+| A second occupational target on a neighbourhood replaces the first; one displacement direction per neighbourhood | both refused: use separate neighbourhoods |
+| Rows are printed by neighbourhood, then energy type, then atom type — not in the order given — and skipped without pairs | rows are matched to targets by (neighbourhood, type, species pair); a missing row is an error |
 
 ## Targets and moves
 
@@ -56,10 +61,15 @@ result.history(0), result.acceptance()             # feedback trajectory, accept
 * `status` is `complete` only when DISCUS exited 0, printed no error, did all requested moves and wrote the
   structure; otherwise `MCRunner` raises and `status.json` says why. **`complete` does not mean the targets were
   reached**: use `target_report(tol)` (feedback targets get `reached` True/False; fixed-energy targets `None`).
-* `measure()` recomputes each target on the final structure with Package C — occupational α (pooled formula,
-  equal to DISCUS's printed value for binary systems with symmetric pair counts), uncentred displacement
-  correlation from the site averages, mean and spread of spring/LJ pair distances. On the probe runs it matches
-  DISCUS's printed values to their 3 decimals.
+* `measure()` recomputes each target on the final structure, independently of DISCUS's log but with DISCUS's
+  definitions: the occupational value as the mean of the two Warren–Cowley α (plus `pooled_alpha`, Package C's
+  pooled-θ α, equal for a binary system with symmetric pair counts), the uncentred displacement correlation from
+  the site averages with (a→b) and (b→a) pairs pooled, and mean/spread/number of spring and LJ pair distances.
+  It reproduces DISCUS's printed values on the probe runs (to their 3 decimals) and a brute-force evaluation of
+  DISCUS's formulas on a two-site, two-species displaced crystal (to 1e-12).
+* `load()` treats as failed: a nonzero or unknown exit code, an engine error line (warnings are not errors),
+  fewer moves than requested, a missing/unreadable output, other species or a different atom count, staged
+  inputs changed, or a target without a printed row.
 * `replica_summary(results)` gives the seed-to-seed mean and spread of achieved and measured values for runs
   that differ only in the seed.
 

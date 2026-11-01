@@ -157,3 +157,129 @@ def test_replica_summary_checks_inputs(tmp_path):
         replica_summary([a])
     with pytest.raises(ValueError, match="different seeds"):
         replica_summary([a, a])
+
+
+# ------------------------------------------------------------------------------ review follow-ups
+def _row(nb, kind, a, b, target, achieved, pairs=100, sigma=None):
+    return {"neighborhood": nb, "kind": kind, "a": a, "b": b, "target": target, "achieved": achieved,
+            "sigma": sigma, "diff": target - achieved, "rel_diff": 0.0, "pairs": pairs}
+
+
+def test_rows_are_matched_not_taken_by_position():
+    from discuspdf.mc import MCResult, SpringTarget, match_row
+    nb2 = Neighborhood.from_translations([(1, 1, 0)])
+    cfg = MCConfig((SIX, nb2), (SpringTarget(0, "Cu", "Cu", 3.0, 1.0), OccupationalTarget(1, "Cu", "Au", correlation=-0.3),
+                                OccupationalTarget(0, "Cu", "Au", energy=0.2)), (Swap(),),
+                   Seed((1, 2, 3, 4, 5, 6, 7, 8)))
+    # DISCUS order: neighbourhood 1 (occupancy before Hooke), then neighbourhood 2
+    rows = [_row(1, "occupational", "AU", "CU", 0.0, -0.11), _row(1, "spring", "CU", "CU", 3.0, 3.004, sigma=0.09),
+            _row(2, "occupational", "AU", "CU", -0.3, -0.29)]
+    log = {"initial": [], "feedback": [{"gen": 10, "tries": 10, "accepted": (1, 1, 1), "fraction": 1.0, "rows": rows}],
+           "final": {"gen": 10, "tries": 11, "accepted": (1, 1, 1), "fraction": None, "rows": rows}, "energies": [], "errors": []}
+    res = MCResult(Path("."), cfg, None, log, "complete", 10)
+    rep = res.target_report(tol=0.02)
+    assert [(r["kind"], r["neighborhood"], r["mode"], r["reached"]) for r in rep] == \
+        [("spring", 1, "ENER", None), ("occupational", 2, "CORR", True), ("occupational", 1, "ENER", None)]
+    assert res.history(1).tolist() == [[10, -0.3, -0.29]]
+    with pytest.raises(ValueError, match="no printed row"):
+        match_row(rows[:2], cfg.targets[1])
+
+
+def test_measure_follows_discus_definitions_for_two_species_two_sites():
+    """Brute force of DISCUS's formulas (mmc_basic.f90) on a 2-site Cu/Au crystal with displacements."""
+    from discuspdf.lattice import Lattice
+    from discuspdf.mc import DisplacementTarget, MCResult, SpringTarget, Vector
+    from discuspdf.neighbors import label_sites_by_slot
+    from discuspdf.structure import Structure
+    from discuspdf.structure_ops import repeat
+    rng = np.random.default_rng(1)
+    cell = Structure(Lattice.from_parameters(3, 3.2, 3.4, 90, 90, 90), ["Cu", "Cu"], [[0, 0, 0], [0.5, 0.5, 0.5]],
+                     model="configuration")
+    n = np.array([5, 4, 4])
+    st = label_sites_by_slot(repeat(cell, tuple(n)).structure)
+    N = st.n_atoms
+    sp = np.where(rng.random(N) < 0.35, "Au", "Cu").astype(object)
+    u = rng.normal(0, 0.03, (N, 3))
+    u[sp == "Au"] *= 3
+    u += np.where(st.site_label == "site2", 1, 0)[:, None] * np.array([0.02, 0, 0])
+    st = st.replace(species=sp, frac=st.frac + u / n, min_separation=None)
+    nb = Neighborhood((Vector(1, 2, (0, 0, 0)), Vector(1, 1, (1, 0, 0))))
+    nb2 = Neighborhood((Vector(1, 2, (0, 0, 0)), Vector(1, 1, (1, 0, 0))))
+    targets = (OccupationalTarget(0, "Cu", "Au", energy=1.0), DisplacementTarget(0, "Cu", "Au", (1, 0, 0), energy=1.0),
+               DisplacementTarget(1, "Au", "Au", (1, 1, 0), energy=1.0), SpringTarget(0, "Cu", "Au", 2.7, 1.0))
+    cfg = MCConfig((nb, nb2), targets, (Swap(),), Seed((1, 2, 3, 4, 5, 6, 7, 8)))
+    meas = MCResult(Path("."), cfg, st, {}, "complete", N).measure()
+    # ---- brute force
+    ci = st.cell_index
+    site = np.array([int(s[4:]) for s in st.site_label])
+    idx = {(tuple(c), s): r for r, (c, s) in enumerate(zip(map(tuple, ci), site))}
+    pairs = []
+    for r in range(N):
+        for v in nb.vectors:
+            if site[r] == v.origin_site:
+                c = ci[r] + np.array(v.translation)
+                off = np.floor_divide(c, n)
+                pairs.append((r, idx[(tuple(c - off * n), v.target_site)], off))
+    xf = st.frac * n
+    ave = {s: (xf[site == s] - ci[site == s]).mean(0) for s in (1, 2)}
+    G = np.diag([3, 3.2, 3.4])
+    U = np.array([xf[r] - ci[r] - ave[site[r]] for r in range(N)]) @ G
+
+    def occ(a, b):
+        p = np.zeros((3, 3))
+        g = lambda s: 0 if s == a else (1 if s == b else 2)   # noqa: E731
+        for i, j, _ in pairs:
+            p[g(sp[i]), g(sp[j])] += 1
+        R = p.sum()
+        return 0.5 * ((1 - p[1, 0] / p[1].sum() / (p[0].sum() / R)) + (1 - p[0, 1] / p[0].sum() / (p[1].sum() / R)))
+
+    def cd(a, b, d):
+        d = np.array(d, float) @ G
+        d /= np.linalg.norm(d)
+        s = np.zeros(3)
+        for i, j, _ in pairs:
+            if (sp[i], sp[j]) == (a, b) or (a != b and (sp[i], sp[j]) == (b, a)):
+                x, y = U[i] @ d, U[j] @ d
+                s += [x * y, x * x, y * y]
+        return s[0] / np.sqrt(s[1] * s[2])
+
+    ds = [np.linalg.norm((xf[j] + off * n - xf[i]) @ G) for i, j, off in pairs if {sp[i], sp[j]} == {"Cu", "Au"}]
+    assert abs(meas[0]["value"] - occ("Cu", "Au")) < 1e-12
+    assert abs(meas[1]["value"] - cd("Cu", "Au", (1, 0, 0))) < 1e-12
+    assert abs(meas[2]["value"] - cd("Au", "Au", (1, 1, 0))) < 1e-12
+    assert abs(meas[3]["value"] - np.mean(ds)) < 1e-12 and abs(meas[3]["std"] - np.std(ds)) < 1e-12
+    assert meas[3]["pairs"] == len(ds)
+
+
+def test_load_failure_modes(tmp_path):
+    runner, run, _ = _staged_r1(tmp_path)
+    text = (run.directory / "run.log").read_text()
+    with pytest.raises(RuntimeError, match="exit code unknown"):
+        runner.load(run)                                        # nothing recorded yet
+    with pytest.raises(RuntimeError, match="exit code 3"):
+        runner.load(run, returncode=3)
+    with pytest.raises(RuntimeError, match="exit code 3"):
+        runner.load(run)                                        # the recorded exit code is used
+    (run.directory / "run.log").write_text(text.replace("Gen:      40960 try:      40961", "Gen:      40959 try:      40960"))
+    with pytest.raises(RuntimeError, match="40959 moves done"):
+        runner.load(run, returncode=0)
+    (run.directory / "run.log").write_text(text + "\n ***MAC *** Warning in macro line 3\n")
+    assert runner.load(run, returncode=0).status == "complete"   # warnings are not errors
+    out = run.directory / "mc_out.stru"
+    good = out.read_text()
+    out.write_text(good.replace("\nAU ", "\nNI ", 1))
+    with pytest.raises(RuntimeError, match="species"):
+        runner.load(run, returncode=0)
+    out.write_text("\n".join(good.splitlines()[:-1]) + "\n")
+    with pytest.raises(RuntimeError, match="output not usable"):
+        runner.load(run, returncode=0)
+    assert json.loads((run.directory / "status.json").read_text())["status"] == "failed"
+    out.write_text(good)
+    assert runner.load(run, returncode=0).status == "complete"
+    assert runner.load(run).status == "complete"                # recorded exit code 0 is reused
+
+
+def test_parser_tolerates_overflowed_pair_count():
+    line = "   1   Occupancy AU      CU           -0.300    -0.306               0.006     0.021   ********"
+    L = parse_mmc_log(" Gen:  10 try:  10 acc: (g/n/b):  1 /  2 /  3  MC moves 1.0000\n" + line + "\n")
+    assert L["feedback"][0]["rows"][0]["pairs"] is None and L["feedback"][0]["rows"][0]["achieved"] == -0.306
