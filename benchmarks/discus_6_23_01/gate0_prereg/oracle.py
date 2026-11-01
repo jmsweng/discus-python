@@ -258,6 +258,73 @@ def _occupancy_grid_from_file(path: Path) -> np.ndarray:
     return occ
 
 
+def total_direct(path: Path, mode: str = "engine") -> np.ndarray:
+    """Compute I(h) = |F(h)|² directly from the .stru file, with per-atom
+    f_el(s) and B from the file (no averaging, no site-level assumption).
+
+    F(h) = Σ_n f_n e^{-B_n s²} e^{2πi h·x_n}
+    I(h) = |F(h)|²
+
+    This is the ground-truth total intensity for a single realization.
+    """
+    s = s_of_grid(mode)
+    wk = coefficients_for(mode)
+    f_au = wk_f(wk["AU"], s)
+    f_cu = wk_f(wk["CU"], s)
+
+    # Parse all atoms from the .stru file (skip header lines)
+    atoms = []
+    for line in Path(path).read_text().splitlines():
+        t = line.replace(",", " ").split()
+        if not t or t[0] not in SPECIES:
+            continue
+        sp = t[0]
+        x, y, z = float(t[1]), float(t[2]), float(t[3])
+        B = float(t[4])
+        atoms.append((sp, x, y, z, B))
+
+    # Vectorized computation: process all atoms at once
+    # F = Σ_n f_n e^{-B_n s²} e^{2πi h·x_n}
+    n = len(atoms)
+    if n == 0:
+        return np.zeros(s.shape)
+
+    # Build numpy arrays for all atoms
+    sp_arr = np.array([a[0] for a in atoms])
+    x_arr = np.array([a[1] for a in atoms])
+    y_arr = np.array([a[2] for a in atoms])
+    z_arr = np.array([a[3] for a in atoms])
+    B_arr = np.array([a[4] for a in atoms])
+
+    # Process in chunks to limit memory: (chunk, 25, 25, 25)
+    F = np.zeros(s.shape, complex)
+    chunk = 256
+    for i in range(0, n, chunk):
+        sl = slice(i, i + chunk)
+        x_c = x_arr[sl]  # (chunk,)
+        y_c = y_arr[sl]  # (chunk,)
+        z_c = z_arr[sl]  # (chunk,)
+        B_c = B_arr[sl]  # (chunk,)
+        sp_c = sp_arr[sl]  # (chunk,)
+
+        # Phase: (chunk, 25, 25, 25)
+        phase = np.exp(2j * np.pi * (
+            H_AXIS[None, :, None, None] * x_c[:, None, None, None] +
+            H_AXIS[None, None, :, None] * y_c[:, None, None, None] +
+            H_AXIS[None, None, None, :] * z_c[:, None, None, None]
+        ))
+        # Amplitude: (chunk, 25, 25, 25)
+        # f_el(s) is (25,25,25), B_c is (chunk,)
+        # amp[n, ix, iy, iz] = f_el[ix, iy, iz] * exp(-B_n * s[ix, iy, iz]²)
+        is_au = (sp_c == "AU")[:, None, None, None]  # (chunk, 1, 1, 1)
+        f_c = np.where(is_au,
+                       np.broadcast_to(f_au, (len(sp_c), 25, 25, 25)),
+                       np.broadcast_to(f_cu, (len(sp_c), 25, 25, 25)))
+        amp = f_c * np.exp(-B_c[:, None, None, None] * s[None, :, :, :] ** 2)
+        F += np.sum(amp * phase, axis=0)
+    return np.abs(F) ** 2
+
+
 def realization_exact(path: Path, mode: str = "engine",
                      b_cu: float = B_CU_A, b_au: float = B_AU_A) -> tuple[np.ndarray, np.ndarray]:
     """Compute the realization-exact D(h) and I(h) on the full grid.
@@ -277,10 +344,14 @@ def realization_exact(path: Path, mode: str = "engine",
     # Build the occupancy grid: occ[ox,oy,oz,j] = 1 if Au
     occ = _occupancy_grid_from_file(path)
 
+    # Subtract the per-site mean over cells: δc_{jR} = c_{jR} - c̄_j
+    c_mean = occ.mean(axis=(0, 1, 2), keepdims=True)  # (1, 1, 1, 4)
+    delta_c = occ - c_mean  # (8, 8, 8, 4)
+
     # Compute D via FFT:
-    # D(h) = Σ_j g_j Σ_R c_{jR} e^{2πi h·R} e^{2πi h·x_j}
+    # D(h) = Σ_j g_j Σ_R δc_{jR} e^{2πi h·R} e^{2πi h·x_j}
     #      = Σ_j g_j e^{2πi h·x_j} · DFT_j(h)
-    # where DFT_j(h) = Σ_R c_{jR} e^{2πi h·R}
+    # where DFT_j(h) = Σ_R δc_{jR} e^{2πi h·R}
 
     # For h = m/8 (m = 0..24), the DFT index is m mod 8 (since the grid is 8³)
     # numpy ifftn gives: ifft(c)[k] = (1/N³) Σ_n c[n] e^{2πi k n / N}
@@ -293,13 +364,13 @@ def realization_exact(path: Path, mode: str = "engine",
 
     D = np.zeros(s.shape, complex)
     for j in range(4):
-        occ_j = occ[:, :, :, j]
-        # DFT: Σ_R c_{jR} e^{2πi h·R} for h = m/8
+        delta_j = delta_c[:, :, :, j]
+        # DFT: Σ_R δc_{jR} e^{2πi h·R} for h = m/8
         # numpy ifftn uses e^{-2πi k n / N}, so we need ifft
-        # Σ_R c e^{2πi h·R} = N³ · ifft(c) at the right index
-        dft_full = np.fft.ifftn(occ_j) * (N_CELL ** 3)  # (8, 8, 8)
+        # Σ_R δc e^{2πi h·R} = N³ · ifft(δc) at the right index
+        dft_full = np.fft.ifftn(delta_j) * (N_CELL ** 3)  # (8, 8, 8)
         # Evaluate at the 25 grid points: index m mod 8
-        dft = dft_full[k_idx, k_idx, k_idx]  # (25, 25, 25)
+        dft = dft_full[np.ix_(k_idx, k_idx, k_idx)]  # (25, 25, 25)
         # Phase factor: e^{2πi h·x_j}
         xj = X_SITES[j]
         phase = np.exp(2j * np.pi * (
@@ -310,21 +381,9 @@ def realization_exact(path: Path, mode: str = "engine",
         g_j = f_au * np.exp(-b_au * s ** 2) - f_cu * np.exp(-b_cu * s ** 2)
         D += g_j * dft * phase
 
-    # Total intensity: F = F_bragg + D
-    # F_bragg = f_avg L(h) where f_avg = p_Cu f_Cu + p_Au f_Au
-    # For Arm A (B=0): f_avg = p_Cu f_Cu + p_Au f_Au
-    # For Arm B: the average B-weighted form factor
-    # Simplified: use the per-atom B from the file
-    # F_bragg = (p_Cu f_Cu e^{-B_Cu s²} + p_Au f_Au e^{-B_Au s²}) L(h)
-    f_avg = P_CU * f_cu * np.exp(-b_cu * s ** 2) + P_AU * f_au * np.exp(-b_au * s ** 2)
+    # Total intensity: direct sum over atoms (per-atom f and per-atom B from the file)
+    I = total_direct(path, mode)
 
-    # L(h) on the full grid: L = N_c if h integer, else 0
-    h_int = np.isclose(H_AXIS, np.rint(H_AXIS))
-    is_int = h_int[:, None, None] & h_int[None, :, None] & h_int[None, None, :]
-    L = np.where(is_int, float(N_C), 0.0)
-
-    F = f_avg * L + D
-    I = np.abs(F) ** 2
     return D, I
 
 

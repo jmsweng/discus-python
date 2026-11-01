@@ -6,8 +6,8 @@
  "code_sha256": {
   "gate0_analyze.py": "3499402fd28a550c40052e196f4908ede559558a767afc09fc8f3cd11716bf6d",
   "gate0_generate.py": "d78fb1a18c3952a585f45774fcecc29893cd410c3d9a3c7951b59860b3bf7b32",
-  "gate0_selftest.py": "159fd69da1f2bdee0293c5a26b87fbb45fdbde10967e0a82e9e3e85900e15752",
-  "oracle.py": "98ba2428c8db9d08f20f26f3c938bbf2fbbdb37cf000257b817e20083200ebd6"
+  "gate0_selftest.py": "fccfa1f8a1754ff7f0c8d923bbdb624994f0ca2453b983ddd05b9076e5c864be",
+  "oracle.py": "67fc2b7eafc94a0144bbf41546569860e4f8161f6b49adeadaef36334b61e838"
  },
  "design": {
   "B_iso": {

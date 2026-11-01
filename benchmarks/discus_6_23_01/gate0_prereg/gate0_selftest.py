@@ -122,9 +122,20 @@ def _make_clean_run(work: Path, arm: str | None = None) -> Path:
 
             # E3: diffuse at integer h → D is zeroed at integer h (exact match)
 
+            # S1, S2, S3: ensemble statistics → use complex-Gaussian sampling
+            # The diffuse intensity D = |Z|² where Z ~ CN(0, E)
+            # So we sample Z from the complex-Gaussian and compute |Z|²
+            E = O.expectation("engine", b_cu=b_cu, b_au=b_au)
+            rng = np.random.default_rng(k)
+            # Sample Z ~ CN(0, E): Z = sqrt(E) * (X + iY) / sqrt(2) where X,Y ~ N(0,1)
+            Z = np.sqrt(E) * (rng.standard_normal(E.shape) + 1j * rng.standard_normal(E.shape)) / np.sqrt(2)
+            D_ens = np.abs(Z) ** 2
+            # Zero at integer h (DISCUS 'set aver' subtracts the average)
+            D_ens[is_int] = 0
+
             # Write the files
             write_discus_h5(run / f"gate0_{a}_total_{k:02d}.h5", I, "bragg_present")
-            write_discus_h5(run / f"gate0_{a}_diffuse_{k:02d}.h5", D, "bragg_subtracted")
+            write_discus_h5(run / f"gate0_{a}_diffuse_{k:02d}.h5", D_ens, "bragg_subtracted")
 
             # Write a log
             temp = "ignored" if a == "A" else "used"
@@ -286,16 +297,13 @@ def _corrupt_run(work: Path, arm: str, corrupt: str) -> Path:
 
 
 CASES = {  # corruption -> (expected status, criterion-name fragment that must fail)
-    # The clean case is expected to PASS all E-criteria (E1-E4).
-    # The S-criteria (S1-S4) may fail due to a known limitation of the synthetic approach:
-    # the oracle's D is not a valid sample from the complex-Gaussian distribution.
-    # This is documented in the selftest output.
-    None: ("PASS", None),  # Clean synthetic data: E-criteria pass, S-criteria may fail
+    # The clean case must PASS every decision criterion (E1-E4 AND S1-S3).
+    None: ("PASS", None),  # Clean synthetic data: all criteria pass
     "p_030": ("FAIL", "S1"),
     "correlated": ("FAIL", "S2"),
     "dw_convention": ("FAIL", "E2"),
     "scale_1pct": ("FAIL", "E1"),
-    "sample_fitted": ("PASS", None),  # Same as clean (static check: evaluator never reads sample occupancies)
+    "sample_fitted": ("PASS", None),  # Static check: evaluator never reads sample occupancies
     "species_swapped": ("FAIL", "E1"),
     "missing_aver": ("FAIL", "E3"),
     "shuffled_seeds": ("FAIL", "E1"),
@@ -355,24 +363,21 @@ def run_selftest(work: Path) -> list:
     print("=" * 80)
 
     for corrupt, (want, frag) in CASES.items():
-        if corrupt is None or corrupt == "sample_fitted":
-            # For the clean case and sample_fitted case, check that all E-criteria pass
-            # (S-criteria may fail due to a known limitation of the synthetic approach)
-            run = work / ("clean" if corrupt is None else f"{corrupt}_A")
-            if corrupt == "sample_fitted":
-                # sample_fitted is a static check: the evaluator never reads sample occupancies
-                # So it's the same as the clean case
-                run = work / "clean"
+        if corrupt is None:
+            # Clean case: all criteria must pass
+            run = work / "clean"
             res = _analyze_with_temp_pred(run, work)
             failed = [c["criterion"] for a in res.get("arms", {}).values() for c in a["criteria"] if not c["pass"]]
-            # Check that all E-criteria pass (S-criteria may fail)
-            e_failed = [f for f in failed if f.startswith("E")]
-            s_failed = [f for f in failed if f.startswith("S")]
-            ok = len(e_failed) == 0  # E-criteria must pass; S-criteria may fail
-            label = "clean" if corrupt is None else f"{corrupt}_A"
-            report.append((label, want, res["status"], ok, failed[:6]))
-            if s_failed:
-                print(f"\nNote: S-criteria failed for {label} (known limitation): {s_failed}")
+            ok = len(failed) == 0  # All criteria must pass
+            report.append(("clean", want, res["status"], ok, failed[:6]))
+        elif corrupt == "sample_fitted":
+            # Static check: gate0_analyze.py never reads occupancies to form E
+            # Verify by AST/grep that gate0_analyze.py does not read .stru occupancies
+            an_src = (HERE / "gate0_analyze.py").read_text()
+            # Check that gate0_analyze.py does not import or use occupancy-related functions
+            # The expectation E is computed from the model (f, B, p), not from sample occupancies
+            ok = "occupancy" not in an_src.lower() and "_occupancy_grid" not in an_src
+            report.append(("sample_fitted", want, "PASS" if ok else "FAIL", ok, []))
         else:
             for arm in AN.ARMS:
                 if corrupt == "dw_convention" and arm == "A":
