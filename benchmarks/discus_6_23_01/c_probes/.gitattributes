@@ -1,0 +1,2 @@
+# Engine inputs are hashed byte for byte and read by DISCUS/bash in WSL: never convert line endings.
+* -text

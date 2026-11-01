@@ -1,0 +1,36 @@
+discus
+read
+  stru disp_sc.stru
+chem
+set mode, quick, period
+set vec, 1, 1, 1, 1, 0, 0
+set vec, 2, 1, 1, 2, 0, 0
+set vec, 3, 1, 1, 3, 0, 0
+set vec, 4, 1, 1, 0, 1, 0
+set vec, 5, 1, 1, 1, 0, 0
+set vec, 6, 1, 1, 1, 0, 0
+set neig, rese
+set neig, vec, 1, number:1
+set neig, dir, 1, 0, 0, 1, 0, 0, number:1
+set neig, vec, 2, number:2
+set neig, dir, 1, 0, 0, 1, 0, 0, number:2
+set neig, vec, 3, number:3
+set neig, dir, 1, 0, 0, 1, 0, 0, number:3
+set neig, vec, 4, number:4
+set neig, dir, 1, 0, 0, 1, 0, 0, number:4
+set neig, vec, 5, number:5
+set neig, dir, 1, 0, 0, 0, 1, 0, number:5
+set neig, vec, 6, number:6
+set neig, dir, 0, 1, 0, 0, 1, 0, number:6
+show
+corr disp, Cu, Cu
+eval res[0]
+eval res[1]
+eval res[2]
+eval res[3]
+eval res[4]
+eval res[5]
+eval res[6]
+exit
+exit
+exit

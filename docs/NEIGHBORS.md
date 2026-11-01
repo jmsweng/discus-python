@@ -102,8 +102,10 @@ stay comparable between selections.
 DISCUS `chem` uses for `set vec, n, A, B, t`: an atom on site A in cell c is paired with site B in
 cell c + t, and an atom on B with site A in c − t (checked against DISCUS index arithmetic in the
 tests). When A = B, DISCUS takes only the `+t` direction for each atom (one pair per atom),
-whereas `symmetric=True` keeps both `+t` and `−t`; correlations that pool both directions are
-unaffected, pair counts differ by a factor 2.
+whereas `symmetric=True` keeps both `+t` and `−t`. To get exactly DISCUS's pairs use
+`symmetric=(A != B)`; this was confirmed against DISCUS 6.23.01 pair counts in
+`benchmarks/discus_6_23_01/c_probes/RESULT.md`. Correlations that pool both directions without a
+species filter are unaffected by the choice; with a species filter (e.g. Au→Cu) they are not.
 
 ## Shells and coordination
 

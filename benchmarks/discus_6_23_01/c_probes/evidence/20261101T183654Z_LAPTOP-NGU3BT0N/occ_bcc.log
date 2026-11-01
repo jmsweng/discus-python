@@ -1,0 +1,208 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\collab_c\reports\002\work\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mocc_bcc.mac
+ suite> discus
+ discus> read
+ discus/read> stru occ_bcc.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    3.00000    3.00000    3.00000   90.00000   90.00000   90.00000    27.0000    
+
+ Metric Tensor     :
+       9.00000      0.00000      0.00000
+       0.00000      9.00000      0.00000
+       0.00000      0.00000      9.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.33333    0.33333    0.33333   90.00000   90.00000   90.00000   0.370370E-01
+
+ Reciprocal metric tensor     : 
+       0.11111     -0.00000     -0.00000
+      -0.00000      0.11111     -0.00000
+      -0.00000     -0.00000      0.11111
+
+ discus> chem
+ discus/chem> set mode, quick, period
+ discus/chem> set vec, 1, 1, 2, 0, 0, 0
+ discus/chem> set vec, 2, 1, 2, -1, -1, -1
+ discus/chem> set vec, 3, 1, 1, 1, 0, 0
+ discus/chem> set vec, 4, 2, 2, 0, 1, 0
+ discus/chem> set vec, 5, 2, 1, 1, 0, 1
+ discus/chem> set neig, rese
+ discus/chem> set neig, vec, 1, number:1
+ discus/chem> set neig, vec, 2, number:2
+ discus/chem> set neig, vec, 3, number:3
+ discus/chem> set neig, vec, 4, number:4
+ discus/chem> set neig, vec, 5, number:5
+ discus/chem> set neig, dis, 0.5, 0.5, 0.5, 0.1, number:6
+ discus/chem> set neig, dis, 1.0, 0.0, 0.0, 0.1, number:7
+ discus/chem> show
+    Neighbour determination mode   : quick = T
+    Periodic boundaries (x,y,z)    : T T T
+    Crystal consists of unit cells:    8   8   8
+    Crystal dimensions x min/max  :    0.00000   7.50000
+    Crystal dimensions y min/max  :    0.00000   7.50000
+    Crystal dimensions z min/max  :    0.00000   7.50000
+    Current operation mode         : atoms
+    Sample volume for homo-check   : complete crystal
+    Allowed bond length range      :  1.500 A to  7.500 A
+    # points for histogramms       :    601
+
+    Neighbour definitions          : 
+
+        #  Mode  Neighbour (or vec.)  fsig  wsig   rmin[A] rmax[A] ang sym
+       -------------------------------------------------------------------
+        1  vec      1
+        2  vec      2
+        3  vec      3
+        4  vec      4
+        5  vec      5
+        6  neig   0.50  0.50  0.50    0.10 *****    2.548   2.648   F   1
+        7  neig   1.00  0.00  0.00    0.10  0.00    2.950   3.050   F   1
+
+    Defined correlation vectors    : 
+
+       Correlation vector   1      : Site  1 -> site  2, neig =  0  0  0
+       Correlation vector   2      : Site  1 -> site  2, neig = -1 -1 -1
+       Correlation vector   3      : Site  1 -> site  1, neig =  1  0  0
+       Correlation vector   4      : Site  2 -> site  2, neig =  0  1  0
+       Correlation vector   5      : Site  2 -> site  1, neig =  1  0  1
+
+    Defined correlation angles     : 
+
+       ** none defined **
+
+    Defined correlation environments: 
+
+       ** none defined **
+
+    Defined correlation ranges: 
+
+       ** none defined **
+
+    Defined displacement direc.    : 
+
+       Displacement corr. #  1     : all directions
+       Displacement corr. #  2     : all directions
+       Displacement corr. #  3     : all directions
+       Displacement corr. #  4     : all directions
+       Displacement corr. #  5     : all directions
+       Displacement corr. #  6     : all directions
+       Displacement corr. #  7     : all directions
+
+    Defined correlation connectiv. : 
+
+       ** none defined **
+ discus/chem> corr occ, Au, Cu
+ Calculating correlations 
+    Atom types : A = AU   and B = CU   
+
+    Neig.     AA         AB         BB         # pairs    correlation
+    -----------------------------------------------------------------
+       1    23.05 %    59.57 %    17.38 %        1024      -0.1952
+       2    23.24 %    59.18 %    17.58 %        1024      -0.1874
+       3    57.03 %    35.94 %     7.03 %         512       0.0417
+       4     8.59 %    44.14 %    47.27 %         512      -0.0381
+       5    22.46 %    60.74 %    16.80 %        1024      -0.2188
+       6    23.27 %    59.13 %    17.60 %        8192      -0.1864
+       7    32.49 %    40.69 %    26.82 %        6144       0.1836
+ discus/chem> eval res[0]
+ Value of res[0] =    7.00000000000    
+ discus/chem> eval res[1]
+ Value of res[1] =  -0.195240774120    
+ discus/chem> eval res[2]
+ Value of res[2] =  -0.187403129700    
+ discus/chem> eval res[3]
+ Value of res[3] =   0.416666666667E-01
+ discus/chem> eval res[4]
+ Value of res[4] =  -0.380550820849E-01
+ discus/chem> eval res[5]
+ Value of res[5] =  -0.218753707382    
+ discus/chem> eval res[6]
+ Value of res[6] =  -0.186423424147    
+ discus/chem> eval res[7]
+ Value of res[7] =   0.183578706202    
+ discus/chem> corr occ, Cu, Au
+ Calculating correlations 
+    Atom types : A = CU   and B = AU   
+
+    Neig.     AA         AB         BB         # pairs    correlation
+    -----------------------------------------------------------------
+       1    17.38 %    59.57 %    23.05 %        1024      -0.1952
+       2    17.58 %    59.18 %    23.24 %        1024      -0.1874
+       3     7.03 %    35.94 %    57.03 %         512       0.0417
+       4    47.27 %    44.14 %     8.59 %         512      -0.0381
+       5    16.80 %    60.74 %    22.46 %        1024      -0.2188
+       6    17.60 %    59.13 %    23.27 %        8192      -0.1864
+       7    26.82 %    40.69 %    32.49 %        6144       0.1836
+ discus/chem> eval res[0]
+ Value of res[0] =    7.00000000000    
+ discus/chem> eval res[1]
+ Value of res[1] =  -0.195240774120    
+ discus/chem> eval res[2]
+ Value of res[2] =  -0.187403129700    
+ discus/chem> eval res[3]
+ Value of res[3] =   0.416666666667E-01
+ discus/chem> eval res[4]
+ Value of res[4] =  -0.380550820849E-01
+ discus/chem> eval res[5]
+ Value of res[5] =  -0.218753707382    
+ discus/chem> eval res[6]
+ Value of res[6] =  -0.186423424147    
+ discus/chem> eval res[7]
+ Value of res[7] =   0.183578706202    
+ discus/chem> exit
+ discus> exit
+ suite> exit
+free(): invalid pointer
+
+Program received signal SIGABRT: Process abort signal.
+
+Backtrace for this error:
+#0  0x7ea156a23960 in ???
+#1  0x7ea156a22ac5 in ???
+#2  0x7ea15624251f in ???
+#3  0x7ea1562969bc in pthread_kill
+#4  0x7ea156242475 in raise
+#5  0x7ea1562287f2 in abort
+#6  0x7ea156289636 in ???
+#7  0x7ea1562a0cbb in ???
+#8  0x7ea1562a2a03 in ???
+#9  0x7ea1562a5412 in __libc_free
+#10  0x7ea154f96717 in ???
+#11  0x7ea1553a21e1 in ???
+#12  0x7ea1575a424d in ???
+#13  0x7ea156245494 in ???
+#14  0x7ea15624560f in exit
+#15  0x7ea156229d96 in ???
+#16  0x7ea156229e3f in __libc_start_main
+#17  0x5dfdde4b3c24 in _start
+#18  0xffffffffffffffff in ???
+timeout: the monitored command dumped core
