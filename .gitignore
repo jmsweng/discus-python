@@ -1,5 +1,6 @@
 # Python virtual environment (never commit)
 .venv/
+.venv*/
 venv/
 env/
 
@@ -43,3 +44,7 @@ benchmarks/discus_6_23_01/gate*/evidence/*/*.h5
 # git history on demand (see benchmarks/discus_6_23_01/gate1_c1_dyadic/README.md), so it stays ignored too.
 *.zip
 structure_factor_benchmark*.tar.gz
+
+# Local agent / orchestration folders (not for the repo)
+.collab/
+.opencode/
