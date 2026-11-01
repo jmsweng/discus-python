@@ -135,40 +135,52 @@ def test_sample_configuration_structure():
 def test_sample_configuration_statistics():
     """Realised Ga fraction among cation sites over 20 seeds.
 
-    The 6x6x6 repeat gives 8 * 216 = 1728 cation sites, each independently
-    realised as Ga with probability 0.7.  The per-seed Ga fraction is a
-    binomial mean, so its standard error over the seeds is the binomial
-    standard error sigma = sqrt(p * (1 - p) / n_cation_sites) with
-    p = 0.7 and n_cation_sites = 1728; the mean over seeds must be within
-    5 sigma of 0.7.
+    The 6x6x6 repeat of the mixed fixture has 864 cation sites (sites with a
+    Ga/In member; the 4 As single-member sites are not cation sites).  Each
+    cation site is independently realised as Ga with probability 0.7, so the
+    per-seed Ga fraction is a binomial mean with standard error
+    sigma = sqrt(p * (1 - p) / n_cation_sites) and p = 0.7.  The mean over
+    the 20 seeds must be within 5 * sigma_mean of 0.7, where
+    sigma_mean = sqrt(p * (1 - p) / (n_cation_sites * n_seeds)) is the
+    standard error of that mean; the sample std over the seeds must lie in a
+    loose band around sigma to catch correlated or frozen draws.
     """
     s = repeat(_mixed_cell(), (6, 6, 6)).structure
-    n_cation_sites = len(s.sites())
-    assert n_cation_sites == 1728
+
+    # Cation sites: sites with at least one Ga/In member.
+    cation_sites = [
+        site for site in s.sites()
+        if any(sp in ("Ga", "In") for sp in s.species[site["members"]])
+    ]
+    n_cation_sites = len(cation_sites)
+    assert n_cation_sites == 864
 
     p = 0.7
-    sigma = math.sqrt(p * (1 - p) / n_cation_sites)
+    n_seeds = 20
+    sigma_mean = math.sqrt(p * (1 - p) / (n_cation_sites * n_seeds))
 
     fractions = []
-    for seed in range(20):
+    for seed in range(n_seeds):
         new_s = sample_configuration(s, seed=seed).structure
         n_cation = new_s.n_atoms - int(np.sum(new_s.species == "As"))
         n_ga = int(np.sum(new_s.species == "Ga"))
         fractions.append(n_ga / n_cation)
     mean_fraction = float(np.mean(fractions))
-    print(f"  Ga fraction: mean={mean_fraction:.6f} (expected {p}, 5-sigma={5 * sigma:.6f})")
+    print(f"  Ga fraction: mean={mean_fraction:.6f} (expected {p}, 5-sigma_mean={5 * sigma_mean:.6f})")
 
-    assert abs(mean_fraction - p) < 5 * sigma, (
-        f"mean Ga fraction {mean_fraction:.6f} not within 5 sigma of {p}"
+    assert abs(mean_fraction - p) < 5 * sigma_mean, (
+        f"mean Ga fraction {mean_fraction:.6f} not within 5 sigma_mean of {p}"
     )
 
-    # The sample is never identical for two different seeds.
-    for i in range(20):
-        for j in range(i + 1, 20):
-            assert sample_configuration(s, seed=i).structure != \
-                sample_configuration(s, seed=j).structure, (
-                f"seeds {i} and {j} produced identical structures"
-            )
+    # The sample std over the seeds must lie in a loose band around the
+    # binomial standard deviation sigma = sqrt(p * (1 - p) / n_cation_sites);
+    # a value far outside this band indicates correlated or frozen draws.
+    sigma = math.sqrt(p * (1 - p) / n_cation_sites)
+    std_fraction = float(np.std(fractions))
+    print(f"  Ga fraction: std={std_fraction:.6f} (expected {sigma:.6f}, band=[{0.5 * sigma:.6f}, {1.6 * sigma:.6f}])")
+    assert 0.5 * sigma <= std_fraction <= 1.6 * sigma, (
+        f"sample std {std_fraction:.6f} not in [{0.5 * sigma:.6f}, {1.6 * sigma:.6f}]"
+    )
 
 
 # ------------------------------ vacancy ------------------------------
@@ -214,6 +226,58 @@ def test_sample_configuration_tolerance():
         result = sample_configuration(s, seed=seed)
         assert result.info["n_vacancies"] == 0
         assert result.structure.n_atoms == 1
+
+
+# ------------------------------ tolerance clamp ------------------------------
+def test_sample_configuration_tolerance_clamp(monkeypatch):
+    """The 1e-9 total-occupancy clamp: a site totalling 1 - 1e-10 is never
+    vacant (its last member is clamped to 1.0), while a site totalling 0.5
+    is a vacancy when the draw is >= 0.5.  With a fake default_rng whose
+    draw is 1 - 1e-11 (just below 1.0), the near-full site must realise its
+    last member and the 0.5 site must be vacant.
+    """
+    class _FakeRNG:
+        def random(self, n):
+            return np.full(n, 1 - 1e-11)
+
+    def fake_default_rng(seed):
+        return _FakeRNG()
+
+    monkeypatch.setattr(np.random, "default_rng", fake_default_rng)
+
+    # One site, two members totalling 1 - 1e-10 (inside the 1e-9 clamp):
+    # the last member is clamped to 1.0, so the draw 1 - 1e-11 realises it
+    # (no vacancy).
+    a = 5.8
+    near_full = Structure(
+        Lattice.from_parameters(a, a, a, 90.0, 90.0, 90.0),
+        np.array(["Ga", "In"], dtype=object),
+        np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        model="average",
+        occupancy=np.array([0.5, 0.5 - 1e-10]),
+        site_label=np.array(["Ga1", "Ga1"], dtype=object),
+        cell_index=np.zeros((2, 3), dtype=np.int64),
+        supercell=(1, 1, 1),
+    )
+    result = sample_configuration(near_full, seed=42)
+    assert result.info["n_vacancies"] == 0
+    assert result.structure.n_atoms == 1
+    assert result.structure.species[0] == "In"
+
+    # One site, two members totalling 0.5 (outside the clamp): the draw
+    # 1 - 1e-11 is >= 0.5, so the site is a vacancy.
+    half = Structure(
+        Lattice.from_parameters(a, a, a, 90.0, 90.0, 90.0),
+        np.array(["Ga", "In"], dtype=object),
+        np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+        model="average",
+        occupancy=np.array([0.25, 0.25]),
+        site_label=np.array(["Ga1", "Ga1"], dtype=object),
+        cell_index=np.zeros((2, 3), dtype=np.int64),
+        supercell=(1, 1, 1),
+    )
+    with pytest.raises(ValueError, match="empty"):
+        sample_configuration(half, seed=42)
 
 
 # ------------------------------ errors ------------------------------
