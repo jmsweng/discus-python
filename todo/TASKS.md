@@ -96,7 +96,7 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Open items: Zarr (not needed yet); first real schema migration when v2 exists.*
 - ✅ **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. [`src/discuspdf/viz.py`](../src/discuspdf/viz.py) · [`tests/test_viz.py`](../tests/test_viz.py) · [`docs/VISUALIZATION.md`](../docs/VISUALIZATION.md); slices in true geometry, `.vti` only for axis-aligned grids, `.vts` otherwise; files read back by VTK 9.7 with matching coordinates.
   - *Open: interactive viewer; DISCUS plane files straight into `SampledVolume` (via `ScatteringVolume`).*
-- ✅ Package B example notebook covering Features 6–9 and 18–20 on committed data. [`notebooks/07_package_b.ipynb`](../notebooks/07_package_b.ipynb).
+- ✅ Example notebook for reciprocal-space grids and scattering data (Features 6–9 and 18–20) on committed data. [`notebooks/07_reciprocal_space_data.ipynb`](../notebooks/07_reciprocal_space_data.ipynb).
 
 ### Package C — [Disorder and correlations](03_disorder_and_correlations.md)
 
