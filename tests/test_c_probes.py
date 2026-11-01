@@ -29,6 +29,22 @@ def test_engine_logs_match_registered_predictions(capsys):
     assert analyze.main(evidence) == 0
     out = capsys.readouterr().out
     assert "input SHA-256: 6/6 match" in out and out.rstrip().endswith("PASS")
+    assert out.count("complete") == 3 and "INCOMPLETE" not in out
+
+
+@pytest.mark.parametrize("cut", ["corr occ, Cu, Au", "corr disp, all, all"])
+def test_analysis_fails_when_a_corr_block_is_missing(tmp_path, cut):
+    """A log truncated before a whole corr block (e.g. an earlier crash) must not pass."""
+    import shutil
+    analyze = _load("analyze")
+    evidence = sorted((PROBE / "evidence").iterdir())[-1]
+    dst = tmp_path / "ev"
+    shutil.copytree(evidence, dst)
+    for log in dst.glob("*.log"):
+        text = log.read_text(errors="replace")
+        if cut in text:
+            log.write_text(text[:text.index(cut)])
+    assert analyze.main(dst) == 1
 
 
 def test_current_code_reproduces_the_registered_predictions():
@@ -48,7 +64,9 @@ def test_current_code_reproduces_the_registered_predictions():
 
     occ = gen.predictions_occ(labelled("occ_bcc"))
     for got, want in zip(occ["neighborhoods"], preds["occ_bcc"]["neighborhoods"]):
-        assert same(got["corr_AuCu"], want["corr_AuCu"])
+        for k in ("corr_AuCu", "corr_CuAu", "n_pairs_discus", "n_pairs_ours"):
+            if k in want:
+                assert same(got[k], want[k]), k
     disp = gen.predictions_disp(labelled("disp_sc"), gen.DISP_VECS, [("Cu", "Cu")])
     for got, want in zip(disp["neighborhoods"], preds["disp_sc"]["neighborhoods"]):
         assert same(got["Cu_Cu"]["discus_convention"], want["Cu_Cu"]["discus_convention"])
@@ -58,3 +76,4 @@ def test_current_code_reproduces_the_registered_predictions():
         for k in ("Au_Cu", "Cu_Cu", "all_all"):
             assert same(got[k]["discus_convention"], want[k]["discus_convention"])
             assert same(got[k]["pearson"], want[k]["pearson"])
+            assert got[k]["n_pairs"] == want[k]["n_pairs"]

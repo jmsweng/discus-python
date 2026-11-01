@@ -393,3 +393,191 @@ def test_displacement_table():
         assert by_t[(0, k, 0)]["correlation"] == pytest.approx(1.0, abs=1e-12)
     shells = displacement_correlation_table(nl, cfg, direction=(1, 0, 0), by="shell")
     assert shells[0]["shell"] == 1 and shells[0]["n_pairs"] == ref.n_atoms * 6
+
+
+# ------------------------------ review fixes (independent review of 88e4120) ------------------------------
+def test_unmatched_configuration_atoms_raise_and_slot_labels_fix_it(tmp_path):
+    """read_stru labels sites by species; a list built on one file must not silently mismatch another."""
+    from discuspdf import label_sites_by_slot
+    from discuspdf.discus_io import read_stru, write_stru
+
+    ref = _cell("bcc", ["Au", "Au"]).repeat((4, 4, 4))
+    rng = np.random.default_rng(5)
+    a = _with_species(ref, np.where(rng.random(ref.n_atoms) < 0.5, "Au", "Cu"))
+    b = _with_species(ref, np.where(rng.random(ref.n_atoms) < 0.5, "Au", "Cu"))
+    write_stru(tmp_path / "a.stru", a)
+    write_stru(tmp_path / "b.stru", b)
+    ra, rb = read_stru(tmp_path / "a.stru").structure, read_stru(tmp_path / "b.stru").structure
+    with pytest.raises(ValueError, match="match no node"):
+        occupational_correlation(neighbor_list(ra, 3.5), rb)
+    la, lb = label_sites_by_slot(ra), label_sites_by_slot(rb)
+    got = occupational_correlation(neighbor_list(la, 3.5).select(shell=1), lb)
+    want = occupational_correlation(neighbor_list(b, 3.5).select(shell=1))
+    np.testing.assert_allclose(got.warren_cowley, want.warren_cowley)
+    assert "Va" not in got.species
+    with pytest.raises(ValueError, match="DISCUS cell-major order"):
+        label_sites_by_slot(b.replace(frac=b.frac[::-1].copy(), cell_index=b.cell_index[::-1].copy()))
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_pure_sublattice_is_undefined_regardless_of_round_off(seed):
+    ref = _cell("fcc", ["A"] * 4).repeat((5, 5, 5))
+    rng = np.random.default_rng(seed)
+    spec = rng.choice(np.array(["A", "B", "C"]), size=ref.n_atoms)
+    spec[ref.site_label == "S4"] = "B"
+    cfg = _with_species(ref, spec)
+    nl = neighbor_list(ref, 2.9)
+    res = occupational_correlation(nl.select(origin_site="S4"), cfg)
+    assert np.all(np.isnan(res.pearson[res.species.index("B"), :]))
+    assert np.all(np.isnan(res.stderr_pearson[res.species.index("B"), :]))
+    assert all(("B", b) in res.undefined for b in res.species)
+    tgt = occupational_correlation(nl.select(target_site="S4"), cfg)
+    assert math.isnan(tgt.value("warren_cowley", "B", "B"))
+    assert math.isnan(tgt.value("stderr_warren_cowley", "B", "B"))
+    assert all(isinstance(k[0], str) and type(k[0]) is str for k in tgt.undefined)
+
+
+def test_self_image_pairs_make_standard_errors_undefined():
+    ref = _cell("sc", ["A"]).repeat((1, 8, 8))
+    rng = np.random.default_rng(2)
+    cfg = _with_species(ref, np.where(rng.random(ref.n_atoms) < 0.5, "A", "B"))
+    sel = neighbor_list(ref, 4.1).select(translation=(1, 0, 0))
+    res = occupational_correlation(sel, cfg)
+    assert res.n_self_pairs == sel.n_pairs and res.stderr_note is not None
+    assert np.all(np.isnan(res.stderr_pearson))
+    moved = cfg.with_cartesian(cfg.cartesian + rng.normal(scale=0.05, size=(cfg.n_atoms, 3)))
+    d = displacement_correlation(sel, moved, direction=(1, 0, 0))
+    assert d.n_self_pairs > 0 and math.isnan(d.stderr_null) and d.stderr_note is not None
+
+
+def _mc_spread(ref, sel, n_trials, make, value):
+    rng = np.random.default_rng(31)
+    vals, ses = [], []
+    for _ in range(n_trials):
+        v, se = value(sel, make(ref, rng))
+        vals.append(v)
+        ses.append(se)
+    return float(np.std(vals)), float(np.mean(ses))
+
+
+def test_standard_error_counts_repeated_node_pairs():
+    """2 cells along a: every node meets the same neighbor through two shifts (+a and -a)."""
+    ref = _cell("sc", ["A"]).repeat((2, 8, 8))
+    sel = neighbor_list(ref, 4.1).select(shell=1)
+
+    def occ_make(r, rng):
+        return _with_species(r, np.where(rng.random(r.n_atoms) < 0.4, "A", "B"))
+
+    def occ_value(s, c):
+        res = occupational_correlation(s, c)
+        return res.value("pearson", "A", "A"), res.value("stderr_pearson", "A", "A")
+    sd, se = _mc_spread(ref, sel, 300, occ_make, occ_value)
+    assert sd == pytest.approx(se, rel=0.15)
+
+    def disp_make(r, rng):
+        return r.with_cartesian(r.cartesian + rng.normal(scale=0.05, size=(r.n_atoms, 3)))
+
+    def disp_value(s, c):
+        res = displacement_correlation(s, c, direction=(1, 0, 0))
+        return res.correlation, res.stderr_null
+    sd, se = _mc_spread(ref, sel, 300, disp_make, disp_value)
+    assert sd == pytest.approx(se, rel=0.15)
+
+
+def test_standard_error_uses_the_concentrations_of_the_nodes_in_the_pairs():
+    """Sublattice S1 at 80 % A, S2 at 20 % A; pairs within S1 only (pooled c over all nodes would be 50 %)."""
+    ref = _cell("bcc", ["A", "A"]).repeat((8, 8, 8))
+    on1 = ref.site_label == "S1"
+    sel = neighbor_list(ref, 4.1).select(origin_site="S1", target_site="S1", translation=(1, 0, 0), symmetric=True)
+    rng = np.random.default_rng(8)
+    vals = []
+    for _ in range(300):
+        spec = np.where(rng.random(ref.n_atoms) < np.where(on1, 0.8, 0.2), "A", np.where(rng.random(ref.n_atoms) < 0.5, "B", "C"))
+        res = occupational_correlation(sel, _with_species(ref, spec))
+        vals.append(res.value("pearson", "A", "B"))
+    c = res.origin_concentration
+    ia, ib = res.species.index("A"), res.species.index("B")
+    nodes = np.unique(np.concatenate([sel.i, sel.j]))
+    cp = np.array([np.mean(spec[sel.node_row[nodes]] == s) for s in res.species])
+    rho = -math.sqrt(cp[ia] * cp[ib] / ((1 - cp[ia]) * (1 - cp[ib])))
+    n = res.n_pairs
+    assert res.value("stderr_pearson", "A", "B") == pytest.approx(math.sqrt((n + n * rho ** 2) / n ** 2))
+    assert np.std(vals) == pytest.approx(res.value("stderr_pearson", "A", "B"), rel=0.15)
+    assert c[ia] > 0.7
+
+
+def test_warren_cowley_standard_error_on_an_asymmetric_selection():
+    """α = r · sqrt(c_o(1−c_o) c_t(1−c_t)) / (c_o (δ − c_t)) with c_o ≠ c_t."""
+    ref = _cell("bcc", ["A", "A"]).repeat((6, 6, 6))
+    on1 = ref.site_label == "S1"
+    rng = np.random.default_rng(4)
+    spec = np.where(rng.random(ref.n_atoms) < np.where(on1, 0.7, 0.25), "A", "B")
+    res = occupational_correlation(neighbor_list(ref, 3.5).select(origin_site="S1", target_site="S2"),
+                                   _with_species(ref, spec))
+    co, ct = res.origin_concentration, res.target_concentration
+    for a in "AB":
+        for b in "AB":
+            ia, ib = res.species.index(a), res.species.index(b)
+            factor = math.sqrt(co[ia] * (1 - co[ia]) * ct[ib] * (1 - ct[ib])) / (co[ia] * ((a == b) - ct[ib]))
+            assert res.value("stderr_warren_cowley", a, b) == pytest.approx(
+                abs(factor) * res.value("stderr_pearson", a, b))
+    assert abs(co[0] - ct[0]) > 0.3
+
+
+def test_cross_direction_standard_error_includes_the_same_atom_correlation():
+    """u_y = 0.5 u_x + noise at every atom: the x->y correlation of reversed pairs is not independent."""
+    ref = _cell("sc", ["A"]).repeat((8, 8, 8))
+    sel = neighbor_list(ref, 4.1).select(translation=(1, 0, 0), symmetric=True)
+    rng = np.random.default_rng(12)
+    vals, ses = [], []
+    for _ in range(300):
+        ux = rng.normal(scale=0.05, size=ref.n_atoms)
+        u = np.column_stack([ux, 0.5 * ux + rng.normal(scale=0.05, size=ref.n_atoms), np.zeros(ref.n_atoms)])
+        res = displacement_correlation(sel, ref.with_cartesian(ref.cartesian + u),
+                                       direction=(1, 0, 0), target_direction=(0, 1, 0))
+        vals.append(res.correlation)
+        ses.append(res.stderr_null)
+    assert np.std(vals) == pytest.approx(np.mean(ses), rel=0.12)
+    # explicit formula for the last crystal: Var = (n + n_rev ρ_self²)/n², ρ_self = corr(u_x, u_y) over atoms
+    ux_c, uy_c = u[:, 0] - u[:, 0].mean(), u[:, 1] - u[:, 1].mean()
+    rho = float(ux_c @ uy_c / math.sqrt((ux_c @ ux_c) * (uy_c @ uy_c)))
+    n = res.n_pairs
+    assert res.stderr_null == pytest.approx(math.sqrt((n + n * rho ** 2) / n ** 2), rel=1e-12)
+    assert 0.3 < rho < 0.6
+
+
+def test_reference_structure_is_used():
+    ref = _cell("sc", ["A"]).repeat((4, 4, 4))
+    rng = np.random.default_rng(6)
+    shifted_ref = ref.with_cartesian(ref.cartesian + rng.normal(scale=0.02, size=(ref.n_atoms, 3)))
+    cfg = ref.with_cartesian(ref.cartesian + rng.normal(scale=0.05, size=(ref.n_atoms, 3)))
+    nl = neighbor_list(ref, 4.1)
+    np.testing.assert_allclose(displacements(nl, cfg, reference=shifted_ref),
+                               cfg.cartesian - shifted_ref.cartesian, atol=1e-12)
+    with pytest.raises(ValueError, match="reference must be"):
+        displacements(nl, cfg, reference="average")
+
+
+def test_tiny_but_real_displacements_are_not_treated_as_zero_variance():
+    ref, cfg, _ = _wave_configuration(amp=1e-4)
+    sel = neighbor_list(ref, 3.1).select(translation=(1, 0, 0), symmetric=True)
+    res = displacement_correlation(sel, cfg, direction=(1, 0, 0))
+    assert res.correlation == pytest.approx(math.cos(2 * math.pi * 2 / 16), abs=1e-6)
+
+
+def test_large_displacements_warn():
+    ref = _cell("sc", ["A"]).repeat((3, 3, 3))
+    cfg = ref.with_cartesian(ref.cartesian + np.array([5.5, 0.0, 0.0]))     # 5.5 Å in a 12 Å supercell
+    with pytest.warns(RuntimeWarning, match="folded back"):
+        displacements(neighbor_list(ref, 4.1), cfg)
+
+
+def test_vector_table_groups_match_individual_selections():
+    _, cfg = _random_binary(6, 0.4, 3, kind="bcc")
+    nl = neighbor_list(cfg, 4.1)
+    rows = occupational_correlation_table(nl, by="vector")
+    for r in rows[:: max(1, len(rows) // 12)]:
+        sel = nl.select(origin_site=r["origin_site"], target_site=r["target_site"], translation=r["translation"])
+        res = occupational_correlation(sel)
+        assert r["n_pairs"] == sel.n_pairs
+        assert r["count"] == res.value("counts", r["a"], r["b"])

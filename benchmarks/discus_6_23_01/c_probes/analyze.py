@@ -40,7 +40,7 @@ def parse_log(text: str) -> list[dict]:
             blocks[-1]["res"][int(r.group(1))] = float(r.group(2))
             continue
         row = _ROW.match(line)
-        if row and "%" in line or (row and blocks[-1]["kind"] == "disp"):
+        if row and ("%" in line or blocks[-1]["kind"] == "disp"):
             blocks[-1]["rows"][int(row.group(1))] = int(row.group(2))
     return blocks
 
@@ -59,9 +59,21 @@ def main(evidence: Path) -> int:
     ok &= not bad_hash
 
     worst = 0.0
+
+    def check_blocks(run, blocks, expected, n_neigh):
+        """Every expected corr block present, in order, with every neighborhood's table row and res value."""
+        got = [(b["kind"], b["a"].upper(), b["b"].upper()) for b in blocks]
+        want = [(k, a.upper(), b.upper()) for k, a, b in expected]
+        good = got == want and all(set(b["rows"]) >= set(range(1, n_neigh + 1)) and
+                                   set(b["res"]) >= set(range(1, n_neigh + 1)) for b in blocks)
+        lines.append(f"{run}: corr blocks {got} (expected {want}), "
+                     f"{'complete' if good else 'INCOMPLETE'}")
+        return good
+
     # occupational
     blocks = parse_log((evidence / "occ_bcc.log").read_text(errors="replace"))
     nbh = preds["occ_bcc"]["neighborhoods"]
+    ok &= check_blocks("occ_bcc", blocks, [("occ", "Au", "Cu"), ("occ", "Cu", "Au")], len(nbh))
     for blk, key in zip(blocks, ("corr_AuCu", "corr_CuAu")):
         for k, p in enumerate(nbh, start=1):
             want = p[key]
@@ -79,6 +91,7 @@ def main(evidence: Path) -> int:
     for run, pairs in (("disp_sc", ["Cu_Cu"]), ("mixed_bcc", ["Au_Cu", "Cu_Cu", "all_all"])):
         blocks = parse_log((evidence / f"{run}.log").read_text(errors="replace"))
         nbh = preds[run]["neighborhoods"]
+        ok &= check_blocks(run, blocks, [("disp",) + tuple(p.split("_")) for p in pairs], len(nbh))
         for blk, key in zip(blocks, pairs):
             for k, p in enumerate(nbh, start=1):
                 want = p[key]["discus_convention"]

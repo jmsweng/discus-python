@@ -28,7 +28,7 @@ import numpy as np
 
 from .structure import Structure
 
-__all__ = ["NeighborList", "neighbor_list", "Shell"]
+__all__ = ["NeighborList", "neighbor_list", "Shell", "label_sites_by_slot"]
 
 _POSITION_TOL = 1e-3  # Å: members of one site must coincide (Structure already enforces 1e-6 in fractions)
 
@@ -226,6 +226,31 @@ def _pairs_open(cart: np.ndarray, cutoff: float):
     if not out_i:
         return np.empty(0, np.int64), np.empty(0, np.int64)
     return np.concatenate(out_i), np.concatenate(out_j)
+
+
+def label_sites_by_slot(structure: Structure, prefix: str = "site") -> Structure:
+    """Return ``structure`` with ``site_label`` = ``f"{prefix}{k}"``, ``k`` = 1-based slot in the cell.
+
+    DISCUS numbers the sites of a cell by their order (``set vec, n, is1, is2, …``);
+    ``read_stru`` instead labels atoms by species and index, which makes every atom
+    its own site.  This relabels a structure stored in DISCUS order (cell-major, the
+    same number ``m`` of atoms in every cell, as ``write_stru`` writes and
+    ``read_stru`` reads) so that row ``r`` gets slot ``r % m + 1``.  Use it on both
+    the reference and the configurations before building neighbor lists or
+    computing correlations.
+    """
+    n_cells = int(np.prod(structure.supercell))
+    if structure.n_atoms % n_cells:
+        raise ValueError(f"{structure.n_atoms} atoms are not a whole number per cell ({n_cells} cells)")
+    m = structure.n_atoms // n_cells
+    expected = np.repeat(np.arange(n_cells), m)
+    sc = structure.supercell
+    ci = structure.cell_index
+    cell = (ci[:, 2] * sc[1] + ci[:, 1]) * sc[0] + ci[:, 0]
+    if not np.array_equal(cell, expected):
+        raise ValueError("rows are not in DISCUS cell-major order (x fastest, m atoms per cell)")
+    labels = np.array([f"{prefix}{r % m + 1}" for r in range(structure.n_atoms)], dtype=object)
+    return structure.replace(site_label=labels)
 
 
 def neighbor_list(structure: Structure, cutoff: float, *, position_tol: float = _POSITION_TOL) -> "NeighborList":

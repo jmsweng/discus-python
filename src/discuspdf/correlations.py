@@ -6,7 +6,8 @@ reference structure, or on the configuration itself) and read the species and
 positions from a ``"configuration"`` :class:`~discuspdf.Structure` that has the
 same lattice, supercell and site/cell bookkeeping.  Nodes of the list are
 matched to atoms of the configuration by (``site_label``, ``cell_index``); a node
-with no atom in the configuration is a **vacancy**.
+with no atom in the configuration is a **vacancy**; an atom that matches no
+node is an error (it means the two structures label their sites differently).
 
 Definitions, domains, null-model standard errors and the mapping to DISCUS
 ``chem corr`` are written out in ``docs/CORRELATIONS.md``.
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import warnings
 
 import numpy as np
 
@@ -32,6 +34,9 @@ __all__ = [
     "displacement_correlation",
     "displacement_correlation_table",
 ]
+
+_ZERO_VARIANCE = 1e-20   # Å²: projected displacements with rms below 1e-10 Å count as zero (round-off)
+_LARGE_DISPLACEMENT = 0.4  # warn when |u| exceeds this fraction of the smallest supercell spacing
 
 
 # ------------------------------------------------------------------ node <-> configuration mapping
@@ -56,7 +61,12 @@ def _check_compatible(nl: NeighborList, configuration: Structure) -> None:
 
 
 def _node_rows(nl: NeighborList, configuration: Structure | None) -> tuple[Structure, np.ndarray]:
-    """(configuration, row of the configuration for each node or -1 for a vacancy)."""
+    """(configuration, row of the configuration for each node or -1 for a vacancy).
+
+    Raises if an atom of the configuration matches no node: the structures then
+    label their sites differently (e.g. ``read_stru`` labels by species), and a
+    silent mismatch would turn real atoms into vacancies.
+    """
     if configuration is None:
         configuration = nl.structure
         if configuration.model != "configuration":
@@ -64,17 +74,25 @@ def _node_rows(nl: NeighborList, configuration: Structure | None) -> tuple[Struc
                 "the neighbor list was built on an average-model structure; pass the "
                 "configuration whose species/positions should be analysed"
             )
-        rows = np.full(nl.n_nodes, -1, dtype=np.int64)
-        rows[:] = nl.node_row
-        return configuration, rows
+        return configuration, np.array(nl.node_row, dtype=np.int64)
     _check_compatible(nl, configuration)
     sl = configuration.site_label
     ci = configuration.cell_index
-    lookup = {(sl[r], int(ci[r, 0]), int(ci[r, 1]), int(ci[r, 2])): r for r in range(configuration.n_atoms)}
+    lookup = {(str(sl[r]), int(ci[r, 0]), int(ci[r, 1]), int(ci[r, 2])): r for r in range(configuration.n_atoms)}
     nsite = nl.node_site
     nci = nl.node_cell_index
-    rows = np.array([lookup.get((nsite[k], int(nci[k, 0]), int(nci[k, 1]), int(nci[k, 2])), -1)
+    rows = np.array([lookup.get((str(nsite[k]), int(nci[k, 0]), int(nci[k, 1]), int(nci[k, 2])), -1)
                      for k in range(nl.n_nodes)], dtype=np.int64)
+    n_unmatched = configuration.n_atoms - int(np.count_nonzero(rows >= 0))
+    if n_unmatched:
+        extra = sorted({str(x) for x in sl} - {str(x) for x in nsite})[:5]
+        raise ValueError(
+            f"{n_unmatched} of {configuration.n_atoms} configuration atoms match no node of the neighbor list "
+            f"by (site_label, cell_index)"
+            + (f"; site labels only in the configuration: {extra}" if extra else "")
+            + ". Both structures must label sites the same way — for DISCUS files read with read_stru "
+            "(labels by species) relabel both with discuspdf.neighbors.label_sites_by_slot"
+        )
     return configuration, rows
 
 
@@ -88,16 +106,16 @@ def node_species(neighbors: NeighborList, configuration: Structure | None = None
     configuration, rows = _node_rows(neighbors, configuration)
     out = np.empty(neighbors.n_nodes, dtype=object)
     have = rows >= 0
-    out[have] = configuration.species[rows[have]]
+    out[have] = [str(x) for x in configuration.species[rows[have]]]
     if not np.all(have):
         if vacancy is None:
             k = int(np.flatnonzero(~have)[0])
             raise ValueError(
-                f"node {k} (site {neighbors.node_site[k]!r}, cell "
+                f"node {k} (site {str(neighbors.node_site[k])!r}, cell "
                 f"{tuple(int(x) for x in neighbors.node_cell_index[k])}) has no atom in the configuration "
                 "and vacancy=None"
             )
-        if vacancy in set(configuration.species):
+        if vacancy in {str(x) for x in configuration.species}:
             raise ValueError(f"vacancy label {vacancy!r} is also a species of the configuration")
         out[~have] = vacancy
     return out
@@ -124,13 +142,47 @@ def concentrations(neighbors: NeighborList, configuration: Structure | None = No
     return out
 
 
-def _n_reversed(nl: NeighborList) -> int:
-    """Number of directed pairs whose reverse (j, i, -shift) is also in the list."""
-    if nl.n_pairs == 0:
-        return 0
-    fwd = _row_keys(np.column_stack([nl.i, nl.j, nl.shift]))
-    rev = _row_keys(np.column_stack([nl.j, nl.i, -nl.shift]))
-    return int(np.isin(rev, fwd).sum())
+# ------------------------------------------------------------------ pair multiplicities (standard errors)
+@dataclasses.dataclass(frozen=True)
+class _PairCounts:
+    n: int            # directed pairs
+    n_reversed: int   # pairs whose exact reverse (j, i, -shift) is in the list
+    n_self: int       # pairs i == j (a node with its own periodic image)
+    s_same: int       # Σ m_ot² over directed node pairs o != t (m = multiplicity over shifts)
+    s_rev: int        # Σ m_ot · m_to over directed node pairs o != t
+
+
+def _pair_counts(i: np.ndarray, j: np.ndarray, shift: np.ndarray) -> _PairCounts:
+    n = len(i)
+    if n == 0:
+        return _PairCounts(0, 0, 0, 0, 0)
+    fwd = _row_keys(np.column_stack([i, j, shift]))
+    rev = _row_keys(np.column_stack([j, i, -shift]))
+    n_reversed = int(np.isin(rev, fwd).sum())
+    self_pair = i == j
+    io, jo = i[~self_pair], j[~self_pair]
+    if len(io) == 0:
+        return _PairCounts(n, n_reversed, int(self_pair.sum()), 0, 0)
+    keys = _row_keys(np.column_stack([io, jo]))
+    uniq, mult = np.unique(keys, return_counts=True)
+    pairs = uniq.view(np.int64).reshape(-1, 2)
+    rkeys = _row_keys(pairs[:, ::-1])
+    pos = np.searchsorted(uniq, rkeys)
+    pos = np.minimum(pos, len(uniq) - 1)
+    has_rev = uniq[pos] == rkeys
+    s_rev = int(np.sum(mult[has_rev] * mult[pos[has_rev]]))
+    return _PairCounts(n, n_reversed, int(self_pair.sum()), int(np.sum(mult.astype(np.int64) ** 2)), s_rev)
+
+
+def _null_variance_factor(pc: _PairCounts, rho):
+    """Var(r) = (S_same + S_rev ρ²) / n² for independent sites; NaN if a node is paired with itself."""
+    if pc.n == 0 or pc.n_self:
+        return np.nan * np.asarray(rho, dtype=float)
+    return (pc.s_same + pc.s_rev * np.asarray(rho, dtype=float) ** 2) / pc.n ** 2
+
+
+_SELF_PAIR_NOTE = ("standard errors undefined: the selection pairs nodes with their own periodic images "
+                   "(cutoff or translation spans the whole supercell); enlarge the supercell")
 
 
 # ------------------------------------------------------------------ occupational (Feature 13)
@@ -147,6 +199,7 @@ class OccupationalCorrelation:
         n_pairs: directed pairs counted (both ends among ``species``).
         n_unique_pairs: distinct unordered pairs among them.
         n_reversed: pairs whose reverse direction is also counted.
+        n_self_pairs: pairs that join a node to its own periodic image.
         counts: ``N[a, b]``.
         joint: ``p[a, b] = N[a, b] / n_pairs``.
         origin_concentration, target_concentration: pair-weighted marginals
@@ -157,12 +210,14 @@ class OccupationalCorrelation:
             the correlation coefficient of the occupation indicators at the two ends.
         stderr_pearson, stderr_warren_cowley: standard errors of ``r`` and ``α``
             under the null model of independent random occupation (see docs).
-        undefined: ``{(a, b): reason}`` for every NaN entry.
+        undefined: ``{(a, b): reason}`` for every NaN value of ``warren_cowley`` or ``pearson``.
+        stderr_note: why the standard errors are NaN although the values are defined, or ``None``.
     """
     species: tuple
     n_pairs: int
     n_unique_pairs: int
     n_reversed: int
+    n_self_pairs: int
     counts: np.ndarray
     joint: np.ndarray
     origin_concentration: np.ndarray
@@ -173,6 +228,7 @@ class OccupationalCorrelation:
     stderr_pearson: np.ndarray
     stderr_warren_cowley: np.ndarray
     undefined: dict
+    stderr_note: str | None = None
 
     def _ix(self, a: str, b: str) -> tuple[int, int]:
         try:
@@ -199,81 +255,110 @@ class OccupationalCorrelation:
             raise ValueError("DISCUS occupational correlations need two different species")
         ia, ib = self._ix(a, b)
         N = self.counts
-        naa, nab, nba, nbb = N[ia, ia], N[ia, ib], N[ib, ia], N[ib, ib]
+        naa, nab, nba, nbb = (int(x) for x in (N[ia, ia], N[ia, ib], N[ib, ia], N[ib, ib]))
         n = naa + nab + nba + nbb
-        if n == 0:
+        num = 2 * naa + nab + nba        # θ = num / (2n), exact in integers
+        if n == 0 or num == 0 or num == 2 * n:
             return math.nan
-        theta = (2 * naa + nab + nba) / (2 * n)
-        if theta <= 0 or theta >= 1:
-            return math.nan
+        theta = num / (2 * n)
         return float((naa / n - theta ** 2) / (theta * (1 - theta)))
 
 
-def _occupational_from_codes(o: np.ndarray, t: np.ndarray, names: list, n_unique: int, n_rev: int,
-                             pooled: np.ndarray) -> OccupationalCorrelation:
+def _occupational_core(o: np.ndarray, t: np.ndarray, names: list, pc: _PairCounts,
+                       pooled: np.ndarray) -> OccupationalCorrelation:
     S = len(names)
     n = len(o)
-    counts = np.zeros((S, S), dtype=np.int64)
-    np.add.at(counts, (o, t), 1)
+    counts = np.bincount(o * S + t, minlength=S * S).reshape(S, S).astype(np.int64)
     undefined: dict = {}
-    nan = np.full((S, S), np.nan)
     if n == 0:
+        nan = np.full((S, S), np.nan)
         for a in names:
             for b in names:
                 undefined[(a, b)] = "no pairs"
-        z = np.zeros(S)
-        return OccupationalCorrelation(tuple(names), 0, 0, 0, counts, nan.copy(), z * np.nan, z * np.nan,
-                                       nan.copy(), nan.copy(), nan.copy(), nan.copy(), nan.copy(), undefined)
+        z = np.full(S, np.nan)
+        return OccupationalCorrelation(tuple(names), 0, 0, 0, 0, counts, nan.copy(), z, z.copy(), nan.copy(),
+                                       nan.copy(), nan.copy(), nan.copy(), nan.copy(), undefined)
+    row_n = counts.sum(axis=1)          # origins of each species (integer)
+    col_n = counts.sum(axis=0)          # targets of each species (integer)
     joint = counts / n
-    co = joint.sum(axis=1)
-    ct = joint.sum(axis=0)
-    row = counts.sum(axis=1, keepdims=True)
+    co = row_n / n
+    ct = col_n / n
+    delta = np.eye(S, dtype=bool)
+    # Zero denominators are decided on the integer counts, never on rounded fractions.
+    origin_absent = (row_n == 0)[:, None] & np.ones((1, S), bool)
+    target_absent = np.ones((S, 1), bool) & (col_n == 0)[None, :]
+    origin_pure = (row_n == n)[:, None] & np.ones((1, S), bool)
+    target_pure = np.ones((S, 1), bool) & (col_n == n)[None, :]
+    wc_zero_den = (~delta & target_absent) | (delta & target_pure)
+    wc_undefined = origin_absent | wc_zero_den
+    pr_undefined = origin_absent | target_absent | origin_pure | target_pure
     with np.errstate(invalid="ignore", divide="ignore"):
-        cond = np.where(row > 0, counts / np.where(row > 0, row, 1), np.nan)
-        delta = np.eye(S)
+        cond = np.where(row_n[:, None] > 0, counts / np.where(row_n[:, None] > 0, row_n[:, None], 1), np.nan)
         wc_den = delta - ct[None, :]
-        wc = (cond - ct[None, :]) / wc_den
-        var_o = co * (1 - co)
-        var_t = ct * (1 - ct)
-        pr_den = np.sqrt(np.outer(var_o, var_t))
-        pr = (joint - np.outer(co, ct)) / pr_den
-        # null-model standard error: Var(r) = (n + n_rev rho_ab^2) / n^2 with rho_ab the
-        # correlation of the a- and b-indicators at one site (pooled concentrations)
+        wc = np.where(wc_undefined, np.nan, (cond - ct[None, :]) / np.where(wc_undefined, 1.0, wc_den))
+        pr_den = np.sqrt(np.outer(co * (1 - co), ct * (1 - ct)))
+        pr = np.where(pr_undefined, np.nan,
+                      (joint - np.outer(co, ct)) / np.where(pr_undefined, 1.0, pr_den))
+        # Null model (independent random occupation, pooled concentrations of the nodes involved):
+        # rho_ab = correlation of the a- and b-indicators at one site.
         cp = pooled
-        cov_site = np.diag(cp) - np.outer(cp, cp)
         sd_site = np.sqrt(cp * (1 - cp))
-        rho_site = cov_site / np.outer(sd_site, sd_site)
-        se_r = np.sqrt((n + n_rev * rho_site ** 2) / n ** 2)
+        rho_site = (np.diag(cp) - np.outer(cp, cp)) / np.outer(sd_site, sd_site)
+        se_r = np.sqrt(_null_variance_factor(pc, rho_site))
+        se_r = np.where(pr_undefined, np.nan, se_r)
         factor = pr_den / (co[:, None] * wc_den)
-        se_wc = np.abs(factor) * se_r
+        se_wc = np.where(wc_undefined | pr_undefined, np.nan, np.abs(factor) * se_r)
     for ia, a in enumerate(names):
         for ib, b in enumerate(names):
-            reason = None
-            if co[ia] == 0:
+            if not (wc_undefined[ia, ib] or pr_undefined[ia, ib]):
+                continue
+            if origin_absent[ia, ib]:
                 reason = f"species {a!r} absent at the origins"
-            elif ct[ib] == 0:
-                reason = f"species {b!r} absent at the targets"
-            elif co[ia] == 1 or ct[ib] == 1:
-                reason = "pure end member (zero variance)"
-            if reason is not None:
-                pr[ia, ib] = np.nan
-                se_r[ia, ib] = np.nan
-                # α stays defined where its own denominators are nonzero
-                if co[ia] == 0 or ct[ib] == 0 or (ia == ib and ct[ib] == 1):
-                    wc[ia, ib] = np.nan
-                    se_wc[ia, ib] = np.nan
-                    if ia == ib and ct[ib] == 1 and co[ia] != 0:
-                        reason = "pure end member (δ_ab − c_b = 0)"
-                else:
-                    se_wc[ia, ib] = np.nan
-                undefined[(a, b)] = reason
-            if np.isnan(cond[ia, ib]) and (a, b) not in undefined:
-                undefined[(a, b)] = f"species {a!r} absent at the origins"
+            elif wc_zero_den[ia, ib]:
+                reason = (f"species {b!r} absent at the targets" if ia != ib
+                          else f"pure end member: every target is {b!r} (δ_ab − c_b = 0)")
+            elif target_absent[ia, ib]:
+                reason = f"species {b!r} absent at the targets (correlation coefficient undefined)"
+            else:
+                reason = "pure end member (zero variance; correlation coefficient undefined)"
+            undefined[(a, b)] = reason
+    note = _SELF_PAIR_NOTE if pc.n_self else None
     return OccupationalCorrelation(
-        species=tuple(names), n_pairs=n, n_unique_pairs=n_unique, n_reversed=n_rev, counts=counts,
-        joint=joint, origin_concentration=co, target_concentration=ct, conditional=cond,
-        warren_cowley=wc, pearson=pr, stderr_pearson=se_r, stderr_warren_cowley=se_wc, undefined=undefined,
+        species=tuple(names), n_pairs=n, n_unique_pairs=n - pc.n_reversed // 2, n_reversed=pc.n_reversed,
+        n_self_pairs=pc.n_self, counts=counts, joint=joint, origin_concentration=co,
+        target_concentration=ct, conditional=cond, warren_cowley=wc, pearson=pr, stderr_pearson=se_r,
+        stderr_warren_cowley=se_wc, undefined=undefined, stderr_note=note,
     )
+
+
+def _species_axis(spec: np.ndarray, species) -> list[str]:
+    if species is None:
+        return sorted({str(x) for x in spec})
+    names = [str(s) for s in ([species] if isinstance(species, str) else species)]
+    if len(set(names)) != len(names) or not names:
+        raise ValueError(f"species must be distinct and non-empty, got {species!r}")
+    return names
+
+
+def _occupational(neighbors: NeighborList, mask, spec: np.ndarray, names: list) -> OccupationalCorrelation:
+    """Core shared by the single call and the tables (``spec``: species per node, already mapped)."""
+    names_arr = np.array(names)
+    order = np.argsort(names_arr)
+    i = neighbors.i if mask is None else neighbors.i[mask]
+    j = neighbors.j if mask is None else neighbors.j[mask]
+    shift = neighbors.shift if mask is None else neighbors.shift[mask]
+    node_code = np.full(len(spec), -1, dtype=np.int64)
+    pos = np.searchsorted(names_arr[order], spec)
+    pos = np.minimum(pos, len(names) - 1)
+    hit = names_arr[order][pos] == spec
+    node_code[hit] = order[pos[hit]]
+    o, t = node_code[i], node_code[j]
+    keep = (o >= 0) & (t >= 0)
+    i, j, shift, o, t = i[keep], j[keep], shift[keep], o[keep], t[keep]
+    nodes = np.unique(np.concatenate([i, j]))
+    pooled = (np.bincount(node_code[nodes], minlength=len(names)) / len(nodes) if nodes.size
+              else np.full(len(names), np.nan))
+    return _occupational_core(o, t, names, _pair_counts(i, j, shift), pooled)
 
 
 def occupational_correlation(neighbors: NeighborList, configuration: Structure | None = None, *,
@@ -286,7 +371,8 @@ def occupational_correlation(neighbors: NeighborList, configuration: Structure |
             ``nl.select(origin_site=..., target_site=..., translation=..., symmetric=True)``
             for one signed neighbor vector.
         configuration: the configuration to read species from (default: the
-            list's own structure).  Must match lattice, supercell and pbc.
+            list's own structure).  Must match lattice, supercell and pbc, and
+            every atom must match a node (see module docstring).
         species: restrict to pairs with **both** ends among these species (as
             DISCUS does); default: all species found at the nodes of the list
             (whether or not they occur in the selected pairs), plus the vacancy
@@ -294,48 +380,36 @@ def occupational_correlation(neighbors: NeighborList, configuration: Structure |
         vacancy: label of empty nodes; ``None`` makes them an error.
     """
     spec = node_species(neighbors, configuration, vacancy=vacancy).astype(str)
-    if species is None:
-        names = sorted(set(spec))
-    else:
-        names = [str(s) for s in ([species] if isinstance(species, str) else species)]
-        if len(set(names)) != len(names) or not names:
-            raise ValueError(f"species must be distinct and non-empty, got {species!r}")
-    code = {s: k for k, s in enumerate(names)}
-    so = spec[neighbors.i]
-    st = spec[neighbors.j]
-    keep = np.isin(so, names) & np.isin(st, names)
-    sub = neighbors._subset(keep)
-    o = np.array([code[s] for s in so[keep]], dtype=np.int64)
-    t = np.array([code[s] for s in st[keep]], dtype=np.int64)
-    nodes = np.unique(np.concatenate([sub.i, sub.j]))
-    pooled = np.array([np.mean(spec[nodes] == s) if nodes.size else np.nan for s in names])
-    n_rev = _n_reversed(sub)
-    n_unique = sub.n_pairs - n_rev // 2
-    return _occupational_from_codes(o, t, names, n_unique, n_rev, pooled)
+    return _occupational(neighbors, None, spec, _species_axis(spec, species))
 
 
 def _group_labels(nl: NeighborList, by: str, shell_tol: float):
+    """[(keys, boolean mask)] per group, in order of distance."""
+    if nl.n_pairs == 0:
+        if by not in ("shell", "vector"):
+            raise ValueError(f"by must be 'shell' or 'vector', got {by!r}")
+        return []
     if by == "shell":
         labels = nl._shell_labels(shell_tol)
-        keys = []
-        for k in range(1, int(labels.max(initial=0)) + 1):
-            d = nl.distance[labels == k]
-            keys.append(({"shell": k, "distance": float(d.mean())}, labels == k))
-        return keys
-    if by == "vector":
-        tr = nl.translation
-        osite = nl.origin_site.astype(str)
-        tsite = nl.target_site.astype(str)
-        groups: dict = {}
-        for p in range(nl.n_pairs):
-            key = (str(osite[p]), str(tsite[p]), int(tr[p, 0]), int(tr[p, 1]), int(tr[p, 2]))
-            groups.setdefault(key, []).append(p)
         out = []
-        for key in sorted(groups, key=lambda k: (float(nl.distance[groups[k][0]]), k)):
-            m = np.zeros(nl.n_pairs, dtype=bool)
-            m[groups[key]] = True
-            out.append(({"origin_site": key[0], "target_site": key[1], "translation": key[2:],
-                         "distance": float(nl.distance[groups[key][0]])}, m))
+        for k in range(1, int(labels.max()) + 1):
+            m = labels == k
+            out.append(({"shell": k, "distance": float(nl.distance[m].mean())}, m))
+        return out
+    if by == "vector":
+        names, code = np.unique(nl.node_site.astype(str), return_inverse=True)
+        code = code.reshape(-1)
+        rows = np.column_stack([code[nl.i], code[nl.j], nl.translation])
+        uniq, first, inverse = np.unique(rows, axis=0, return_index=True, return_inverse=True)
+        inverse = inverse.reshape(-1)
+        order = np.lexsort((uniq[:, 4], uniq[:, 3], uniq[:, 2], uniq[:, 1], uniq[:, 0],
+                            np.round(nl.distance[first], 9)))
+        out = []
+        for g in order:
+            m = inverse == g
+            out.append(({"origin_site": str(names[uniq[g, 0]]), "target_site": str(names[uniq[g, 1]]),
+                         "translation": tuple(int(x) for x in uniq[g, 2:]),
+                         "distance": float(nl.distance[first[g]])}, m))
         return out
     raise ValueError(f"by must be 'shell' or 'vector', got {by!r}")
 
@@ -351,9 +425,11 @@ def occupational_correlation_table(neighbors: NeighborList, configuration: Struc
     keys, ``n_pairs``, ``n_unique_pairs``, ``a``, ``b``, ``count``, ``joint``,
     ``conditional``, ``warren_cowley``, ``pearson`` and both standard errors.
     """
+    spec = node_species(neighbors, configuration, vacancy=vacancy).astype(str)
+    names = _species_axis(spec, species)
     rows = []
     for key, mask in _group_labels(neighbors, by, shell_tol):
-        res = occupational_correlation(neighbors._subset(mask), configuration, species=species, vacancy=vacancy)
+        res = _occupational(neighbors, mask, spec, names)
         for ia, a in enumerate(res.species):
             for ib, b in enumerate(res.species):
                 rows.append({**key, "n_pairs": res.n_pairs, "n_unique_pairs": res.n_unique_pairs,
@@ -367,8 +443,6 @@ def occupational_correlation_table(neighbors: NeighborList, configuration: Struc
 
 
 # ------------------------------------------------------------------ displacement (Feature 14)
-_ZERO_VARIANCE = 1e-20   # Å²: projected displacements with rms below 1e-10 Å count as zero (round-off)
-
 def displacements(neighbors: NeighborList, configuration: Structure, *, reference="neighbors") -> np.ndarray:
     """(n_nodes, 3) Cartesian displacement of every node's atom from its reference position (Å).
 
@@ -380,23 +454,24 @@ def displacements(neighbors: NeighborList, configuration: Structure, *, referenc
             — additionally subtract, for every site label, the mean displacement
             of that site over all cells (DISCUS ``chem`` measures displacements
             from the average position of each site in this way); or a
-            ``Structure`` with the same nodes (positions taken from it).
+            configuration ``Structure`` with the same sites (positions taken from it).
 
-    The difference is taken as the minimum image in the structure's cell for
-    periodic structures (so wrapping of the configuration does not matter);
-    displacements longer than half the shortest supercell spacing are ambiguous.
+    The difference is taken as the minimum image in the supercell for periodic
+    structures (so wrapping of the configuration does not matter).  A
+    displacement longer than half the shortest supercell spacing would be folded
+    back; a ``RuntimeWarning`` is issued when any displacement exceeds 0.4 of it.
     Rows of vacant nodes are NaN.
     """
     config, rows = _node_rows(neighbors, configuration)
     if isinstance(reference, Structure):
-        ref_nl_rows = _node_rows(neighbors, reference)[1] if reference.model == "configuration" else None
-        if ref_nl_rows is None:
+        if reference.model != "configuration":
             raise ValueError("a reference Structure must be a configuration with the same sites")
-        if np.any(ref_nl_rows < 0):
+        ref_rows = _node_rows(neighbors, reference)[1]
+        if np.any(ref_rows < 0):
             raise ValueError("the reference structure lacks some nodes of the neighbor list")
-        ref_frac = reference.frac[ref_nl_rows]
-        mode = "neighbors"
-    elif reference in ("neighbors", "site_average"):
+        ref_frac = reference.frac[ref_rows]
+        mode = "structure"
+    elif isinstance(reference, str) and reference in ("neighbors", "site_average"):
         ref_frac = neighbors.node_frac
         mode = reference
     else:
@@ -406,6 +481,13 @@ def displacements(neighbors: NeighborList, configuration: Structure, *, referenc
     df = config.frac[rows[have]] - ref_frac[have]
     if all(config.pbc):
         df, _ = config.lattice.minimum_image(df)
+        spacing = float(np.min(1.0 / np.linalg.norm(config.lattice.reciprocal_matrix, axis=1)))
+        longest = float(np.max(np.linalg.norm(df @ config.lattice.matrix, axis=1), initial=0.0))
+        if longest > _LARGE_DISPLACEMENT * spacing:
+            warnings.warn(
+                f"a displacement of {longest:.3g} Å exceeds {_LARGE_DISPLACEMENT} of the smallest supercell "
+                f"spacing ({spacing:.3g} Å); displacements beyond half of it are folded back by the "
+                "minimum image — check the reference structure", RuntimeWarning, stacklevel=2)
     u[have] = df @ config.lattice.matrix
     if mode == "site_average":
         site = neighbors.node_site.astype(str)
@@ -416,10 +498,6 @@ def displacements(neighbors: NeighborList, configuration: Structure, *, referenc
     return u
 
 
-def _direction(neighbors: NeighborList, direction, frame: str) -> np.ndarray:
-    return neighbors._direction_unit(direction, frame)
-
-
 @dataclasses.dataclass(frozen=True)
 class DisplacementCorrelation:
     """Displacement statistics of one set of directed pairs.
@@ -427,7 +505,7 @@ class DisplacementCorrelation:
     Attributes:
         n_pairs: pairs used (both ends occupied and of the selected species).
         n_skipped: pairs dropped because an end is vacant or of another species.
-        n_unique_pairs, n_reversed: as for :class:`OccupationalCorrelation`.
+        n_unique_pairs, n_reversed, n_self_pairs: as for :class:`OccupationalCorrelation`.
         centered: whether means over the pairs were subtracted (Pearson) or not (DISCUS).
         origin_mean, target_mean: (3,) mean displacement of the origins / targets over the pairs (Å).
         covariance: (3, 3) ``<(u_o − m_o)(u_t − m_t)ᵀ>`` over the pairs (Å²; means are 0 if not centered).
@@ -438,11 +516,13 @@ class DisplacementCorrelation:
         stderr_null: standard error of ``correlation`` under the null model of
             independent displacements (see docs); NaN when undefined.
         undefined: reason when ``correlation`` is NaN, else ``None``.
+        stderr_note: why ``stderr_null`` is NaN although ``correlation`` is defined, or ``None``.
     """
     n_pairs: int
     n_skipped: int
     n_unique_pairs: int
     n_reversed: int
+    n_self_pairs: int
     centered: bool
     origin_mean: np.ndarray
     target_mean: np.ndarray
@@ -454,6 +534,7 @@ class DisplacementCorrelation:
     correlation: float
     stderr_null: float
     undefined: str | None
+    stderr_note: str | None = None
 
     @property
     def correlation_matrix(self) -> np.ndarray:
@@ -462,7 +543,74 @@ class DisplacementCorrelation:
         vt = np.diag(self.target_covariance)
         with np.errstate(invalid="ignore", divide="ignore"):
             den = np.sqrt(np.outer(vo, vt))
-            return np.where(den > 0, self.covariance / np.where(den > 0, den, 1), np.nan)
+            ok = den > _ZERO_VARIANCE
+            return np.where(ok, self.covariance / np.where(ok, den, 1), np.nan)
+
+
+def _species_mask(spec: np.ndarray, value, nodes: np.ndarray) -> np.ndarray:
+    if value is None:
+        return np.ones(len(nodes), dtype=bool)
+    vals = [value] if isinstance(value, str) else list(value)
+    return np.isin(spec[nodes], [str(v) for v in vals])
+
+
+def _displacement(neighbors: NeighborList, mask, u: np.ndarray, spec: np.ndarray, do, dt, centered: bool,
+                  origin_species, target_species) -> DisplacementCorrelation:
+    i = neighbors.i if mask is None else neighbors.i[mask]
+    j = neighbors.j if mask is None else neighbors.j[mask]
+    shift = neighbors.shift if mask is None else neighbors.shift[mask]
+    total = len(i)
+    keep = ~np.isnan(u[i, 0]) & ~np.isnan(u[j, 0])
+    keep &= _species_mask(spec, origin_species, i) & _species_mask(spec, target_species, j)
+    i, j, shift = i[keep], j[keep], shift[keep]
+    n = len(i)
+    pc = _pair_counts(i, j, shift)
+    nan3, nan33 = np.full(3, np.nan), np.full((3, 3), np.nan)
+    if n == 0:
+        return DisplacementCorrelation(0, total, 0, 0, 0, centered, nan3, nan3, nan33, nan33, nan33,
+                                       do, dt, math.nan, math.nan, "no pairs with both ends occupied")
+    uo, ut = u[i], u[j]
+    mo = uo.mean(axis=0) if centered else np.zeros(3)
+    mt = ut.mean(axis=0) if centered else np.zeros(3)
+    ao, at = uo - mo, ut - mt
+    cov, cov_o, cov_t = ao.T @ at / n, ao.T @ ao / n, at.T @ at / n
+    corr, se, reason, note = math.nan, math.nan, None, None
+    if do is None:
+        reason = "no direction given"
+    else:
+        x, y = ao @ do, at @ dt
+        sxx, syy = float(x @ x / n), float(y @ y / n)
+        if sxx <= _ZERO_VARIANCE or syy <= _ZERO_VARIANCE:
+            reason = "zero variance of the projected displacements (rms < 1e-10 Å)"
+        else:
+            corr = float(x @ y / n / math.sqrt(sxx * syy))
+            # Null model: independent displacements; a pair counted in both orientations
+            # contributes the same-atom correlation of the two projections (rho_self).
+            nodes = np.unique(np.concatenate([i, j]))
+            un = u[nodes] - (u[nodes].mean(axis=0) if centered else 0.0)
+            a1, a2 = un @ do, un @ dt
+            den = math.sqrt(float(a1 @ a1) * float(a2 @ a2))
+            rho_self = float(a1 @ a2) / den if den > 0 else 0.0
+            se = float(np.sqrt(_null_variance_factor(pc, rho_self)))
+            if pc.n_self:
+                note = _SELF_PAIR_NOTE
+    return DisplacementCorrelation(
+        n_pairs=n, n_skipped=total - n, n_unique_pairs=n - pc.n_reversed // 2, n_reversed=pc.n_reversed,
+        n_self_pairs=pc.n_self, centered=centered,
+        origin_mean=mo if centered else uo.mean(axis=0), target_mean=mt if centered else ut.mean(axis=0),
+        covariance=cov, origin_covariance=cov_o, target_covariance=cov_t, origin_direction=do,
+        target_direction=dt, correlation=corr, stderr_null=se, undefined=reason, stderr_note=note,
+    )
+
+
+def _directions(neighbors, direction, target_direction, frame):
+    if direction is None:
+        if target_direction is not None:
+            raise ValueError("target_direction needs direction")
+        return None, None
+    do = neighbors._direction_unit(direction, frame)
+    dt = do if target_direction is None else neighbors._direction_unit(target_direction, frame)
+    return do, dt
 
 
 def displacement_correlation(neighbors: NeighborList, configuration: Structure, *, direction=None,
@@ -477,71 +625,17 @@ def displacement_correlation(neighbors: NeighborList, configuration: Structure, 
         direction: projection direction at the origin; ``target_direction``
             defaults to the same.  ``direction_frame="fractional"`` reads them as
             [uvw] of the parent cell.  Without a direction only the covariance
-            matrices are computed and ``correlation`` is NaN.
+            matrices are computed and ``correlation`` is NaN.  (DISCUS's
+            direction-free ``dir all`` mode is not implemented.)
         reference: see :func:`displacements`.
         centered: subtract the pair means (Pearson correlation, default) or not
             (DISCUS ``chem corr disp`` convention ``<xy>/sqrt(<x²><y²>)``).
         origin_species, target_species: keep only pairs whose ends carry these species.
     """
+    do, dt = _directions(neighbors, direction, target_direction, direction_frame)
     u = displacements(neighbors, configuration, reference=reference)
     spec = node_species(neighbors, configuration).astype(str)
-    keep = ~np.isnan(u[neighbors.i, 0]) & ~np.isnan(u[neighbors.j, 0])
-
-    def _species_mask(value, nodes):
-        if value is None:
-            return np.ones(len(nodes), dtype=bool)
-        vals = [value] if isinstance(value, str) else list(value)
-        return np.isin(spec[nodes], [str(v) for v in vals])
-    keep &= _species_mask(origin_species, neighbors.i) & _species_mask(target_species, neighbors.j)
-    sub = neighbors._subset(keep)
-    n = sub.n_pairs
-    uo = u[sub.i]
-    ut = u[sub.j]
-    n_rev = _n_reversed(sub)
-    nan3 = np.full(3, np.nan)
-    nan33 = np.full((3, 3), np.nan)
-    do = None if direction is None else _direction(neighbors, direction, direction_frame)
-    dt = None
-    if direction is not None:
-        dt = do if target_direction is None else _direction(neighbors, target_direction, direction_frame)
-    elif target_direction is not None:
-        raise ValueError("target_direction needs direction")
-    if n == 0:
-        return DisplacementCorrelation(0, neighbors.n_pairs, 0, 0, centered, nan3, nan3, nan33, nan33, nan33,
-                                       do, dt, math.nan, math.nan, "no pairs with both ends occupied")
-    mo = uo.mean(axis=0) if centered else np.zeros(3)
-    mt = ut.mean(axis=0) if centered else np.zeros(3)
-    ao = uo - mo
-    at = ut - mt
-    cov = ao.T @ at / n
-    cov_o = ao.T @ ao / n
-    cov_t = at.T @ at / n
-    corr, se, reason = math.nan, math.nan, None
-    if do is None:
-        reason = "no direction given"
-    else:
-        x = ao @ do
-        y = at @ dt
-        sxx, syy = float(x @ x / n), float(y @ y / n)
-        if sxx <= _ZERO_VARIANCE or syy <= _ZERO_VARIANCE:
-            reason = "zero variance of the projected displacements (rms < 1e-10 Å)"
-        else:
-            corr = float(x @ y / n / math.sqrt(sxx * syy))
-            # Null model: independent displacements; a reversed pair contributes the
-            # same-atom correlation of the two projections (rho_self).
-            nodes = np.unique(np.concatenate([sub.i, sub.j]))
-            un = u[nodes] - (u[nodes].mean(axis=0) if centered else 0.0)
-            a1, a2 = un @ do, un @ dt
-            den = math.sqrt(float(a1 @ a1) * float(a2 @ a2))
-            rho_self = float(a1 @ a2) / den if den > 0 else 0.0
-            se = math.sqrt((n + n_rev * rho_self ** 2) / n ** 2)
-    return DisplacementCorrelation(
-        n_pairs=n, n_skipped=neighbors.n_pairs - n, n_unique_pairs=n - n_rev // 2, n_reversed=n_rev,
-        centered=centered, origin_mean=mo if centered else uo.mean(axis=0),
-        target_mean=mt if centered else ut.mean(axis=0), covariance=cov, origin_covariance=cov_o,
-        target_covariance=cov_t, origin_direction=do, target_direction=dt, correlation=corr,
-        stderr_null=se, undefined=reason,
-    )
+    return _displacement(neighbors, None, u, spec, do, dt, centered, origin_species, target_species)
 
 
 def displacement_correlation_table(neighbors: NeighborList, configuration: Structure, *, direction,
@@ -552,14 +646,13 @@ def displacement_correlation_table(neighbors: NeighborList, configuration: Struc
     """One row per group (``by="shell"`` or ``by="vector"``, as in
     :func:`occupational_correlation_table`) with ``n_pairs``, ``correlation``,
     ``stderr_null`` and ``covariance`` (the projected ``<x y>`` in Å²)."""
+    do, dt = _directions(neighbors, direction, target_direction, direction_frame)
+    u = displacements(neighbors, configuration, reference=reference)
+    spec = node_species(neighbors, configuration).astype(str)
     rows = []
     for key, mask in _group_labels(neighbors, by, shell_tol):
-        res = displacement_correlation(
-            neighbors._subset(mask), configuration, direction=direction, target_direction=target_direction,
-            direction_frame=direction_frame, reference=reference, centered=centered,
-            origin_species=origin_species, target_species=target_species)
-        proj = (math.nan if res.origin_direction is None or res.n_pairs == 0
-                else float(res.origin_direction @ res.covariance @ res.target_direction))
+        res = _displacement(neighbors, mask, u, spec, do, dt, centered, origin_species, target_species)
+        proj = (math.nan if do is None or res.n_pairs == 0 else float(do @ res.covariance @ dt))
         rows.append({**key, "n_pairs": res.n_pairs, "n_skipped": res.n_skipped,
                      "correlation": res.correlation, "stderr_null": res.stderr_null, "covariance": proj,
                      "undefined": res.undefined})
