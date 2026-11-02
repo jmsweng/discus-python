@@ -1,0 +1,52 @@
+xdpyinfo:  unable to open display "".
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : \home\user\discus_powder\work\20261102T220205Z_LAPTOP-NGU3BT0N\delta002\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+pgxwin_server: cannot connect to X server []
+free(): invalid next size (normal)
+
+Program received signal SIGABRT: Process abort signal.
+
+Backtrace for this error:
+#0  0x7de1f2023960 in ???
+#1  0x7de1f2022ac5 in ???
+#2  0x7de1f184251f in ???
+#3  0x7de1f18969bc in pthread_kill
+#4  0x7de1f1842475 in raise
+#5  0x7de1f18287f2 in abort
+#6  0x7de1f1889636 in ???
+#7  0x7de1f18a0cbb in ???
+#8  0x7de1f18a2c9b in ???
+#9  0x7de1f18a5412 in __libc_free
+#10  0x58f4a977d93b in __powder_write_mod_MOD_powder_convolute
+#11  0x58f4a9775e55 in __powder_top_mod_MOD_powder_run_post
+#12  0x58f4a977623a in __powder_top_mod_MOD_powder_run
+#13  0x58f4a977731e in __powder_top_mod_MOD_do_powder
+#14  0x58f4a9b962de in discus_mache_kdo_
+#15  0x58f4a9b9413c in __discus_loop_mod_MOD_discus_loop
+#16  0x58f4a9b6c7da in suite_mache_kdo_
+#17  0x58f4a9b6afc0 in __suite_loop_mod_MOD_suite_loop
+#18  0x58f4a96d5f6a in MAIN__
+#19  0x58f4a96d5bee in main
