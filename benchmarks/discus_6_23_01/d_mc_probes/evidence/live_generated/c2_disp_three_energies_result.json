@@ -1,0 +1,75 @@
+{
+ "directory": "C:\\tmp\\mclive\\c2_disp_three_energies\\9b016f0730534946aa3980c61db9124a",
+ "report": [
+  {
+   "neighborhood": 1,
+   "kind": "spring",
+   "a": "CU",
+   "b": "CU",
+   "target": 3.0,
+   "achieved": 3.002,
+   "sigma": 0.067,
+   "diff": -0.002,
+   "rel_diff": -0.001,
+   "pairs": 20736,
+   "mode": "ENER",
+   "reached": null
+  },
+  {
+   "neighborhood": 1,
+   "kind": "displacement",
+   "a": "CU",
+   "b": "CU",
+   "target": 0.0,
+   "achieved": 0.018,
+   "sigma": null,
+   "diff": -0.018,
+   "rel_diff": -0.018,
+   "pairs": 10368,
+   "mode": "ENER",
+   "reached": null
+  },
+  {
+   "neighborhood": 2,
+   "kind": "lennard_jones",
+   "a": "CU",
+   "b": "CU",
+   "target": 4.243,
+   "achieved": 4.244,
+   "sigma": 0.074,
+   "diff": -0.001,
+   "rel_diff": -0.0,
+   "pairs": 41472,
+   "mode": "ENER",
+   "reached": null
+  }
+ ],
+ "measure": [
+  {
+   "type": "SpringTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Cu",
+   "pairs": 10368,
+   "value": 3.001830879099968,
+   "std": 0.06706997135505376
+  },
+  {
+   "type": "DisplacementTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Cu",
+   "pairs": 10368,
+   "value": 0.017854639416171998
+  },
+  {
+   "type": "LennardJonesTarget",
+   "neighborhood": 1,
+   "a": "Cu",
+   "b": "Cu",
+   "pairs": 20736,
+   "value": 4.2439267322453125,
+   "std": 0.07366301321247336
+  }
+ ]
+}

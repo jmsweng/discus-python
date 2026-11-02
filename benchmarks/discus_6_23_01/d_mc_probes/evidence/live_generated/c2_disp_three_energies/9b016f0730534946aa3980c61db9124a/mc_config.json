@@ -1,0 +1,262 @@
+{
+ "schema": "discuspdf.MCConfig",
+ "version": 1,
+ "neighborhoods": [
+  {
+   "vectors": [
+    [
+     1,
+     1,
+     [
+      1,
+      0,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      -1,
+      0,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      -1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      0,
+      1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      0,
+      -1
+     ]
+    ]
+   ],
+   "symmetric": true
+  },
+  {
+   "vectors": [
+    [
+     1,
+     1,
+     [
+      1,
+      1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      1,
+      -1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      1,
+      0,
+      1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      1,
+      0,
+      -1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      1,
+      1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      1,
+      -1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      -1,
+      -1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      -1,
+      1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      -1,
+      0,
+      -1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      -1,
+      0,
+      1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      -1,
+      -1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      -1,
+      1
+     ]
+    ]
+   ],
+   "symmetric": true
+  }
+ ],
+ "targets": [
+  {
+   "type": "SpringTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Cu",
+   "distance": 3.0,
+   "k": 50.0
+  },
+  {
+   "type": "DisplacementTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Cu",
+   "direction": [
+    1.0,
+    0.0,
+    0.0
+   ],
+   "correlation": null,
+   "energy": 0.5
+  },
+  {
+   "type": "LennardJonesTarget",
+   "neighborhood": 1,
+   "a": "Cu",
+   "b": "Cu",
+   "distance": 4.2426,
+   "depth": 0.5,
+   "n_rep": 12.0,
+   "n_att": 6.0
+  }
+ ],
+ "moves": [
+  {
+   "type": "Shift",
+   "sigma": {
+    "Cu": [
+     0.005,
+     0.005,
+     0.005
+    ]
+   },
+   "probability": 0.6
+  },
+  {
+   "type": "SwapDisplacement",
+   "probability": 0.4,
+   "pairing": "slocal"
+  }
+ ],
+ "seed": [
+  11,
+  22,
+  33,
+  44,
+  55,
+  66,
+  77,
+  88
+ ],
+ "moves_per_atom": 8,
+ "feedback_per_atom": 2,
+ "temperature": 0.5,
+ "output_file": "mc_out.stru",
+ "cautions": [
+  "acceptance is heat-bath for uphill and neutral moves (\u0394E = 0 accepted with probability \u00bd), not Metropolis",
+  "SpringTarget: energy is averaged over each centre's neighbours",
+  "cd energy counts a pair only when the moved atom is the vector origin",
+  "LennardJonesTarget: energy is averaged over each centre's neighbours"
+ ],
+ "n_atoms": 1728,
+ "supercell": [
+  12,
+  12,
+  12
+ ],
+ "species": [
+  "Cu"
+ ],
+ "counts": [
+  13824,
+  3456
+ ]
+}

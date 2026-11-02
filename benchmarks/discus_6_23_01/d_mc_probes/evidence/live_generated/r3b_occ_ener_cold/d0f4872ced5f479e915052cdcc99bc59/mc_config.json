@@ -1,0 +1,113 @@
+{
+ "schema": "discuspdf.MCConfig",
+ "version": 1,
+ "neighborhoods": [
+  {
+   "vectors": [
+    [
+     1,
+     1,
+     [
+      1,
+      0,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      -1,
+      0,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      -1,
+      0
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      0,
+      1
+     ]
+    ],
+    [
+     1,
+     1,
+     [
+      0,
+      0,
+      -1
+     ]
+    ]
+   ],
+   "symmetric": true
+  }
+ ],
+ "targets": [
+  {
+   "type": "OccupationalTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Au",
+   "correlation": null,
+   "energy": 0.5
+  }
+ ],
+ "moves": [
+  {
+   "type": "Swap",
+   "probability": 1.0,
+   "pairing": "all"
+  }
+ ],
+ "seed": [
+  11,
+  22,
+  33,
+  44,
+  55,
+  66,
+  77,
+  88
+ ],
+ "moves_per_atom": 10,
+ "feedback_per_atom": 1,
+ "temperature": 1.0,
+ "output_file": "mc_out.stru",
+ "cautions": [
+  "acceptance is heat-bath for uphill and neutral moves (\u0394E = 0 accepted with probability \u00bd), not Metropolis"
+ ],
+ "n_atoms": 4096,
+ "supercell": [
+  16,
+  16,
+  16
+ ],
+ "species": [
+  "Au",
+  "Cu"
+ ],
+ "counts": [
+  40960,
+  4096
+ ]
+}

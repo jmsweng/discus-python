@@ -1,0 +1,128 @@
+{
+ "cuau_x_tot_c4": {
+  "bragg_meta": "bragg_present",
+  "max_discus": 112792761.57833134,
+  "physics": {
+   "rel_l2": 0.0006978879943623827,
+   "max_abs_over_max": 0.0006366397761081391
+  },
+  "engine": {
+   "rel_l2": 0.00013678149394049096,
+   "max_abs_over_max": 0.000119298751094093
+  },
+  "criterion": {
+   "mode": "engine",
+   "metric": "rel_l2",
+   "max": 1e-09,
+   "value": 0.00013678149394049096,
+   "passed": false
+  }
+ },
+ "cuau_x_dif_c4": {
+  "bragg_meta": "bragg_subtracted",
+  "max_discus": 567317.6236338615,
+  "physics": {
+   "rel_l2": 0.000854784114479718,
+   "max_abs_over_max": 0.0010939085628706038
+  },
+  "engine": {
+   "rel_l2": 0.00027728714713828135,
+   "max_abs_over_max": 0.0003115099985188815
+  },
+  "criterion": {
+   "mode": "engine",
+   "metric": "rel_l2",
+   "max": 1e-09,
+   "value": 0.00027728714713828135,
+   "passed": false
+  }
+ },
+ "cuau_n_tot_c4": {
+  "bragg_meta": "bragg_present",
+  "max_discus": 3881593.4709759997,
+  "physics": {
+   "rel_l2": 0.00012942054669787007,
+   "max_abs_over_max": 0.00018792206307574865
+  },
+  "criterion": {
+   "mode": "physics",
+   "metric": "rel_l2",
+   "max": 1e-09,
+   "value": 0.00012942054669787007,
+   "passed": false
+  }
+ },
+ "cuau_n_dif_c4": {
+  "bragg_meta": "bragg_subtracted",
+  "max_discus": 38.889525703561844,
+  "physics": {
+   "rel_l2": 0.002378352716652486,
+   "max_abs_over_max": 0.0030133731180497637
+  },
+  "criterion": {
+   "mode": "physics",
+   "metric": "rel_l2",
+   "max": 1e-09,
+   "value": 0.002378352716652486,
+   "passed": false
+  }
+ },
+ "cuau_x_tot_nc": {
+  "bragg_meta": "bragg_present",
+  "max_discus": 15169549.430970404,
+  "physics": {
+   "rel_l2": 0.0005473071257558249,
+   "max_abs_over_max": 0.0005202403380987835
+  },
+  "engine": {
+   "rel_l2": 9.949504790694527e-05,
+   "max_abs_over_max": 9.670931105496164e-05
+  }
+ },
+ "cuau_x_dif_nc": {
+  "bragg_meta": "bragg_subtracted",
+  "max_discus": 908760.4829427722,
+  "physics": {
+   "rel_l2": 0.0007243664501177758,
+   "max_abs_over_max": 0.0007124516685039937
+  },
+  "engine": {
+   "rel_l2": 0.00023875556584376567,
+   "max_abs_over_max": 0.00022402278035721146
+  }
+ },
+ "mono_x_tot_m": {
+  "bragg_meta": "bragg_present",
+  "max_discus": 1571725.0889303358,
+  "physics": {
+   "rel_l2": 0.0011263731211281975,
+   "max_abs_over_max": 0.001543409868533439
+  },
+  "engine": {
+   "rel_l2": 0.00019254735658723297,
+   "max_abs_over_max": 0.00020887469734884401
+  },
+  "criterion": {
+   "mode": "engine",
+   "metric": "max_abs_over_max",
+   "max": 0.01,
+   "value": 0.00020887469734884401,
+   "passed": true
+  }
+ },
+ "mono_n_tot_m": {
+  "bragg_meta": "bragg_present",
+  "max_discus": 101452.67197959198,
+  "physics": {
+   "rel_l2": 0.00021130418993042606,
+   "max_abs_over_max": 0.00037296821363571014
+  },
+  "criterion": {
+   "mode": "physics",
+   "metric": "max_abs_over_max",
+   "max": 0.01,
+   "value": 0.00037296821363571014,
+   "passed": true
+  }
+ }
+}

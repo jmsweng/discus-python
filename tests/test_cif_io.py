@@ -998,3 +998,50 @@ def test_loss_report():
         assert isinstance(w[0].message, InteropWarning)
         assert "loss 1" in str(w[0].message)
         assert "loss 2" in str(w[0].message)
+
+
+# ---------------------------------------------------------------------------
+# min_separation is honoured for foreign CIFs (expand-and-merge path)
+# ---------------------------------------------------------------------------
+
+_CLOSE_PAIR_CIF = """data_close
+_cell_length_a 10
+_cell_length_b 10
+_cell_length_c 10
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 90
+_symmetry_space_group_name_H-M 'P 1'
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+{u_header}H1 H 0.0 0.0 0.0{u}
+H2 H 0.005 0.0 0.0{u}
+"""
+
+
+@pytest.mark.parametrize("with_u", [False, True], ids=["no_U", "with_U"])
+def test_foreign_cif_min_separation_honoured(with_u, tmp_path):
+    """Two sites 0.05 Å apart: refused by default, accepted with a smaller or no threshold.
+
+    ``with_U`` exercises the later B-factor ``replace`` step as well."""
+    pytest.importorskip("gemmi")
+    from discuspdf.cif_io import parse_cif, read_cif
+
+    text = _CLOSE_PAIR_CIF.format(u_header="_atom_site_U_iso_or_equiv\n" if with_u else "",
+                                  u=" 0.01" if with_u else "")
+    with pytest.raises(ValueError, match="0.050000"):
+        parse_cif(text)
+    for ms in (0.01, None):
+        s = parse_cif(text, min_separation=ms).structure
+        assert s.n_atoms == 2
+        assert np.isclose(s.distance(0, 1), 0.05)
+        assert (s.b_iso is not None) == with_u
+    path = tmp_path / "close.cif"
+    path.write_text(text, encoding="ascii")
+    assert read_cif(path, min_separation=0.01).structure.n_atoms == 2
+    with pytest.raises(ValueError):
+        parse_cif(text, min_separation=0.06)

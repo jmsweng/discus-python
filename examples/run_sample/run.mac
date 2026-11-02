@@ -15,7 +15,7 @@ set wvle,1.5406
 run
 exit
 output
-outf result.csv
+outf result.pdf
 form pdf, r, 0.0, 12, 0.02
 value PDF
 run

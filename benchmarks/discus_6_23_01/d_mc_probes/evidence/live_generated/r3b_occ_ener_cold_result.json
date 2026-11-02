@@ -1,0 +1,38 @@
+{
+ "directory": "C:\\tmp\\mclive\\r3b_occ_ener_cold\\d0f4872ced5f479e915052cdcc99bc59",
+ "measure": [
+  {
+   "type": "OccupationalTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Au",
+   "pairs": 24576,
+   "value": -0.6575520833333333,
+   "pooled_alpha": -0.6575520833333333
+  }
+ ],
+ "final": {
+  "gen": 40960,
+  "tries": 40961,
+  "accepted": [
+   1854,
+   1243,
+   626
+  ],
+  "fraction": null,
+  "rows": [
+   {
+    "neighborhood": 1,
+    "kind": "occupational",
+    "a": "AU",
+    "b": "CU",
+    "target": 0.0,
+    "achieved": -0.658,
+    "sigma": null,
+    "diff": 0.658,
+    "rel_diff": 0.658,
+    "pairs": 24576
+   }
+  ]
+ }
+}

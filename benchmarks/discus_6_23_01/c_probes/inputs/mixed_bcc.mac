@@ -1,0 +1,34 @@
+discus
+read
+  stru mixed_bcc.stru
+chem
+set mode, quick, period
+set vec, 1, 1, 2, 0, 0, 0
+set vec, 2, 1, 1, 0, 0, 1
+set vec, 3, 1, 2, 0, 0, 0
+set neig, rese
+set neig, vec, 1, number:1
+set neig, dir, 0, 0, 1, 0, 0, 1, number:1
+set neig, vec, 2, number:2
+set neig, dir, 0, 0, 1, 0, 0, 1, number:2
+set neig, vec, 3, number:3
+set neig, dir, 1, 1, 0, 1, 1, 0, number:3
+show
+corr disp, Au, Cu
+eval res[0]
+eval res[1]
+eval res[2]
+eval res[3]
+corr disp, Cu, Cu
+eval res[0]
+eval res[1]
+eval res[2]
+eval res[3]
+corr disp, all, all
+eval res[0]
+eval res[1]
+eval res[2]
+eval res[3]
+exit
+exit
+exit

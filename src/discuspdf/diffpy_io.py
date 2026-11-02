@@ -99,12 +99,14 @@ def from_diffpy(
     *,
     model: str,
     allow_loss: bool = False,
+    min_separation: float | None = 0.1,
 ) -> Structure:
     """Convert a ``diffpy.structure.Structure`` to a :class:`Structure`.
 
     ``model`` is required (no default).  The lattice is recovered via
     ``lattice.cell_parms()`` — NEVER ``.base`` (different orientation).
     Anisotropic atoms are a loss (the isotropic equivalent is kept).
+    ``min_separation`` (Å, or None to skip) is passed to :class:`Structure`.
     """
     diffpy = _import_diffpy()
 
@@ -151,5 +153,5 @@ def from_diffpy(
         occupancy=occupancy,
         site_label=labels,
         b_iso=b_iso,
-        min_separation=0.1,
+        min_separation=min_separation,
     )

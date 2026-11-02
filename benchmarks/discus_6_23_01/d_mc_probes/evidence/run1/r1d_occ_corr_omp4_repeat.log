@@ -1,0 +1,239 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   4           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\collab_d\reports\002\work\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mr1d_occ_corr_omp4_repeat.mac
+ suite>  
+ suite> discus
+ discus> seed 11,22,33,44,55,66,77,88
+ discus> read
+ discus/read> stru cuau.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    3.00000    3.00000    3.00000   90.00000   90.00000   90.00000    27.0000    
+
+ Metric Tensor     :
+       9.00000      0.00000      0.00000
+       0.00000      9.00000      0.00000
+       0.00000      0.00000      9.00000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.33333    0.33333    0.33333   90.00000   90.00000   90.00000   0.370370E-01
+
+ Reciprocal metric tensor     : 
+       0.11111     -0.00000     -0.00000
+      -0.00000      0.11111     -0.00000
+      -0.00000     -0.00000      0.11111
+
+ discus> mmc
+ discus/mmc> set vec, 1, 1, 1, 1, 0, 0
+ discus/mmc> set vec, 2, 1, 1, -1, 0, 0
+ discus/mmc> set vec, 3, 1, 1, 0, 1, 0
+ discus/mmc> set vec, 4, 1, 1, 0, -1, 0
+ discus/mmc> set vec, 5, 1, 1, 0, 0, 1
+ discus/mmc> set vec, 6, 1, 1, 0, 0, -1
+ discus/mmc> set neig, rese
+ discus/mmc> set neig, vec, 1, 2, 3, 4, 5, 6, number:1
+ discus/mmc> set mode, 1.0, swchem, all
+ discus/mmc> set target, 1, corr, Cu, Au, -0.3, 0.0, CORR
+ discus/mmc> set temp, 1.0
+ discus/mmc> set cyc, 40960
+ discus/mmc> set feed, 4096
+ discus/mmc> show
+   Operation mode for MC        : atoms
+   Max. number of MC cycles     :      10.0 per atom
+   Feedback/update intervall    :       1.0 per atom
+   Maximum no. non_valid cycles :     1000
+   Temperature [kT]             :   1.0000
+   MMC will stop at convergence
+      Max rel. difference       :   0.0000 at last cycle
+      Max change rel. difference:   0.0000 observed over    3 feedbacks
+      Av. change rel. difference:   0.0000 averaged over    3 feedbacks
+
+ Operation modes for MMC; atoms selected 
+   Mode                  Probability  two-atom correlation
+   -------------------------------------------------------
+   switch chemistry      1.00000      all                 
+   switch displacement   0.00000      all                 
+   shift atom            0.00000      all                 
+   inverse displacement  0.00000      all                 
+   rotate molecule       0.00000      all                 
+   switch neighbors      0.00000      all                 
+   exchange neighbors    0.00000      all                 
+
+ Correlation definitions        : 
+
+    Neighbour definitions          : 
+
+        #  Mode  Neighbour (or vec.)  fsig  wsig   rmin[A] rmax[A] ang sym
+       -------------------------------------------------------------------
+        1  vec      1   2   3   4   5   6
+
+    Defined correlation vectors    : 
+
+       Correlation vector   1      : Site  1 -> site  1, neig =  1  0  0
+       Correlation vector   2      : Site  1 -> site  1, neig = -1  0  0
+       Correlation vector   3      : Site  1 -> site  1, neig =  0  1  0
+       Correlation vector   4      : Site  1 -> site  1, neig =  0 -1  0
+       Correlation vector   5      : Site  1 -> site  1, neig =  0  0  1
+       Correlation vector   6      : Site  1 -> site  1, neig =  0  0 -1
+
+    Defined correlation angles     : 
+
+       ** none defined **
+
+    Defined correlation environments: 
+
+       ** none defined **
+
+    Defined correlation ranges: 
+
+       ** none defined **
+
+    Defined displacement direc.    : 
+
+       Displacement corr. #  1     : all directions
+
+    Defined correlation connectiv. : 
+
+       ** none defined **
+
+ Desired correlations for Chemical Occupancy : 
+
+            Pairs          neigh. #   correl.        depth
+     AU(1)    - CU(2)          1      -0.300         0.30729000    
+ discus/mmc> run
+ --- Initial multiple energy configuration ---
+
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.003              -0.297    -0.990          0
+
+ ---------------------------------------------
+
+ Gen:       4096 try:       4096 acc: (g/n/b):      751 /      348 /      267  MC moves 0.1000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.289              -0.011    -0.035      24576
+
+ Gen:       8192 try:       8192 acc: (g/n/b):     1136 /      601 /      565  MC moves 0.2000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.332               0.032     0.108      24576
+
+ Gen:      12288 try:      12288 acc: (g/n/b):     1546 /      831 /      939  MC moves 0.3000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.329               0.029     0.096      24576
+
+ Gen:      16384 try:      16384 acc: (g/n/b):     1982 /     1037 /     1332  MC moves 0.4000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.320               0.020     0.067      24576
+
+ Gen:      20480 try:      20480 acc: (g/n/b):     2445 /     1282 /     1770  MC moves 0.5000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.292              -0.008    -0.026      24576
+
+ Gen:      24576 try:      24576 acc: (g/n/b):     2912 /     1551 /     2144  MC moves 0.6000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.324               0.024     0.080      24576
+
+ Gen:      28672 try:      28672 acc: (g/n/b):     3350 /     1811 /     2527  MC moves 0.7000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.338               0.038     0.126      24576
+
+ Gen:      32768 try:      32768 acc: (g/n/b):     3767 /     2041 /     2938  MC moves 0.8000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.327               0.027     0.089      24576
+
+ Gen:      36864 try:      36864 acc: (g/n/b):     4209 /     2245 /     3325  MC moves 0.9000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.357               0.057     0.191      24576
+
+ Gen:      40960 try:      40960 acc: (g/n/b):     4611 /     2472 /     3705  MC moves 1.0000
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.343               0.043     0.145      24576
+
+ ---------------------------------------------
+ --- multiple energy simulation is finished---
+ ---------------------------------------------
+
+ --- Initial multiple energy configuration ---
+
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.003              -0.297    -0.990          0
+
+ ---------------------------------------------
+
+ --- Final multiple energy configuration ---
+
+ Gen:      45056 try:      45056 acc: (g/n/b):     5053 /     2685 /     4123  MC moves 
+                                             Correlations/
+ Neig.- Energy-       Atoms           Target  Distance/    Sigma     Diff      Diff/     Number
+ Def.   Type    central  Neighbors             Angle                           Target  of pairs
+   1   Occupancy AU      CU           -0.300    -0.334               0.034     0.113      24576
+
+ Maximum Cycles reached 
+ Largest          difference       0.0434 ?       0.0000
+ Largest relative difference       0.1447 ?       0.0000
+ Stagnant: average changes        -0.0233 ?       0.0000
+ Stagnant: largest changes         0.1020 ?       0.0000
+
+ --- Average energy changes ---
+
+ Energy type              number                 number  number
+                             E < 0      <E>           E = 0     E > 0     <E>
+Occupation correlation        5035      -1.495846      2682      4108       1.531261
+
+ Elapsed time :    0 h  0 min  0 sec 
+ Time/cycle   :     0.000 sec
+
+ discus/mmc> exit
+ discus> save r1d_occ_corr_omp4_repeat_out.stru
+ discus> exit
+ suite> exit
