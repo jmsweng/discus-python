@@ -76,7 +76,7 @@ An [older DISCUS command reference](https://www.xray.cz/ecm-cd/soft/xray/general
 
 | Gate | Status |
 |---|---|
-| 0 — evidence/oracle | **PARTIAL**: fixed both defects, tests and independent HDF voxel/full-grid comparison; still need verified prescribed C1 ensemble model and factor-table matching. |
+| 0 — evidence/oracle | **PARTIAL**: fixed both defects, tests and independent HDF voxel/full-grid comparison; still need verified prescribed C1 ensemble model and factor-table matching. — *superseded 2026-11-02 by Gate 0 v2.1 (PASS); see the gate table at the top.* |
 | 1 — DISCUS set aver | **OPEN**: no version-matched source proof or new controlled engine runs. |
 | 2 — controlled pair disorder and off-origin 3D-ΔPDF | **NOT COMPLETED**. |
 | 3 — coordinate/FFT and absolute normalization | **OPEN**, including native real-space step discrepancy. |
@@ -203,7 +203,7 @@ To convert to Cartesian Å, multiply by `direct_basis`. For a 4×5.0 Å supercel
 
 | Gate | Status |
 |---|---|
-| 0 — evidence/oracle | **PARTIAL**: fixed both defects, tests and independent HDF voxel/full-grid comparison; still need verified prescribed C1 ensemble model and factor-table matching. |
+| 0 — evidence/oracle | **PARTIAL**: fixed both defects, tests and independent HDF voxel/full-grid comparison; still need verified prescribed C1 ensemble model and factor-table matching. — *superseded 2026-11-02 by Gate 0 v2.1 (PASS); see the gate table at the top.* |
 | 1 — DISCUS set aver | **DIAGNOSED**: algorithm identified (amplitude-subtracted); form-factor hypothesis untested (engine does not support custom form factors). |
 | 2 — controlled pair disorder and off-origin 3D-ΔPDF | **UNRESOLVED**: model corrected (normalized ρ, frozen structure, correct NN distance); DISCUS engine not available in current WSL environment. |
 | 3 — coordinate/FFT and absolute normalization | **OPEN**: coordinate convention corrected (fractional units, not Å); absolute normalization unresolved. |

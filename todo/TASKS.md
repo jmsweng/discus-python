@@ -52,7 +52,7 @@
 
 - ✅ **P1 — Integrate the new common/NeXus reader with the 3D runner** so a configured output filename is loaded with verified source metadata and invalid geometry is rejected. [Merged PR #7](https://github.com/jmsweng/discus-python/pull/7) includes the reviewed real-engine smoke test (C1 Bragg-subtracted, 65³, `native_nexus=True` → `complete`); this is engineering evidence, **not** independent physical 3D-ΔPDF calibration.
 
-### PR #8 independent scientific audit (merged; Gates 1–3 passed, Gate 0 partial; not physically calibrated)
+### PR #8 independent scientific audit (merged; Gates 1–3 passed, Gate 0 partial at the time — superseded 2026-11-02 by Gate 0 v2.1 (PASS); not physically calibrated)
 
 - ✅ **Gate 0 groundwork — Correct independent 3×3 reciprocal grid and direct-average oracle.** [PR #8](https://github.com/jmsweng/discus-python/pull/8) (merged) adds synthetic skew/2×2×2/origin-shift tests, opt-in frozen-C1 oracle test, and true 33³ archived HDF5 observed-versus-predicted metrics. **Only this reference-code and archived-evidence groundwork is complete**, not Gate 0 scientific acceptance.
 - ✅ **Gate 0 — PASS (pre-registered Gate 0 v2.1, 2026-11-02).** DISCUS 6.23.01 `set aver` diffuse on a prescribed (not sample-fitted) fcc Cu/Au ensemble, 4-site cell, K = 64, arms B = 0 and B ≠ 0: E1/E2 agreement ~1e-14, S1–S3 pass, 0/15561 S3 violations. One prior pre-registered attempt (v1.5) failed only on a log-format check and is recorded. C1 itself stays sample-conditional. [`RESULT.md`](../benchmarks/discus_6_23_01/gate0_prereg/RESULT.md); see [PR #8 report](../docs/SCIENTIFIC_VALIDATION_REPORT.md).
