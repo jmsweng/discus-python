@@ -129,6 +129,21 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.neighbor_list` lists every site pair within a cutoff on any lattice (all periodic images, exact for triclinic cells), with selection by site, species, shell, distance, direction and DISCUS-style neighbor vectors (`set vec`). `discuspdf.correlations` computes occupational correlations (pair probabilities, Warren–Cowley α, correlation coefficients, null-model standard errors) and displacement correlations (covariances, directional correlations, Pearson or DISCUS convention) on those pairs. The DISCUS `chem corr` definitions are reproduced and were checked against DISCUS 6.23.01 (29/29 values to 5 × 10⁻¹³, [probe result](benchmarks/discus_6_23_01/c_probes/RESULT.md)). See [docs/NEIGHBORS.md](docs/NEIGHBORS.md), [docs/CORRELATIONS.md](docs/CORRELATIONS.md) and `notebooks/09_neighbors_and_correlations.ipynb`.
 
+## Monte Carlo models, reference scattering and structure pictures (Package D)
+
+`discuspdf.mc` configures DISCUS MMC (Monte Carlo) runs in Python — neighbourhoods, occupational/displacement/spring/
+Lennard-Jones targets, swap/shift moves, a fixed 8-value seed, always serial — renders the exact macro, runs it and
+loads the result with the feedback history, target vs achieved and an independent measurement. The commands and the
+engine's behaviour (heat-bath acceptance, not Metropolis) were read in the DISCUS source and checked on the engine
+([probe result](benchmarks/discus_6_23_01/d_mc_probes/RESULT.md)). `discuspdf.reference_scattering` is a small
+independent structure-factor calculator that reproduces DISCUS 6.23.01 intensities to ~1e-15 once DISCUS's table
+rounding is emulated ([result](benchmarks/discus_6_23_01/d_reference/RESULT.md)); `discuspdf.structure_viz` draws
+structures, displacements and neighbor bonds and exports checked files for viewers; `discuspdf.magnetic_reference`
+is an experimental magnetic-scattering reference (DISCUS computes none). See [docs/MONTE_CARLO.md](docs/MONTE_CARLO.md),
+[docs/REFERENCE_SCATTERING.md](docs/REFERENCE_SCATTERING.md), [docs/STRUCTURE_VIZ.md](docs/STRUCTURE_VIZ.md),
+[docs/MAGNETIC_SCATTERING.md](docs/MAGNETIC_SCATTERING.md) and `notebooks/10_monte_carlo_and_reference_scattering.ipynb`.
+Optional extra: `pip install 'discuspdf-starter[reference]'` (xraydb, periodictable).
+
 ## Interoperability (CIF, ASE, DiffPy)
 
 `discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
