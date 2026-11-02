@@ -36,3 +36,8 @@
 
 - WSL kept alive for the whole run (`wsl.exe -d Ubuntu-22.04 -- sleep 21600` in a separate background process); the 256 macros ran sequentially in ONE WSL call (bash loop), each exit code logged to `RUN_STATUS.txt` (256 x `exit=0`, ends `ALL_DONE`).
 - `MANIFEST.sha256` lists only the files committed in the evidence dir (646 lines); `sha256sum -c MANIFEST.sha256` exit 0. The 256 `.h5` hashes are in `EVIDENCE_CONTENT_HASHES.json` only.
+
+## Prior attempts
+
+- **v1.5**, RUN_ID `20261102T063824_LAPTOP-NGU3BT0N`, registration `2132146`, evidence commit `321a123`: **FAIL 2/18** — only E4 B total/diffuse failed, because the registered regex looked for per-atom B values that DISCUS 6.23.01 never prints; all E1–E3 and S1–S4 passed. Diagnosis: `DIAGNOSIS_v1_5.md`. Re-registered as v2.1 with fresh seeds before any v2.1 engine run.
+- Arms A and B use the same seeds, so their S1–S3 values are identical by construction; arm B adds engine-precision coverage with B ≠ 0 (E1/E2), not independent statistics.
