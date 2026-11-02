@@ -62,8 +62,10 @@ def case_config(over: dict):
     s = {**BASE, **over}
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", V1.QmaxLimitWarning)
+        warnings.simplefilter("ignore", V1.SetDeltaWarning)  # the set delta cases are the point of the probe
         return V1.PDFConfig(STRUCTURE, supercell=(5, 5, 5), rmax=12.0, dr=0.02,
-                            wavelength=1.5406 if s["radiation"] == "xray" else 1.54, **s)
+                            wavelength=1.5406 if s["radiation"] == "xray" else 1.54,
+                            allow_qsig=s["qsig"] > 0, **s)
 
 
 def case_macro(over: dict) -> str:

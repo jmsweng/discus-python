@@ -45,7 +45,8 @@
   - G(r) = Σ F sin(Qr) ΔQ, π/2 times the textbook transform; F zeroed from its last sign change; linear below Qmin (≤ 2.2×10⁻⁴, no fit).
   - F(Q) files are labelled one ΔQ high, after a placeholder first line.
   - **`set delta` > 0 crashes the engine on most grids** (heap corruption).
-- ⬜ **P1 — Decide how `PDFConfig` handles `qsig` > 0** while `set delta` crashes DISCUS 6.23.01 (refuse or warn), and report the crash to the DiffuseCode maintainers.
+- ✅ **P1 — Decide how `PDFConfig` handles `qsig` > 0** while `set delta` crashes DISCUS 6.23.01 (refuse or warn), and report the crash to the DiffuseCode maintainers. Owner's decision: `PDFConfig` raises `SetDeltaError` for `qsig` > 0; `allow_qsig=True` runs it with a `SetDeltaWarning`, for a fixed DISCUS. Report: [issue #65](https://github.com/jmsweng/discus-python/issues/65) (owner takes it to the maintainers).
+  - *Open: when a fixed DISCUS is released, re-run the `set delta` cases (new registration of `probe_v2.py`) and relax the error.*
 - ⬜ **P2 — Decide whether the package converts or labels DISCUS's G(r) convention** (factor π/2 from the missing 2/π), and whether a reader for DISCUS F(Q) files should correct the one-step label offset.
 - ⬜ **P2 — Explain the remaining powder discrepancies:** F(Q) depends slightly on ΔQ (0.2–1.4 %), and above Q ≈ 8 Å⁻¹ the result depends on the wavelength (raise with DiffuseCode).
 - ✅ **P1 — Validate 3D-ΔPDF normalization and real-space scale against an independent analytical reference.** [Gate 3](../benchmarks/discus_6_23_01/gate3/RESULT.md): `delta_pdf_fractional` is absolute (e² Å⁻³, whole crystal) and matches the independent physics prediction to 1.1×10⁻⁵ ρ(0) at every predeclared lattice vector; the native `value 3DPDF` convention and its axis mislabelling are derived. Scope: B = 0, one site per cell, commensurate cubic grid.
