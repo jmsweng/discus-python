@@ -120,5 +120,5 @@ and leaves `cell_index` unchanged. Wrapping changes coordinates but not physics.
 `examples/structure_basics.py` (run with `python examples/structure_basics.py`); covered by
 `tests/test_structure.py::test_example_script_runs`.
 
-Notebook: [`notebooks/04_structure_basics.ipynb`](../notebooks/04_structure_basics.ipynb) —
+Notebook: [`notebooks/04_building_and_editing_structures.ipynb`](../notebooks/04_building_and_editing_structures.ipynb) —
 worked examples of the API (construction, validation, select/edit, distances, wrapping).

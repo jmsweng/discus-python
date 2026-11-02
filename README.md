@@ -23,7 +23,7 @@ pip install -e '.[notebook,dev]'
 jupyter lab
 ```
 
-Open `notebooks/01_pdf_quickstart.ipynb`.
+Open `notebooks/01_powder_pdf_with_discus.ipynb`.
 
 ## First run
 
@@ -61,7 +61,7 @@ Each run directory records the copied `.cll` input, a SHA-256 hash, the generate
 
 ## 3D-ΔPDF analysis
 
-See `notebooks/02_3d_delta_pdf.ipynb` for a **synthetic demonstration only**. For DISCUS 6.23.01 `form nexus` outputs, use `read_discus_volume()` or `Diffuse3DRun.load_discus_volume()` and `delta_pdf_fractional()`, which preserve hkl axes and the cell metric. For other HDF5 files with independently verified centered uniform Cartesian-Q arrays, use `read_hdf5_volume(...)` or load NumPy arrays. A grid in h,k,l reciprocal-lattice units must never be relabeled as Cartesian Q. See [3D integration](docs/3D_INTEGRATION.md) and the [reproducible-science benchmark plan](docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md).
+See `notebooks/02_3d_delta_pdf_synthetic_example.ipynb` for a **synthetic demonstration only**. For DISCUS 6.23.01 `form nexus` outputs, use `read_discus_volume()` or `Diffuse3DRun.load_discus_volume()` and `delta_pdf_fractional()`, which preserve hkl axes and the cell metric. For other HDF5 files with independently verified centered uniform Cartesian-Q arrays, use `read_hdf5_volume(...)` or load NumPy arrays. A grid in h,k,l reciprocal-lattice units must never be relabeled as Cartesian Q. See [3D integration](docs/3D_INTEGRATION.md) and the [reproducible-science benchmark plan](docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md).
 
 For quantitative work, add mask/window handling, correct reciprocal-space intensity normalization, and compare one FFT result to a trusted 3D-ΔPDF workflow. **Breaking change:** the 3D FFT no longer returns a tuple — it returns an `FFTResult` containing `complex_volume`, `r_axes`, and `diagnostics`; `real_volume` is available for plotting. Do not unpack the result as a tuple. If the imaginary/real norm ratio exceeds `imaginary_tolerance` (default `1e-4`), the transform raises `FFTValidationError` (a `ValueError` subclass) that carries the computed `FFTResult` on `exc.result`; pass `raise_on_imaginary=False` to get a warning and the same computed values instead. No 3D-ΔPDF calculations are run automatically inside DISCUS by this starter; integration history is recorded in [docs/INTEGRATION_HISTORY.md](docs/INTEGRATION_HISTORY.md).
 
@@ -73,11 +73,26 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 |---|---|
 | `src/discuspdf/` | The Python package. |
 | `tests/` | Unit tests (`python -m pytest -q`; run by CI on every push). They use stubbed engines, so they do not validate a real DISCUS run; see the separately documented manual DISCUS integration check. |
-| `examples/`, `notebooks/` | Example unit cells, a recorded real 1D run, and the quick-start, synthetic 3D-ΔPDF and feature walkthrough notebooks. |
+| `examples/`, `notebooks/` | Example unit cells, a recorded real 1D run, and the notebooks listed below. |
 | `docs/` | Verified macro syntax, 3D integration notes, integration history and the [validation report](docs/SCIENTIFIC_VALIDATION_REPORT.md). |
 | `benchmarks/discus_6_23_01/` | The pre-registered validation of DISCUS 6.23.01 (Gates 1–3): inputs, predictions, analysis scripts, results and small evidence files. Large engine volumes are not committed; `regenerate_evidence.py` recreates them. |
 | `spike_discus_3d/` | The original 3D probe kit: verified macros (used by the 3D runner example and its tests), case runner and historical findings. |
 | `todo/` | Open work items. |
+
+### Notebooks
+
+| Notebook | What it shows | Needs DISCUS? |
+|---|---|---|
+| [`01_powder_pdf_with_discus`](notebooks/01_powder_pdf_with_discus.ipynb) | Set up a powder PDF G(r) calculation, read the generated macro, run it and compare Qmax values | yes (to run) |
+| [`02_3d_delta_pdf_synthetic_example`](notebooks/02_3d_delta_pdf_synthetic_example.ipynb) | Fourier transform of a made-up diffuse-scattering volume into a 3D-ΔPDF | no |
+| [`03_lattices_and_coordinates`](notebooks/03_lattices_and_coordinates.ipynb) | Unit cells, fractional ↔ Cartesian coordinates, Q and d-spacings, periodic distances | no |
+| [`04_building_and_editing_structures`](notebooks/04_building_and_editing_structures.ipynb) | Build an atomic structure, select and edit atoms, wrap coordinates, validation | no |
+| [`05_reading_and_writing_discus_files`](notebooks/05_reading_and_writing_discus_files.ipynb) | DISCUS `.cll` (unit cell) and `.stru` (crystal) files | no (optional live check) |
+| [`06_cif_ase_and_diffpy_conversion`](notebooks/06_cif_ase_and_diffpy_conversion.ipynb) | Read a CIF, convert to and from ASE and DiffPy, write `.cll` and CIF | no |
+| [`07_diffuse_scattering_data_and_3d_delta_pdf`](notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb) | Reciprocal-space grids, DISCUS output, Bragg subtraction or masking, 3D-ΔPDF, xarray/HDF5, VTK and Mantid export | no (uses stored DISCUS data) |
+| [`08_disordered_supercells`](notebooks/08_disordered_supercells.ipynb) | From an average structure to a disordered supercell: sampling, substitution, displacements | no |
+| [`09_neighbors_and_short_range_order`](notebooks/09_neighbors_and_short_range_order.ipynb) | Neighbor shells and how ordered a crystal is: occupational and displacement correlations, compared with DISCUS | no |
+| [`10_monte_carlo_scattering_checks_and_magnetism`](notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb) | Independent scattering check against DISCUS, structure pictures, analysing a DISCUS Monte Carlo run, magnetic scattering basics | no (uses stored DISCUS data) |
 
 ## Next stages
 
@@ -123,11 +138,11 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 
 `discuspdf.read_mantid_mdhisto` / `write_mantid_mdhisto` convert between Mantid `SaveMD` (v2) MDHistoWorkspace files in the HKL frame and `ScatteringVolume`, including projections (`[H,H,0]`-style axes, `W_MATRIX`), errors² and masks. Checked against files written by Mantid 7.0.0, and Mantid loads the files we write. See [docs/MANTID_IO.md](docs/MANTID_IO.md).
 
-`notebooks/07_reciprocal_space_data.ipynb` walks through these reciprocal-space and data features (grids, DISCUS output loading, Fourier macros, Bragg subtraction and masking, xarray/HDF5, slices, isosurfaces and VTK, Mantid files) on data committed to this repository.
+`notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb` walks through these reciprocal-space and data features (grids, DISCUS output loading, Fourier macros, Bragg subtraction and masking, xarray/HDF5, slices, isosurfaces and VTK, Mantid files) on data committed to this repository.
 
 ## Neighbors and disorder correlations (Package C)
 
-`discuspdf.neighbor_list` lists every site pair within a cutoff on any lattice (all periodic images, exact for triclinic cells), with selection by site, species, shell, distance, direction and DISCUS-style neighbor vectors (`set vec`). `discuspdf.correlations` computes occupational correlations (pair probabilities, Warren–Cowley α, correlation coefficients, null-model standard errors) and displacement correlations (covariances, directional correlations, Pearson or DISCUS convention) on those pairs. The DISCUS `chem corr` definitions are reproduced and were checked against DISCUS 6.23.01 (29/29 values to 5 × 10⁻¹³, [probe result](benchmarks/discus_6_23_01/c_probes/RESULT.md)). See [docs/NEIGHBORS.md](docs/NEIGHBORS.md), [docs/CORRELATIONS.md](docs/CORRELATIONS.md) and `notebooks/09_neighbors_and_correlations.ipynb`.
+`discuspdf.neighbor_list` lists every site pair within a cutoff on any lattice (all periodic images, exact for triclinic cells), with selection by site, species, shell, distance, direction and DISCUS-style neighbor vectors (`set vec`). `discuspdf.correlations` computes occupational correlations (pair probabilities, Warren–Cowley α, correlation coefficients, null-model standard errors) and displacement correlations (covariances, directional correlations, Pearson or DISCUS convention) on those pairs. The DISCUS `chem corr` definitions are reproduced and were checked against DISCUS 6.23.01 (29/29 values to 5 × 10⁻¹³, [probe result](benchmarks/discus_6_23_01/c_probes/RESULT.md)). See [docs/NEIGHBORS.md](docs/NEIGHBORS.md), [docs/CORRELATIONS.md](docs/CORRELATIONS.md) and `notebooks/09_neighbors_and_short_range_order.ipynb`.
 
 ## Monte Carlo models, reference scattering and structure pictures (Package D)
 
@@ -141,7 +156,7 @@ rounding is emulated ([result](benchmarks/discus_6_23_01/d_reference/RESULT.md))
 structures, displacements and neighbor bonds and exports checked files for viewers; `discuspdf.magnetic_reference`
 is an experimental magnetic-scattering reference (DISCUS computes none). See [docs/MONTE_CARLO.md](docs/MONTE_CARLO.md),
 [docs/REFERENCE_SCATTERING.md](docs/REFERENCE_SCATTERING.md), [docs/STRUCTURE_VIZ.md](docs/STRUCTURE_VIZ.md),
-[docs/MAGNETIC_SCATTERING.md](docs/MAGNETIC_SCATTERING.md) and `notebooks/10_monte_carlo_and_reference_scattering.ipynb`.
+[docs/MAGNETIC_SCATTERING.md](docs/MAGNETIC_SCATTERING.md) and `notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb`.
 Optional extra: `pip install 'discuspdf-starter[reference]'` (xraydb, periodictable).
 
 ## Interoperability (CIF, ASE, DiffPy)
@@ -165,7 +180,7 @@ s2 = from_ase(atoms)      # exact round trip
 assert s2.isclose(s)
 ```
 
-`import discuspdf` works without the extras; the adapters raise a helpful `ImportError` naming the extra. Losses (partial occupancy to ASE, anisotropic ADPs, DiffPy orientation/supercell) raise `InteropError` by default and warn with `allow_loss=True`. See [docs/INTEROP.md](docs/INTEROP.md), `examples/interop_basics.py` and `notebooks/06_interop.ipynb`.
+`import discuspdf` works without the extras; the adapters raise a helpful `ImportError` naming the extra. Losses (partial occupancy to ASE, anisotropic ADPs, DiffPy orientation/supercell) raise `InteropError` by default and warn with `allow_loss=True`. See [docs/INTEROP.md](docs/INTEROP.md), `examples/interop_basics.py` and `notebooks/06_cif_ase_and_diffpy_conversion.ipynb`.
 
 ## Notes
 
