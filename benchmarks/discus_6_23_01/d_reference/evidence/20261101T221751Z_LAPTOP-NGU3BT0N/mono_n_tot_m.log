@@ -1,0 +1,164 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\collab_d\reports\001\work\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmono_n_tot_m.mac
+ suite>  
+ suite> discus
+ discus> read
+ discus/read> stru mono.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    4.10000    5.30000    3.70000   90.00000  103.00000   90.00000    78.3403    
+
+ Metric Tensor     :
+      16.81000      0.00000     -3.41251
+       0.00000     28.09000      0.00000
+      -3.41251      0.00000     13.69000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.25032    0.18868    0.27738   90.00000   77.00000   90.00000   0.127648E-01
+
+ Reciprocal metric tensor     : 
+       0.06266     -0.00000      0.01562
+      -0.00000      0.03560     -0.00000
+       0.01562     -0.00000      0.07694
+
+ discus> fourier
+ discus/fourier> neut
+ discus/fourier> wvle moa1
+ discus/fourier> ll -2,-1,0.5
+ discus/fourier> lr 2,-1,0.5
+ discus/fourier> ul -2,3,0.5
+ discus/fourier> tl -2,-1,2.5
+ discus/fourier> na 21
+ discus/fourier> no 21
+ discus/fourier> nt 11
+ discus/fourier> abs h
+ discus/fourier> ord k
+ discus/fourier> top l
+ discus/fourier> temp use
+ discus/fourier> disp off
+ discus/fourier> lots off
+ discus/fourier> set technique:turbo
+ discus/fourier> set aver,0.0
+ discus/fourier> show
+ Fourier technique    : turbo Fourier
+ Fourier calculated by: atom form factors taken from: International Tables Vol. C
+   Fourier volume     : complete crystal
+   Radiation          : neutron , wavelength = MOA1 =  0.7093 A
+   Temp. factors      : used
+   Anomalous scat.    : ignored
+   Symmetry averaging : Friedel pairs merged
+   Exctinction Param. : No extinction correction applied
+   Filter function    : Not applied 
+   Intensity scale    :     1.0000
+
+ Reciprocal layer     : 
+   lower left  corner :     -2.0000    -1.0000     0.5000
+   lower right corner :      2.0000    -1.0000     0.5000
+   upper left  corner :     -2.0000     3.0000     0.5000
+   top   left  corner :     -2.0000    -1.0000     2.5000
+
+   hor. increment     :      0.2000     0.0000     0.0000   ->    0.0501 A**-1
+   vert. increment    :      0.0000     0.2000     0.0000   ->    0.0377 A**-1
+   top   increment    :      0.0000     0.0000     0.2000   ->    0.0555 A**-1
+   # of points        :     21 x   21 x   11  (h,k,l)
+   Angle Ratio Aver v/h     90.0000 degrees        0.7538     0.7538
+   Angle Ratio Aver h/t     77.0000 degrees        0.9024     0.9024
+   Angle Ratio Aver t/v     90.0000 degrees        1.4701     1.4701
+ discus/fourier> run
+ Computing complex exponent table ...
+ Computing sin(theta)/lambda table ...
+ Computing formfactor lookup table ...
+
+ Lot #    1/   1 : complete crystal
+                   Atom typ = GA         (#        27 )
+                   Atom typ = AS         (#        27 )
+
+ 
+ Diffuse scat.   :  0.802919E-01  ->   101453.    
+      Average    :   2577.32      +-   9587.64    
+
+ Elapsed time    :  0.430600E-02 sec
+ discus/fourier> exit
+ discus> output
+ discus/output> value int
+ discus/output> form nexus
+ discus/output> outf mono_n_tot_m.h5
+ discus/output> run
+
+      Partial dump of unified data 
+
+   Crystal Meta information
+audit_conform_dict_name    Disorder unified data
+audit_conform_dict_version 0.0.0
+audit_creation_date        2026-11-01
+audit_creation_method      6.23.01
+audit_author_name          DISCUS
+
+ Unit cell params     4.100000    5.300000    3.700000
+ Unit cell angles    90.000000  103.000000   90.000000
+ Symmetry H_M     P 1                             
+ Symmetry Origin      1
+ Symmetry abc     abc
+ Symmetry n MAT       1
+ Symmetry 1 fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry 1 scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry 1 lst      0.000000   0.000000   1.000000   0.000000
+ Symmetry N fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry N scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry N lst      0.000000   0.000000   1.000000   0.000000
+
+ Data experiment  calculated                      
+ Data with  bragg bragg_present                   
+ Data symmetrized none                            
+ Data number                                      
+ Data axes        hkl                             
+ Data radiation   neutron                         
+ Data dimensions     21   21   11
+ Data abs,ord,top     1    2    3
+ Data style       single_diffraction              
+ Data content     intensity                       
+ Data symbol      MOA1            
+ Data length         0.709260   0.709260   0.000000
+
+Axes coordinates: basecell_fractional             
+
+ Data corner        -2.000000  -1.000000   0.500000
+
+ Data abscissa       0.200000   0.000000   0.000000
+ Data ordinate       0.000000   0.200000   0.000000
+ Data top_axis       0.000000   0.000000   0.200000
+
+  DATA_VALUES   6246.7253698496079        3338.5696317360462     
+  DATA_MINMAX   8.0291937716414893E-002   101452.67197959198     
+
+ discus/output> exit
+ discus> exit
+ suite> exit

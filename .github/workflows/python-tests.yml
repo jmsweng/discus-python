@@ -11,5 +11,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - run: python -m pip install -e ".[dev,notebook,data,interop,viz]"
+      - run: python -m pip install -e ".[dev,notebook,data,interop,viz,reference]"
       - run: python -m pytest -q

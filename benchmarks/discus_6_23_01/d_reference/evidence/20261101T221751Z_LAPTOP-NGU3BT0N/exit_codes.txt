@@ -1,0 +1,8 @@
+cuau_n_dif_c4 exit=0
+cuau_n_tot_c4 exit=0
+cuau_x_dif_c4 exit=0
+cuau_x_dif_nc exit=0
+cuau_x_tot_c4 exit=0
+cuau_x_tot_nc exit=0
+mono_n_tot_m exit=0
+mono_x_tot_m exit=0

@@ -1,0 +1,157 @@
+{
+ "runs": [
+  {
+   "id": "cuau_x_tot_c4",
+   "structure": "cuau.stru",
+   "radiation": "xray",
+   "grid": "c4",
+   "aver": 0.0,
+   "output": "cuau_x_tot_c4.h5"
+  },
+  {
+   "id": "cuau_x_dif_c4",
+   "structure": "cuau.stru",
+   "radiation": "xray",
+   "grid": "c4",
+   "aver": 100.0,
+   "output": "cuau_x_dif_c4.h5"
+  },
+  {
+   "id": "cuau_n_tot_c4",
+   "structure": "cuau.stru",
+   "radiation": "neut",
+   "grid": "c4",
+   "aver": 0.0,
+   "output": "cuau_n_tot_c4.h5"
+  },
+  {
+   "id": "cuau_n_dif_c4",
+   "structure": "cuau.stru",
+   "radiation": "neut",
+   "grid": "c4",
+   "aver": 100.0,
+   "output": "cuau_n_dif_c4.h5"
+  },
+  {
+   "id": "cuau_x_tot_nc",
+   "structure": "cuau.stru",
+   "radiation": "xray",
+   "grid": "nc",
+   "aver": 0.0,
+   "output": "cuau_x_tot_nc.h5"
+  },
+  {
+   "id": "cuau_x_dif_nc",
+   "structure": "cuau.stru",
+   "radiation": "xray",
+   "grid": "nc",
+   "aver": 100.0,
+   "output": "cuau_x_dif_nc.h5"
+  },
+  {
+   "id": "mono_x_tot_m",
+   "structure": "mono.stru",
+   "radiation": "xray",
+   "grid": "m",
+   "aver": 0.0,
+   "output": "mono_x_tot_m.h5"
+  },
+  {
+   "id": "mono_n_tot_m",
+   "structure": "mono.stru",
+   "radiation": "neut",
+   "grid": "m",
+   "aver": 0.0,
+   "output": "mono_n_tot_m.h5"
+  }
+ ],
+ "grids": {
+  "c4": {
+   "ll": [
+    -2,
+    -2,
+    0
+   ],
+   "lr": [
+    2,
+    -2,
+    0
+   ],
+   "ul": [
+    -2,
+    2,
+    0
+   ],
+   "tl": [
+    -2,
+    -2,
+    2
+   ],
+   "n": [
+    17,
+    17,
+    9
+   ]
+  },
+  "nc": {
+   "ll": [
+    -1.5,
+    -1.5,
+    0.3
+   ],
+   "lr": [
+    1.5,
+    -1.5,
+    0.3
+   ],
+   "ul": [
+    -1.5,
+    1.5,
+    0.3
+   ],
+   "tl": [
+    -1.5,
+    -1.5,
+    1.8
+   ],
+   "n": [
+    11,
+    11,
+    6
+   ]
+  },
+  "m": {
+   "ll": [
+    -2,
+    -1,
+    0.5
+   ],
+   "lr": [
+    2,
+    -1,
+    0.5
+   ],
+   "ul": [
+    -2,
+    3,
+    0.5
+   ],
+   "tl": [
+    -2,
+    -1,
+    2.5
+   ],
+   "n": [
+    21,
+    21,
+    11
+   ]
+  }
+ },
+ "b_iso": {
+  "Cu": 0.5,
+  "Au": 0.8,
+  "Ga": 0.6,
+  "As": 0.6
+ }
+}

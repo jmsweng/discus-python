@@ -1,1 +1,2 @@
+# Shell scripts run inside WSL from Windows checkouts (core.autocrlf=true): keep them LF.
 *.sh text eol=lf
