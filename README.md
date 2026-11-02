@@ -1,5 +1,7 @@
 # discuspdf — a Python layer for DISCUS: disorder models, diffuse scattering, 3D-ΔPDF and PDF
 
+# See notebooks for usage examples, documentation is currently a work in progress.
+
 `discuspdf` drives [DISCUS](https://github.com/tproffen/DiffuseCode) (DISCUS_SUITE 6.23.01) from Python. It
 generates DISCUS macros from typed configurations (inspectable before execution), runs each job in an isolated,
 hashed run directory, and loads native output (NeXus, `.stru`, logs) back as labelled data with explicit metric,
