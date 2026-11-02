@@ -1,6 +1,6 @@
 # Gate 0 v2 — pre-registered prescribed-ensemble diffuse scattering experiment (DISCUS_SUITE 6.23.01)
 
-**Registered:** 2026-11-01. The current version is **v1.5**.
+**Registered:** 2026-11-01. The current version is **v2.1**.
 
 ## Registration history
 
@@ -10,6 +10,7 @@
 - **v1.3** (2026-11-01): Arm A B = 0 in the oracle (B from file only in arm B); clean case uses the real realizations (diffuse = |D_orc|²); separate `gaussian_ensemble` selftest case for synthetic CN(0,E) diffuse; oracle caching (.npy) to speed up the selftest.
 - **v1.4** (2026-11-01): S3 voxel indexing fixed (vectorised, no `unravel_index` bug); Bonferroni over n_tested = 15 561 (all off-integer-h voxels); `n_s3_tested` stored in predictions.json.
 - **v1.5** (2026-11-01): Selftest expectation only: duplicated_realization case now expects E1 (a duplicated output does not match its own structure). Analyzer, oracle, thresholds, seeds and inputs are unchanged; only the code hash of gate0_selftest.py in predictions.json was regenerated.
+- **v2.1** (2026-11-02): After the v1.5 engine run FAILed only on E4 B (DISCUS 6.23.01 prints no per-atom B values; see `DIAGNOSIS_v1_5.md`): E4 redefined — arm A: both logs contain `Temp. factors      : ignored` (regex `Temp\.\s*factors\s*:\s*ignored`); arm B: both logs contain `Temp. factors : used`; the per-atom B regex is removed. The B values themselves are verified by E1/E2 (the arm B oracle uses B = 0.5/0.8; a wrong B would give percent-level errors). Selftest now builds its synthetic logs from the committed v1.5 real DISCUS logs, adds a `real_logs` case (analyzer log parser on the four committed v1.5 logs; E4 must pass) and a `temp_flag_wrong_B` corruption (arm B log with `ignored`; E4 must fail). 64 fresh seeds (`secrets.randbits(63)`); structures and the 256 macros regenerated with `gate0_generate.py` (design, grid, thresholds and Gamma intervals unchanged). `gate0_analyze.py` gains an optional `--cache DIR` for the realization-oracle results (`.npy`, keyed by the SHA-256 of the structure file; default: no cache).
 
 **Why:** Gate 0 is PARTIAL: the forward model is verified, but C1's diffuse was only compared with occupancies **fitted from the sample itself**; the independently prescribed C1 ensemble is not documented. Gate 0 v2 replaces that with an ensemble that **is** prescribed before any engine run, so DISCUS's `set aver` diffuse can be compared with an *analytic ensemble expectation* that uses no sample information. It also extends coverage beyond Gates 2/3 (which were one-site cells, B = 0) to a **multi-site cell** and **B ≠ 0**. **C1 itself stays sample-conditional; the report must say so.**
 
@@ -34,7 +35,7 @@ Does DISCUS 6.23.01, run on a prescribed multi-site fcc crystal with B ≠ 0, pr
 | Lattice | fcc, conventional cubic cell a = 3.75 Å, **4 sites per cell** at (0,0,0), (½,½,0), (½,0,½), (0,½,½) | Multi-site cell: `set aver` averages per site over unit cells. With 4 sites, ⟨F⟩ is fixed by composition and site occupancies alone. |
 | Crystal | repeat(average, (8, 8, 8)) → N_c = 512 cells, N = 2048 sites | Sufficient size for the central limit theorem to make x = \|D\|²/E ≈ Exp(1). |
 | Species | Cu (p = 0.75) / Au (p = 0.25), every site mixed | High contrast; uncorrelated occupancies by construction (independent Bernoulli draws). |
-| B | Arm A: 0 (`temp ignore`); Arm B: B_Cu = 0.5, B_Au = 0.8 (`temp use`) | Covers both the B = 0 convention (Gate 2 v3+) and the B ≠ 0 case (new in Gate 0 v2). The log must show the B values DISCUS used. |
+| B | Arm A: 0 (`temp ignore`); Arm B: B_Cu = 0.5, B_Au = 0.8 (`temp use`) | Covers both the B = 0 convention (Gate 2 v3+) and the B ≠ 0 case (new in Gate 0 v2). The log shows the `Temp. factors` flag; the B values themselves are verified by E1/E2 (v2.1). |
 | hkl grid | dyadic, corner (0,0,0), step 1/8, 25 points per axis (h, k, l ∈ {0, 1/8, …, 3}) | **Commensurate** with the 8-cell crystal: the finite-crystal sum equals the periodic sum exactly. L(h) = 0 off integer h, so E = 4 N_c p(1-p)\|g\|² off integer h and E = 0 at integer h. |
 | Realizations | K = 64 configurations `sample_configuration(crystal, seed=s_k)` with 64 **fresh** seeds registered in `predictions.json` | Independent, uncorrelated occupancies by construction. Seeds drawn once with `secrets.randbits(63)` and recorded; never run anything on them before registration. |
 
@@ -61,7 +62,7 @@ Does DISCUS 6.23.01, run on a prescribed multi-site fcc crystal with B ≠ 0, pr
   - E1: total vs realization engine oracle, rel L2 ≤ 1×10⁻⁹ per realization.
   - E2: diffuse vs realization engine oracle, rel L2 ≤ 1×10⁻⁶ per realization (looser than Gate 1's 6.9×10⁻¹² because B ≠ 0 is new; record the achieved maximum).
   - E3: diffuse at integer h ≤ 1×10⁻⁶ × max(diffuse) per realization.
-  - E4: Arm B log shows B_Cu = 0.5 and B_Au = 0.8 used; Arm A log shows `temp ignore`.
+  - E4 (v2.1): Arm A: both logs contain `Temp. factors      : ignored` (regex `Temp\.\s*factors\s*:\s*ignored`); Arm B: both logs contain `Temp. factors : used`. The per-atom B regex is removed: DISCUS 6.23.01 prints no per-atom B values (v1.5 diagnosis, `DIAGNOSIS_v1_5.md`). The B values themselves are verified by E1/E2 (the arm B oracle uses B = 0.5/0.8; a wrong B would give percent-level errors).
   - S1: over S, mean over voxels and realizations of x = D/E_eng within 1 ± 5/√(K·|S|).
   - S2: over S, the sample variance of x within 1 ± 5·√(8/(K·|S|)) (Exp(1): var 1, fourth central moment 9).
   - S3: every voxel of the **whole grid** off integer h: x̄_v = mean_k x lies inside the two-sided Gamma(K, 1/K) interval — **except voxels with 2h integer (q ≡ −q mod 1), where D is real and x ~ χ²₁, so x̄_v ~ Gamma(K/2, 2/K)** — with family-wise false-alarm 1×10⁻³ (Bonferroni over the number of tested voxels; quantiles computed with `scipy.stats.gamma` at registration time and stored in `predictions.json`).
@@ -80,7 +81,7 @@ These are evaluated for *both* arms by `gate0_analyze.py`. Values come from `pre
 | E1 | engine total vs realization engine oracle (rel L2), max over realizations | ≤ 1×10⁻⁹ |
 | E2 | engine diffuse vs realization engine oracle (rel L2), max over realizations | ≤ 1×10⁻⁶ |
 | E3 | engine diffuse at integer h / max diffuse, max over realizations | ≤ 1×10⁻⁶ |
-| E4 | Arm B: log shows B_Cu = 0.5 and B_Au = 0.8; Arm A: log shows `temp ignore` | required |
+| E4 | Arm A: both logs contain `Temp. factors      : ignored`; Arm B: both logs contain `Temp. factors : used` (the B values themselves are verified by E1/E2) | required |
 | S1 | over S: \|mean x − 1\| | ≤ 5/√(K·\|S\|) |
 | S2 | over S: \|var x − 1\| | ≤ 5·√(8/(K·\|S\|)) |
 | S3 | every voxel off integer h: x̄_v inside two-sided Gamma interval (Bonferroni FWER 1×10⁻³) | 0 violations |
@@ -110,7 +111,7 @@ Metadata must also match before any criterion is evaluated: shape 25³, corner 0
 - `inputs/`: registered structures and macros.
 - `predictions.json`: seeds, thresholds, Gamma quantiles, SHA-256 hashes.
 - `gate0_analyze.py`: the only evaluator.
-- `gate0_selftest.py`: proves the evaluator passes clean synthetic data and fails nine kinds of corruption (p = 0.30, correlated, DW convention, ×1.01 scale, sample-fitted, species swapped, missing `set aver`, shuffled seeds, Friedel noise, duplicated realization).
+- `gate0_selftest.py`: proves the evaluator passes clean synthetic data and fails ten kinds of corruption (p = 0.30, correlated, DW convention, ×1.01 scale, sample-fitted, species swapped, missing `set aver`, shuffled seeds, Friedel noise, duplicated realization, `temp_flag_wrong_B`); plus a `real_logs` case that runs the analyzer's log parser on the four committed v1.5 real DISCUS logs (E4 must pass).
 
 ## Selftest (offline; must be run before registration)
 
@@ -124,4 +125,6 @@ Clean synthetic data built from the oracle (with complex-Gaussian sampling for t
 - missing `set aver` (E3)
 - realizations shuffled against their seeds (E1)
 - Friedel-violating noise 1e-4 (E1)
-- one realization duplicated (S2 or a duplicate-hash check)
+- one realization duplicated (E1)
+- `temp_flag_wrong_B`: arm B log with `Temp. factors : ignored` (E4)
+- `real_logs`: the analyzer's log parser on the four committed v1.5 real DISCUS logs (E4 must pass)

@@ -1,7 +1,7 @@
 """Evaluate real DISCUS 6.23.01 output against the pre-registered Gate 0 v2 predictions.
 
 Usage:
-    python gate0_analyze.py RUN_DIR [--out RUN_DIR]
+    python gate0_analyze.py RUN_DIR [--out RUN_DIR] [--cache DIR]
 
 RUN_DIR must contain the generated inputs (copied unmodified from inputs/), the engine HDF5 files
 gate0_{A,B}_{total,diffuse}_{0..63}.h5 and, if available, the engine logs *.log.
@@ -70,20 +70,37 @@ def _read_h5(path: Path, want_bragg: str):
     return values
 
 
-def _log_checks(run_dir: Path, arm: str, kind: str) -> dict:
-    cand = sorted(run_dir.glob(f"gate0_{arm}_{kind}*.log"))
-    if not cand:
-        return {"log": None, "note": "no log found", "b_values": None, "temp": None}
-    txt = cand[0].read_text(errors="replace")
+def log_check(txt: str) -> dict:
+    """Parse a DISCUS log: the `Temp. factors : used|ignored` flag.
+
+    DISCUS 6.23.01 prints no per-atom B values in the log (v1.5 diagnosis,
+    DIAGNOSIS_v1_5.md), so E4 checks the flag only. The B values themselves
+    are verified by E1/E2 (arm B oracle uses B = 0.5/0.8).
+    """
     temp = re.search(r"Temp\. factors\s*:\s*(\w+)", txt)
-    # Look for B values in the log
-    b_cu = re.search(r"B\s*=\s*([\d.]+).*Cu|Cu.*B\s*=\s*([\d.]+)", txt)
-    b_au = re.search(r"B\s*=\s*([\d.]+).*Au|Au.*B\s*=\s*([\d.]+)", txt)
-    return {"log": cand[0].name, "temp": temp.group(1) if temp else None,
-            "b_cu": b_cu, "b_au": b_au}
+    return {"temp": temp.group(1) if temp else None}
 
 
-def analyze_arm(run_dir: Path, arm: str, pred: dict) -> dict:
+def _oracle_cached(arm: str, k: int, stru_path: Path, cache_dir: Path | None) -> tuple[np.ndarray, np.ndarray]:
+    """realization_exact, cached as .npy keyed by the SHA-256 of the structure file.
+
+    cache_dir None → no cache (an engine analysis computes everything fresh).
+    """
+    b_cu, b_au = (O.B_CU_A, O.B_AU_A) if arm == "A" else (O.B_CU_B, O.B_AU_B)
+    if cache_dir is not None:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        sha = O.sha256_file(stru_path)
+        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npy"
+        if cache_file.exists():
+            data = np.load(cache_file)
+            return data["D"], data["I"]
+    result = O.realization_exact(stru_path, "engine", b_cu, b_au)
+    if cache_dir is not None:
+        np.savez_compressed(cache_file, D=result[0], I=result[1])
+    return result
+
+
+def analyze_arm(run_dir: Path, arm: str, pred: dict, cache_dir: Path | None = None) -> dict:
     T = pred["thresholds"]
     K = pred["n_realizations"]
     crit = []
@@ -103,9 +120,8 @@ def analyze_arm(run_dir: Path, arm: str, pred: dict) -> dict:
         I_eng = _read_h5(tot_path, "bragg_present")
         D_eng = _read_h5(dif_path, "bragg_subtracted")
 
-        # Compute realization-exact oracle
-        b_cu, b_au = (O.B_CU_A, O.B_AU_A) if arm == "A" else (O.B_CU_B, O.B_AU_B)
-        D_orc, I_orc = O.realization_exact(stru_path, "engine", b_cu, b_au)
+        # Compute realization-exact oracle (cached when cache_dir is given)
+        D_orc, I_orc = _oracle_cached(arm, k, stru_path, cache_dir)
 
         # E1: total vs realization engine oracle
         e1 = O.rel_l2(I_eng, I_orc)
@@ -133,16 +149,22 @@ def analyze_arm(run_dir: Path, arm: str, pred: dict) -> dict:
     crit.append(_crit(f"E3 {arm}: max diffuse at integer h / max diffuse", max(e3_vals),
                       T["E3_diffuse_at_integer_h_max_over_max_diffuse"]))
 
-    # E4: log checks
+    # E4: log checks (v2.1: the Temp. factors flag; DISCUS 6.23.01 prints no per-atom B values)
     for kind in ("total", "diffuse"):
-        lg = _log_checks(run_dir, arm, kind)
-        if arm == "A":
-            ok = lg["temp"] is not None and lg["temp"].lower() == "ignored"
-            crit.append(_crit(f"E4 {arm} {kind}: log shows 'temp ignore'", float(ok), 1.0, ">="))
+        cand = sorted(run_dir.glob(f"gate0_{arm}_{kind}*.log"))
+        if not cand:
+            ok = False
         else:
-            # Check B values are present in the log
-            ok = lg["b_cu"] is not None and lg["b_au"] is not None
-            crit.append(_crit(f"E4 {arm} {kind}: log shows B values", float(ok), 1.0, ">="))
+            txt = cand[0].read_text(errors="replace")
+            lg = log_check(txt)
+            if arm == "A":
+                ok = lg["temp"] is not None and lg["temp"].lower() == "ignored"
+            else:
+                ok = lg["temp"] is not None and lg["temp"].lower() == "used"
+        if arm == "A":
+            crit.append(_crit(f"E4 {arm} {kind}: log shows 'Temp. factors : ignored'", float(ok), 1.0, ">="))
+        else:
+            crit.append(_crit(f"E4 {arm} {kind}: log shows 'Temp. factors : used'", float(ok), 1.0, ">="))
 
     # S-criteria: ensemble, over the independent evaluation set
     mask_S = O.independent_set_mask()
@@ -230,7 +252,7 @@ def analyze_arm(run_dir: Path, arm: str, pred: dict) -> dict:
     return {"criteria": crit, "info": info}
 
 
-def analyze(run_dir: Path) -> dict:
+def analyze(run_dir: Path, cache_dir: Path | None = None) -> dict:
     run_dir = Path(run_dir)
     pred = json.loads((HERE / "predictions.json").read_text())
     out = {"predictions_sha256": O.sha256_file(HERE / "predictions.json"), "run_dir": str(run_dir)}
@@ -239,7 +261,7 @@ def analyze(run_dir: Path) -> dict:
         out.update(status="INVALID", problems=problems)
         return out
     try:
-        out["arms"] = {a: analyze_arm(run_dir, a, pred) for a in ARMS}
+        out["arms"] = {a: analyze_arm(run_dir, a, pred, cache_dir=cache_dir) for a in ARMS}
     except Invalid as e:
         out.update(status="INVALID", problems=[str(e)])
         return out
@@ -269,8 +291,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("run_dir", type=Path)
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--cache", type=Path, default=None,
+                    help="optional directory for the realization-oracle cache (.npy, keyed by the "
+                         "SHA-256 of the structure file); default: no cache (compute everything fresh)")
     a = ap.parse_args()
-    res = analyze(a.run_dir)
+    res = analyze(a.run_dir, cache_dir=a.cache)
     write_report(res, a.out or a.run_dir)
     print(f"Gate 0 v2 pre-registered experiment: {res['status']}"
           + (f" ({res['n_failed']}/{res['n_criteria']} criteria failed)" if "n_failed" in res else ""))

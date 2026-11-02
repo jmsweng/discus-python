@@ -134,7 +134,7 @@ def main():
 
     # Compute predictions
     pred = {
-        "schema": "gate0-v2-prereg-v1",
+        "schema": "gate0-v2-prereg-v2.1",
         "status": "PRE-REGISTERED: written before any engine run of these inputs that produced data",
         "design": {
             "lattice": "fcc", "a_A": O.A_CELL, "cells": [O.N_CELL] * 3,
@@ -149,8 +149,8 @@ def main():
             "E1_total_vs_realization_engine_relL2_max": 1e-9,
             "E2_diffuse_vs_realization_engine_relL2_max": 1e-6,
             "E3_diffuse_at_integer_h_max_over_max_diffuse": 1e-6,
-            "E4_armB_log_shows_B_values": True,
-            "E4_armA_log_shows_temp_ignore": True,
+            "E4_armB_log_shows_temp_used": True,
+            "E4_armA_log_shows_temp_ignored": True,
             "S1_mean_x_within": None,  # computed below
             "S2_var_x_within": None,   # computed below
             "S3_bonferroni_fwer": 1e-3,

@@ -27,7 +27,15 @@ import gate0_analyze as AN  # noqa: E402
 
 import json
 import hashlib
+import time
 K = json.loads((HERE / "predictions.json").read_text())["n_realizations"]
+
+# Real DISCUS 6.23.01 logs committed as v1.5 evidence (DIAGNOSIS_v1_5.md):
+# arm A logs say `Temp. factors : ignored`, arm B logs say `Temp. factors : used`
+# (DISCUS prints no per-atom B values; the B values are verified by E1/E2).
+V15_EVIDENCE = HERE / "evidence" / "20261102T063824_LAPTOP-NGU3BT0N"
+REAL_LOG_NAMES = ("gate0_A_total_00.log", "gate0_A_diffuse_00.log",
+                 "gate0_B_total_00.log", "gate0_B_diffuse_00.log")
 
 
 def _make_temp_predictions(work: Path) -> Path:
@@ -71,12 +79,10 @@ def write_discus_h5(path: Path, values: np.ndarray, bragg: str):
 
 # Cache for oracle computations to avoid re-parsing .stru files
 _ORACLE_CACHE: dict = {}
-_CACHE_DIR: Path | None = None
 
 
 def _get_oracle(arm: str, k: int, work_dir: Path | None = None) -> tuple[np.ndarray, np.ndarray]:
     """Get the oracle's D and I for a given arm and realization (cached as .npy)."""
-    global _CACHE_DIR
     key = (arm, k)
     if key in _ORACLE_CACHE:
         return _ORACLE_CACHE[key]
@@ -86,10 +92,10 @@ def _get_oracle(arm: str, k: int, work_dir: Path | None = None) -> tuple[np.ndar
 
     # File-based cache keyed by input SHA-256
     if work_dir is not None:
-        _CACHE_DIR = work_dir / "oracle_cache"
-        _CACHE_DIR.mkdir(exist_ok=True)
+        cache_dir = work_dir / "oracle_cache"
+        cache_dir.mkdir(exist_ok=True)
         sha = hashlib.sha256(stru_path.read_bytes()).hexdigest()[:16]
-        cache_file = _CACHE_DIR / f"oracle_{arm}_{k:02d}_{sha}.npy"
+        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npy"
         if cache_file.exists():
             data = np.load(cache_file)
             _ORACLE_CACHE[key] = (data["D"], data["I"])
@@ -99,9 +105,9 @@ def _get_oracle(arm: str, k: int, work_dir: Path | None = None) -> tuple[np.ndar
     _ORACLE_CACHE[key] = result
 
     # Save to file cache
-    if _CACHE_DIR is not None:
+    if work_dir is not None:
         sha = hashlib.sha256(stru_path.read_bytes()).hexdigest()[:16]
-        cache_file = _CACHE_DIR / f"oracle_{arm}_{k:02d}_{sha}.npy"
+        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npy"
         np.savez_compressed(cache_file, D=result[0], I=result[1])
 
     return result
@@ -152,13 +158,10 @@ def _make_clean_run(work: Path, arm: str | None = None) -> Path:
             write_discus_h5(run / f"gate0_{a}_total_{k:02d}.h5", I, "bragg_present")
             write_discus_h5(run / f"gate0_{a}_diffuse_{k:02d}.h5", D, "bragg_subtracted")
 
-            # Write a log
-            temp = "ignored" if a == "A" else "used"
-            log = f"Temp. factors      : {temp}\n"
-            if a == "B":
-                # Format that matches the regex in gate0_analyze.py:
-                # "B = 0.5 ... Cu" or "Cu ... B = 0.5"
-                log += "Cu B = 0.5\nAu B = 0.8\n"
+            # Write a log: a COPY of the committed v1.5 real DISCUS log for this arm
+            # (DISCUS 6.23.01 prints `Temp. factors : used|ignored` and no per-atom B values)
+            src = V15_EVIDENCE / (f"gate0_{a}_total_00.log" if a == "A" else f"gate0_{a}_diffuse_00.log")
+            log = src.read_text()
             (run / f"gate0_{a}_total_{k:02d}.log").write_text(log)
             (run / f"gate0_{a}_diffuse_{k:02d}.log").write_text(log)
 
@@ -306,6 +309,15 @@ def _corrupt_run(work: Path, arm: str, corrupt: str) -> Path:
             with h5py.File(run / f"gate0_{arm}_{kind}_01.h5", "r+") as f:
                 f["entry/data/data_values"][...] = d0
 
+    elif corrupt == "temp_flag_wrong_B":
+        # Arm B log with the arm-A flag (`ignored`): E4 must fail
+        if arm == "B":
+            for k in range(K):
+                for kind in ("total", "diffuse"):
+                    p = run / f"gate0_{arm}_{kind}_{k:02d}.log"
+                    p.write_text(p.read_text().replace("Temp. factors      : used",
+                                                     "Temp. factors      : ignored"))
+
     return run
 
 
@@ -323,14 +335,16 @@ CASES = {  # corruption -> (expected status, criterion-name fragment that must f
     "shuffled_seeds": ("FAIL", "E1"),
     "friedel_noise": ("FAIL", "E1"),
     "duplicated_realization": ("FAIL", "E1"),
+    "temp_flag_wrong_B": ("FAIL", "E4"),
 }
 
 
-def _analyze_with_temp_pred(run_dir: Path, work: Path) -> dict:
+def _analyze_with_temp_pred(run_dir: Path, work: Path, cache_dir: Path | None = None) -> dict:
     """Analyze a run using a temporary predictions.json with updated code hashes.
 
     This monkey-patches the predictions.json path so the hash check passes
-    with the current (possibly modified) code files.
+    with the current (possibly modified) code files. Passes cache_dir through
+    to gate0_analyze.analyze (realization-oracle .npy cache).
     """
     import gate0_analyze as _AN
     import oracle as _O
@@ -354,7 +368,7 @@ def _analyze_with_temp_pred(run_dir: Path, work: Path) -> dict:
         return orig_read_text(self, *args, **kwargs)
     _Path.read_text = patched_read_text
     try:
-        return _AN.analyze(run_dir)
+        return _AN.analyze(run_dir, cache_dir=cache_dir)
     finally:
         _Path.read_text = orig_read_text
 
@@ -393,20 +407,51 @@ def _make_gaussian_run(work: Path, arm: str | None = None) -> Path:
             write_discus_h5(run / f"gate0_{a}_total_{k:02d}.h5", I, "bragg_present")
             write_discus_h5(run / f"gate0_{a}_diffuse_{k:02d}.h5", D_ens, "bragg_subtracted")
 
-            temp = "ignored" if a == "A" else "used"
-            log = f"Temp. factors      : {temp}\n"
-            if a == "B":
-                log += "Cu B = 0.5\nAu B = 0.8\n"
+            # Real DISCUS log text (copy of the committed v1.5 log for this arm)
+            src = V15_EVIDENCE / (f"gate0_{a}_total_00.log" if a == "A" else f"gate0_{a}_diffuse_00.log")
+            log = src.read_text()
             (run / f"gate0_{a}_total_{k:02d}.log").write_text(log)
             (run / f"gate0_{a}_diffuse_{k:02d}.log").write_text(log)
 
     return run
 
 
+def _real_logs_case(work: Path) -> tuple[bool, list]:
+    """real_logs: run the analyzer's log parser on the four committed v1.5 logs; E4 must pass.
+
+    Copies the four committed v1.5 logs into a run dir (with the registered inputs)
+    and runs the analyzer's log parser (gate0_analyze.log_check) on them:
+    arm A logs must parse to `ignored`, arm B logs to `used`.
+    """
+    run = work / "real_logs"
+    if run.exists():
+        shutil.rmtree(run)
+    run.mkdir(parents=True)
+    if (HERE / "inputs").exists():
+        shutil.copytree(HERE / "inputs", run, dirs_exist_ok=True)
+    notes = []
+    for name in REAL_LOG_NAMES:
+        src = V15_EVIDENCE / name
+        if not src.exists():
+            return False, [f"missing v1.5 log {name}"]
+        shutil.copyfile(src, run / name)
+        txt = (run / name).read_text()
+        parsed = AN.log_check(txt)
+        want = "ignored" if name.startswith("gate0_A_") else "used"
+        if parsed["temp"] != want:
+            return False, [f"{name}: parsed {parsed['temp']!r}, expected {want!r}"]
+        notes.append(f"{name}: {parsed['temp']}")
+    return True, notes
+
+
 def run_selftest(work: Path) -> list:
     report = []
     _make_clean_run(work)  # Create the clean run once
     _make_gaussian_run(work)  # Create the gaussian_ensemble run
+
+    # real_logs: the analyzer's log parser on the four committed v1.5 logs
+    rl_ok, rl_note = _real_logs_case(work)
+    report.append(("real_logs", "PASS", "PASS" if rl_ok else "FAIL", rl_ok, rl_note))
 
     # Print all criterion values for the clean case
     clean_res = _analyze_with_temp_pred(work / "clean", work)
@@ -425,14 +470,14 @@ def run_selftest(work: Path) -> list:
         if corrupt is None:
             # Clean case: all criteria must pass
             run = work / "clean"
-            res = _analyze_with_temp_pred(run, work)
+            res = _analyze_with_temp_pred(run, work, cache_dir=work / "oracle_cache")
             failed = [c["criterion"] for a in res.get("arms", {}).values() for c in a["criteria"] if not c["pass"]]
             ok = len(failed) == 0  # All criteria must pass
             report.append(("clean", want, res["status"], ok, failed[:6]))
         elif corrupt == "gaussian_ensemble":
             # Gaussian ensemble: S1-S3 pass, E2 expected to fail
             run = work / "gaussian_ensemble"
-            res = _analyze_with_temp_pred(run, work)
+            res = _analyze_with_temp_pred(run, work, cache_dir=work / "oracle_cache")
             failed = [c["criterion"] for a in res.get("arms", {}).values() for c in a["criteria"] if not c["pass"]]
             # S-criteria must pass; E2 may fail
             s_failed = [f for f in failed if f.startswith("S")]
@@ -443,12 +488,19 @@ def run_selftest(work: Path) -> list:
             an_src = (HERE / "gate0_analyze.py").read_text()
             ok = "occupancy" not in an_src.lower() and "_occupancy_grid" not in an_src
             report.append(("sample_fitted", want, "PASS" if ok else "FAIL", ok, []))
+        elif corrupt == "temp_flag_wrong_B":
+            # Arm B only: the log flag is wrong → E4 must fail
+            run = _corrupt_run(work, "B", corrupt)
+            res = _analyze_with_temp_pred(run, work, cache_dir=work / "oracle_cache")
+            failed = [c["criterion"] for a in res.get("arms", {}).values() for c in a["criteria"] if not c["pass"]]
+            ok = res["status"] == want and (frag is None or any(frag in f for f in failed))
+            report.append((f"{corrupt}_B", want, res["status"], ok, failed[:6]))
         else:
             for arm in AN.ARMS:
                 if corrupt == "dw_convention" and arm == "A":
                     continue  # DW convention only applies to Arm B
                 run = _corrupt_run(work, arm, corrupt)
-                res = _analyze_with_temp_pred(run, work)
+                res = _analyze_with_temp_pred(run, work, cache_dir=work / "oracle_cache")
                 failed = [c["criterion"] for a in res.get("arms", {}).values() for c in a["criteria"] if not c["pass"]]
                 ok = res["status"] == want and (frag is None or any(frag in f for f in failed))
                 report.append((f"{corrupt}_{arm}", want, res["status"], ok, failed[:6]))
@@ -457,9 +509,11 @@ def run_selftest(work: Path) -> list:
 
 def main():
     work = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(tempfile.mkdtemp(prefix="gate0_selftest_"))
+    t0 = time.monotonic()
     rep = run_selftest(work)
     for name, want, got, ok, failed in rep:
         print(f"{'ok ' if ok else 'BAD'} {name:25s} expected {want:7s} got {got:7s} failed: {failed}")
+    print(f"selftest time: {time.monotonic() - t0:.1f}s")
     sys.exit(0 if all(r[3] for r in rep) else 1)
 
 
