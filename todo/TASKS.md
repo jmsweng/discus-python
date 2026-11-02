@@ -1,6 +1,6 @@
 # Development task tracker
 
-**Review snapshot:** 2026-11-01 (America/New_York) · **Evidence:** repository `main` at [`6888905`](https://github.com/jmsweng/discus-python/commit/68889053e31f0652fd9bc9fc1130d86c2bfef415), [PRs](https://github.com/jmsweng/discus-python/pulls?q=is%3Apr) and GitHub Actions. **This is a living checklist, not a promise that an agent is working on a task.**
+**Review snapshot:** 2026-11-01 (America/New_York) · **Evidence:** repository `main` at [`f158f4d`](https://github.com/jmsweng/discus-python/commit/f158f4d), [PRs](https://github.com/jmsweng/discus-python/pulls?q=is%3Apr) and GitHub Actions. **This is a living checklist, not a promise that an agent is working on a task.**
 
 - ✅ means the specified deliverable has been **implemented or recorded with evidence**, **not** that all related science is verified.
 - ⬜ means still needed, insufficiently verified, or only partly built. When some groundwork exists, it is explicitly described.
@@ -74,7 +74,7 @@ The existing DISCUS engine may implement some of these physical methods already.
 ### Package A — [Structure and interoperability](01_structure_and_interoperability.md)
 
 - ✅ **A1 / Feature 1:** Editable, validated `Structure` (atomic species, sites, fractional/cartesian positions, occupancy, cell, PBC and supercell metadata). [`src/discuspdf/structure.py`](../src/discuspdf/structure.py); [PR A-2](https://github.com/jmsweng/discus-python/pull/11) · [`tests/test_structure.py`](../tests/test_structure.py).
-  - *Open items: magnetic moments (Package D11), anisotropic ADPs, mixed-PBC distances.*
+  - *Open items: magnetic moments (DISCUS 6.23.01 cannot keep them, see D11), anisotropic ADPs, mixed-PBC distances.*
 - ✅ **A2 / Feature 2:** CIF, ASE and optional DiffPy imports/exports with occupancy/PBC fidelity and round-trip tests. [`src/discuspdf/cif_io.py`](../src/discuspdf/cif_io.py); [PR #15](https://github.com/jmsweng/discus-python/pull/15) · [`tests/test_cif_io.py`](../tests/test_cif_io.py), [`tests/test_ase_io.py`](../tests/test_ase_io.py), [`tests/test_diffpy_io.py`](../tests/test_diffpy_io.py).
 - ✅ **A3 / Feature 3:** Real-format, version-aware DISCUS `.cll` / `.stru` import/export and round-trip tests. [`src/discuspdf/discus_io.py`](../src/discuspdf/discus_io.py); [PR A3](https://github.com/jmsweng/discus-python/pull/12) · [`tests/test_discus_io_cll.py`](../tests/test_discus_io_cll.py), [`tests/test_discus_io_stru.py`](../tests/test_discus_io_stru.py).
   - *Not done: symmetry expansion of `.cll`, occupancy < 1 in `.stru`, molecule/property columns, CIF/ASE (next PR).*
@@ -112,12 +112,19 @@ The existing DISCUS engine may implement some of these physical methods already.
 
 ### Package D — [Monte Carlo and advanced physics](04_monte_carlo_and_advanced_physics.md)
 
-- ⬜ **D10 / Feature 10:** Limited independent Python scattering reference calculator for physics verification, not a replacement for DISCUS.
-- ⬜ **D11 / Feature 11:** Magnetic neutron diffuse-scattering support with validated form factors, moments and Q-dependent projection.
-- ⬜ **D15 / Feature 15:** Typed Python Monte Carlo/disorder configuration compiled to validated DISCUS MMC macros.
-- ⬜ **D16 / Feature 16:** Multiple targeted occupational/displacement correlations with convergence and achievement reporting.
-- ⬜ **D17 / Feature 17:** Site-restricted occupancy/displacement move and energy configuration; verified detailed balance, units and seeded reproducibility.
-- ⬜ **D21 / Feature 21:** Notebook-friendly atomistic structure and selected-neighbor visualization, with optional exports.
+- ✅ **D10 / Feature 10:** Limited independent Python scattering reference calculator for physics verification, not a replacement for DISCUS. [`src/discuspdf/reference_scattering.py`](../src/discuspdf/reference_scattering.py); [PR #34](https://github.com/jmsweng/discus-python/pull/34) · [`tests/test_reference_scattering.py`](../tests/test_reference_scattering.py) · [`docs/REFERENCE_SCATTERING.md`](../docs/REFERENCE_SCATTERING.md); analytical benchmarks (single atom, two atoms, Laue function, Warren–Cowley sums, triclinic brute force) and a pre-registered DISCUS 6.23.01 comparison: 2.5e-15 … 1.8e-13 relative L2 with DISCUS's table rounding emulated ([result](../benchmarks/discus_6_23_01/d_reference/RESULT.md)).
+  - *Open: anomalous dispersion, anisotropic ADPs, partial `set aver`, lots.*
+- ✅ **D11 / Feature 11:** Investigation and specification done; **experimental** reference only. DISCUS 6.23.01 computes no magnetic scattering and drops moments in `.stru` I/O; Javelin's projection is wrong outside a Cartesian a = 1 Å cell. [`src/discuspdf/magnetic_reference.py`](../src/discuspdf/magnetic_reference.py) (not exported); [PR #36](https://github.com/jmsweng/discus-python/pull/36) · [`tests/test_magnetic_reference.py`](../tests/test_magnetic_reference.py) · [`docs/MAGNETIC_SCATTERING.md`](../docs/MAGNETIC_SCATTERING.md); analytical benchmarks only.
+  - *Open (before any production use): an independent numerical comparison (e.g. Spinvert/SCATTY), moments in `Structure` with I/O that keeps them, magnetic symmetry.*
+- ✅ **D15 / Feature 15:** Typed Python Monte Carlo configuration compiled to verified DISCUS MMC macros, staged and executed per run directory. [`src/discuspdf/mc.py`](../src/discuspdf/mc.py); [PR #37](https://github.com/jmsweng/discus-python/pull/37) · [`tests/test_mc_config.py`](../tests/test_mc_config.py) · [`docs/MONTE_CARLO.md`](../docs/MONTE_CARLO.md) · source facts [`docs/MC_FACTS.md`](../docs/MC_FACTS.md); engine probe ([result](../benchmarks/discus_6_23_01/d_mc_probes/RESULT.md)) and live runs of generated macros (four bit-identical to the probe).
+  - *Open: temperature schedules, molecules, angle/environment neighbourhoods, `site` pairing not yet engine-run.*
+- ✅ **D16 / Feature 16:** Several occupational/displacement targets with achievement reporting: rows matched to targets, `target_report` (reached / not reached), feedback history and acceptance, independent `measure()` with DISCUS's definitions, `replica_summary` for seed spread. Same module; [`tests/test_mc_results.py`](../tests/test_mc_results.py).
+  - *Open: DISCUS `set finish` convergence (unverified, not offered); only one feedback target per run.*
+- ✅ **D17 / Feature 17:** Swap, displacement-swap and shift moves with occupational, displacement, spring and Lennard-Jones energies wrapped from DISCUS MMC; units, sign convention, acceptance rule (heat bath, **not** detailed balance with exp(−E/kT)), periodicity, composition conservation, zero-energy acceptance (½) and fixed-seed reproducibility verified on the engine. Same module and PR.
+  - *Open: `unid`, `cn`, `group`, `heli`, `bucking`, `repulsive`; site-restricted atom lists (DISCUS bug, refused).*
+- ✅ **D21 / Feature 21:** Notebook-friendly structure, displacement and neighbor-bond pictures with checked viewer export. [`src/discuspdf/structure_viz.py`](../src/discuspdf/structure_viz.py); [PR #35](https://github.com/jmsweng/discus-python/pull/35) · [`tests/test_structure_viz.py`](../tests/test_structure_viz.py) · [`docs/STRUCTURE_VIZ.md`](../docs/STRUCTURE_VIZ.md).
+  - *Open: interactive viewer.*
+- ✅ Example notebook for Package D (Features 10, 11, 15–17, 21) on committed data. [`notebooks/10_monte_carlo_and_reference_scattering.ipynb`](../notebooks/10_monte_carlo_and_reference_scattering.ipynb).
 
 ## Maintenance rules
 
