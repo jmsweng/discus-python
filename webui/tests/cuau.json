@@ -1,0 +1,123 @@
+{
+ "title": "CuAu SRO",
+ "seed": 5,
+ "cell": {
+  "a": 3.75,
+  "b": 3.75,
+  "c": 3.75,
+  "alpha": 90,
+  "beta": 90,
+  "gamma": 90
+ },
+ "supercell": [
+  8,
+  8,
+  8
+ ],
+ "sites": [
+  {
+   "label": "Cu",
+   "frac": [
+    0,
+    0,
+    0
+   ],
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25
+    }
+   ],
+   "draw": "exact"
+  }
+ ],
+ "disorder": {
+  "atomic_displacements": {}
+ },
+ "mmc": {
+  "enabled": true,
+  "neighborhoods": [
+   {
+    "vectors": [
+     {
+      "origin": 1,
+      "target": 1,
+      "t": [
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 1,
+      "t": [
+       0,
+       1,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 1,
+      "t": [
+       0,
+       0,
+       1
+      ]
+     }
+    ],
+    "symmetric": true
+   }
+  ],
+  "targets": [
+   {
+    "type": "occupational",
+    "neighborhood": 0,
+    "a": "Cu",
+    "b": "Au",
+    "mode": "correlation",
+    "value": -0.2
+   }
+  ],
+  "moves": {
+   "swap": 1.0
+  },
+  "moves_per_atom": 10
+ },
+ "calc": {
+  "fourier": {
+   "enabled": true,
+   "steps": [
+    0.125,
+    0.125,
+    0.125
+   ],
+   "hmax": [
+    3,
+    3,
+    3
+   ],
+   "lots": {
+    "enabled": true,
+    "shape": "box",
+    "size": [
+     4,
+     4,
+     4
+    ],
+    "count": 20,
+    "periodic": true
+   }
+  },
+  "pdf": {
+   "enabled": false
+  }
+ }
+}
