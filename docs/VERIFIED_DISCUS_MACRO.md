@@ -97,7 +97,7 @@ exit
 | `qmin` | `set qmin,<qmin>` | Q-grid start (Å⁻¹), default 0.5 |
 | `qmax` | `set qmax,<qmax>` | must be > 0 (`qmax = 0` is rejected); limit ≈ 12.3/λ, see below |
 | `dq` | `set dq,<dq>` | Q-grid step (Å⁻¹), default 0.01 |
-| `qsig` | `set delta,<qsig>` | Gaussian convolution width; `0.0` = off. **Values > 0 crash DISCUS 6.23.01 on most grids**, see below |
+| `qsig` | `set delta,<qsig>` | Gaussian convolution width; `0.0` = off. **Values > 0 crash DISCUS 6.23.01 on most grids**, see below: `PDFConfig` raises `SetDeltaError` unless `allow_qsig=True` ([issue #65](https://github.com/jmsweng/discus-python/issues/65)) |
 | — (derived) | `set wvle,<λ>` | 1.5406 Å (Cu-Kα) for xray; 1.5400 Å reference for neutron |
 | `rmax`, `dr` | `form pdf, r, 0.0, <rmax>, <dr>` | PDF distance range and step |
 | — (fixed) | `value PDF` | write the powder PDF |
@@ -179,4 +179,4 @@ Two runs: the pre-registered probe v1.1 and its confirmation v2, in [`benchmarks
 | ΔQ | 0.005 / 0.02 / 0.05 | 1.3×10⁻³ / 2.6×10⁻³ / 1.0×10⁻² | F itself changes slightly with ΔQ (0.2–1.4 %), cause not identified |
 | `set delta` | 0.02 / 0.03 / 0.05 / 0.10 | engine aborts on 5 of 6 grid/thread combinations | see below |
 
-**`set delta` (`qsig`) is not usable with 6.23.01.** Any value > 0 aborted DISCUS with `double free or corruption` in `powder_convolute` on 5 of 6 grid/thread combinations, including `OMP_NUM_THREADS=1`. On the sixth (qmin 0.5, qmax 7.0, ΔQ 0.02) it ran: G(r) changed by 2.8 % and F(Q) was smoothed roughly as a Gaussian of σ = δ/√2 in Q. The likely cause from the source is a write one point past the end of the pattern array (`powder_conv_res` runs to `xmax + xdel`). That would also make a run that does not crash unreliable. To be reported to the DiffuseCode maintainers together with the wavelength question above.
+**`set delta` (`qsig`) is not usable with 6.23.01.** Any value > 0 aborted DISCUS with `double free or corruption` in `powder_convolute` on 5 of 6 grid/thread combinations, including `OMP_NUM_THREADS=1`. On the sixth (qmin 0.5, qmax 7.0, ΔQ 0.02) it ran: G(r) changed by 2.8 % and F(Q) was smoothed roughly as a Gaussian of σ = δ/√2 in Q. The likely cause from the source is a write one point past the end of the pattern array (`powder_conv_res` runs to `xmax + xdel`). That would also make a run that does not crash unreliable. Write-up for the DiffuseCode maintainers: [issue #65](https://github.com/jmsweng/discus-python/issues/65). Until it is fixed, `PDFConfig(qsig > 0)` raises `SetDeltaError`. `allow_qsig=True` runs it anyway with a `SetDeltaWarning`, for use with a fixed DISCUS.

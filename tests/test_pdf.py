@@ -188,3 +188,49 @@ def test_qmax_limit_warning_points_at_caller():
         replace(base, qmax=25)
     assert direct[0].filename == __file__
     assert via_replace[0].filename == __file__
+
+
+# --- qsig > 0 ('set delta') guard: DISCUS 6.23.01 aborts on most grids (issue #65) -------------
+from discuspdf import SetDeltaError, SetDeltaWarning  # noqa: E402
+
+
+def test_qsig_positive_raises_by_default():
+    with pytest.raises(SetDeltaError) as exc:
+        PDFConfig("input.cll", qmax=7.5, qsig=0.03)
+    msg = str(exc.value)
+    assert "issues/65" in msg and "allow_qsig=True" in msg
+    assert isinstance(exc.value, ValueError)
+
+
+def test_qsig_zero_needs_no_opt_in():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SetDeltaWarning)
+        assert "set delta,0\n" in render_pdf_macro(PDFConfig("input.cll", qmax=7.5))
+        PDFConfig("input.cll", qmax=7.5, qsig=0.0, allow_qsig=True)  # opt-in alone does nothing
+
+
+def test_qsig_opt_in_warns_and_runs_set_delta():
+    with pytest.warns(SetDeltaWarning) as rec:
+        cfg = PDFConfig("input.cll", qmax=7.5, qsig=0.03, allow_qsig=True)
+    assert rec[0].filename == __file__  # the warning points at the user's line
+    assert "set delta,0.03\n" in render_pdf_macro(cfg)
+
+
+def test_allow_qsig_must_be_bool():
+    with pytest.raises(ValueError, match="allow_qsig"):
+        PDFConfig("input.cll", qmax=7.5, allow_qsig="yes")
+
+
+def test_qsig_opt_in_survives_prepare_and_execute(tmp_path):
+    script = tmp_path / "fake_discuss.py"
+    script.write_text("from pathlib import Path\nPath('result.pdf').write_text('0.0 1.0\\n0.1 1.2\\n0.2 0.8\\n')\n")
+    cell = tmp_path / "cell.cll"
+    cell.write_text("dummy")
+    runner = PDFRunner(runs_directory=tmp_path / "runs", launcher=[sys.executable, str(script)])
+    with pytest.warns(SetDeltaWarning):
+        prepared = runner.prepare(PDFConfig(cell, rmax=.2, dr=.1, qmax=7.5, qsig=0.03, allow_qsig=True))
+    assert json.loads((prepared.directory / "config.json").read_text())["allow_qsig"] is True
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SetDeltaWarning)  # already warned when the config was created
+        result = runner.execute(prepared)
+    assert json.loads((result.directory / "status.json").read_text())["status"] == "complete"

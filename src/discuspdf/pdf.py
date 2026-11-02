@@ -33,6 +33,22 @@ class QmaxLimitWarning(UserWarning):
     """qmax is above what DISCUS can use at this wavelength; the PDF is computed unchanged."""
 
 
+SET_DELTA_ISSUE = "https://github.com/jmsweng/discus-python/issues/65"
+_SET_DELTA_PROBLEM = (
+    "DISCUS_SUITE 6.23.01 aborts on most Q grids when 'set delta' > 0 (heap corruption in "
+    "powder_convolute), and a run that does not abort may still be wrong. See "
+    f"{SET_DELTA_ISSUE} and docs/VERIFIED_DISCUS_MACRO.md."
+)
+
+
+class SetDeltaError(ValueError):
+    """qsig > 0 (DISCUS 'set delta') was requested without allow_qsig=True."""
+
+
+class SetDeltaWarning(UserWarning):
+    """qsig > 0 runs 'set delta', which DISCUS 6.23.01 cannot do reliably (allow_qsig=True was given)."""
+
+
 def _caller_stacklevel() -> int:
     """stacklevel for a warning issued in PDFConfig.__post_init__ that points at the user's code.
 
@@ -60,6 +76,10 @@ class PDFConfig:
     "set delta" convolution width; it is not assumed to be a universal
     instrument-resolution parameter. qmax must be explicitly positive:
     omitting "set qmax" is not a verified way to disable termination.
+
+    qsig > 0 raises :class:`SetDeltaError`, because DISCUS 6.23.01 aborts on most Q grids
+    with 'set delta' > 0 (issue #65). Pass ``allow_qsig=True`` to run it anyway, e.g. with a
+    DISCUS version in which this is fixed; a :class:`SetDeltaWarning` is then issued.
     """
     structure: Path | str
     supercell: tuple[int, int, int] = (5, 5, 5)
@@ -71,6 +91,7 @@ class PDFConfig:
     qmin: float = 0.5
     dq: float = 0.01
     wavelength: float | None = None
+    allow_qsig: bool = False
 
     def __post_init__(self) -> None:
         if len(self.supercell) != 3 or any(type(n) is not int or n < 1 for n in self.supercell):
@@ -87,6 +108,15 @@ class PDFConfig:
             raise ValueError("Require 0 < qmin < qmax and dq > 0 (qmax=0 is not supported)")
         if self.qsig < 0:
             raise ValueError("qsig must be >= 0")
+        if not isinstance(self.allow_qsig, bool):
+            raise ValueError("allow_qsig must be True or False")
+        if self.qsig > 0:
+            if not self.allow_qsig:
+                raise SetDeltaError(
+                    f"qsig = {self.qsig:g} needs 'set delta', and {_SET_DELTA_PROBLEM} "
+                    "Use qsig = 0, or pass allow_qsig=True to run it anyway (for example with a fixed DISCUS).")
+            warnings.warn(f"qsig = {self.qsig:g} with allow_qsig=True: {_SET_DELTA_PROBLEM}",
+                          SetDeltaWarning, stacklevel=_caller_stacklevel())
         if self.wavelength is not None:
             if isinstance(self.wavelength, bool) or not isinstance(self.wavelength, (int, float)) or not math.isfinite(self.wavelength) or self.wavelength <= 0:
                 raise ValueError("wavelength must be finite and > 0")
@@ -280,7 +310,7 @@ class PDFRunner:
         """
         params = json.loads((prepared.directory / "config.json").read_text(encoding="utf-8"))
         config_keys = ("structure", "supercell", "rmax", "dr", "qmax", "qsig",
-                       "radiation", "qmin", "dq", "wavelength")
+                       "radiation", "qmin", "dq", "wavelength", "allow_qsig")
 
         def status(state: str, **details: object) -> None:
             (prepared.directory / "status.json").write_text(
@@ -293,6 +323,7 @@ class PDFRunner:
 
         with warnings.catch_warnings():  # already warned when the config was created
             warnings.simplefilter("ignore", QmaxLimitWarning)
+            warnings.simplefilter("ignore", SetDeltaWarning)
             config = PDFConfig(**{key: params[key] for key in config_keys if key in params})
         staged = prepared.directory / "model.cll"
         if not staged.is_file() or hashlib.sha256(staged.read_bytes()).hexdigest() != params["input_sha256"]:

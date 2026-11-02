@@ -46,7 +46,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "src"))
-from discuspdf import PDFConfig, QmaxLimitWarning, render_pdf_macro  # noqa: E402
+from discuspdf import PDFConfig, QmaxLimitWarning, SetDeltaWarning, render_pdf_macro  # noqa: E402
 
 STRUCTURE = REPO / "examples" / "gaas.cll"
 INPUTS = HERE / "inputs"
@@ -91,8 +91,9 @@ def case_config(over: dict) -> PDFConfig:
     s = {**BASE, **over}
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", QmaxLimitWarning)
+        warnings.simplefilter("ignore", SetDeltaWarning)  # the set delta cases are the point of the probe
         return PDFConfig(STRUCTURE, supercell=(5, 5, 5), rmax=12.0, dr=0.02, radiation="xray",
-                         wavelength=1.5406, **s)
+                         wavelength=1.5406, allow_qsig=s["qsig"] > 0, **s)
 
 
 def case_macro(cid: str, over: dict) -> str:
