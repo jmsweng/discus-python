@@ -35,3 +35,7 @@ See `docs/VERIFIED_DISCUS_MACRO.md` for the verified macro syntax.
 - **Engine binary not recorded.** The run predates binary hashing, so the exact DISCUS binary is unknown. The gate evidence of 2026-10-28/29 used SHA-256 `d4274f13…45706f3`.
 - **Checks.** `tests/test_run_sample_fixture.py` (standard CI, no DISCUS) checks the manifest, the macro against the generator and against the log, the structure hash and the r grid. `tests/test_integration_discus.py` (opt-in, `DISCUS_INTEGRATION=1`) reruns the recorded settings and compares G(r) with `result.pdf` (relative L2 < 1e-6).
 - **qmax 30 vs 25.** Both are above the DISCUS limit at this wavelength and give identical G(r) (see the Qmax note above), so the test's earlier `qmax=25` would not have changed the numbers. The test now uses the recorded 30.
+
+## Engine re-check (2026-11-02)
+
+`DISCUS_INTEGRATION=1 python -m pytest -q -rP tests/test_run_sample_fixture.py tests/test_integration_discus.py` on the owner's WSL machine, fresh LF clone of `fix/gaas-fixture-provenance` at `d770b74`: **7 passed**. DISCUS_SUITE 6.23.01 rerun of the recorded settings (qmax 30) against `result.pdf`: same 601-point r grid, **relative L2 = 2.454×10⁻¹⁶** (limit 1×10⁻⁶), i.e. identical to floating-point precision. Engine binary SHA-256: *to be added*.
