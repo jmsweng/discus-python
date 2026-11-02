@@ -1,0 +1,111 @@
+{
+ "probe": "powder-settings-v2",
+ "criteria": [
+  {
+   "criterion": "P1 b: first F point is the S = 0 placeholder, |F0/Q0 + 1|",
+   "value": 0.0009834455400727915,
+   "limit": 0.01,
+   "pass": true
+  },
+  {
+   "criterion": "P2 b: G vs model (no fit)",
+   "value": 0.00016322177788917648,
+   "limit": 0.001,
+   "pass": true
+  },
+  {
+   "criterion": "P1 b_qmin: first F point is the S = 0 placeholder, |F0/Q0 + 1|",
+   "value": 0.0009150866386313794,
+   "limit": 0.01,
+   "pass": true
+  },
+  {
+   "criterion": "P2 b_qmin: G vs model (no fit)",
+   "value": 0.00017334351559917158,
+   "limit": 0.001,
+   "pass": true
+  },
+  {
+   "criterion": "P1 b_qmax: first F point is the S = 0 placeholder, |F0/Q0 + 1|",
+   "value": 0.0009834455400727915,
+   "limit": 0.01,
+   "pass": true
+  },
+  {
+   "criterion": "P2 b_qmax: G vs model (no fit)",
+   "value": 0.00014110375621362184,
+   "limit": 0.001,
+   "pass": true
+  },
+  {
+   "criterion": "P1 b_dq: first F point is the S = 0 placeholder, |F0/Q0 + 1|",
+   "value": 0.0009834455400727915,
+   "limit": 0.01,
+   "pass": true
+  },
+  {
+   "criterion": "P2 b_dq: G vs model (no fit)",
+   "value": 0.00016310452714760306,
+   "limit": 0.001,
+   "pass": true
+  },
+  {
+   "criterion": "P1 n: first F point is the S = 0 placeholder, |F0/Q0 + 1|",
+   "value": 0.002606386691479612,
+   "limit": 0.01,
+   "pass": true
+  },
+  {
+   "criterion": "P2 n: G vs model (no fit)",
+   "value": 0.0002174545207140332,
+   "limit": 0.001,
+   "pass": true
+  },
+  {
+   "criterion": "P4 d: engine aborts, no G(r)",
+   "value": null,
+   "limit": null,
+   "pass": true
+  },
+  {
+   "criterion": "P4 d_omp1: engine aborts, no G(r)",
+   "value": null,
+   "limit": null,
+   "pass": true
+  },
+  {
+   "criterion": "P4 d_grid: engine aborts, no G(r)",
+   "value": null,
+   "limit": null,
+   "pass": false
+  },
+  {
+   "criterion": "P3 b_qmin: F at true Q vs b, 460 common points",
+   "value": 6.584121392677861e-16,
+   "limit": 1e-12,
+   "pass": true
+  },
+  {
+   "criterion": "P3 b_qmax: F at true Q vs b, 430 common points",
+   "value": 5.349598631550763e-16,
+   "limit": 1e-12,
+   "pass": true
+  },
+  {
+   "criterion": "I1 b_dq: F at true Q vs b (dq 0.008 vs 0.012), 270 common points (informational)",
+   "value": 0.0023308304446745935,
+   "limit": null,
+   "pass": null
+  }
+ ],
+ "n_graded": 15,
+ "n_failed": 1,
+ "model_scale_fit": {
+  "b": 1.0000010192928162,
+  "b_qmin": 1.0000009920158537,
+  "b_qmax": 1.0000015359723948,
+  "b_dq": 1.0000009610850829,
+  "n": 1.000000783713874
+ },
+ "verdict": "FAIL"
+}

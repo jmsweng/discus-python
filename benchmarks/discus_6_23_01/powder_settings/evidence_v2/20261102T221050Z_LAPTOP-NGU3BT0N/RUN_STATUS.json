@@ -1,0 +1,78 @@
+[
+ {
+  "id": "b",
+  "env": {},
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "b_qmin",
+  "env": {},
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "b_qmax",
+  "env": {},
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "b_dq",
+  "env": {},
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "n",
+  "env": {},
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "d",
+  "env": {},
+  "exit": -6,
+  "engine_error": "double free",
+  "outputs": []
+ },
+ {
+  "id": "d_omp1",
+  "env": {
+   "OMP_NUM_THREADS": "1"
+  },
+  "exit": -6,
+  "engine_error": "double free",
+  "outputs": []
+ },
+ {
+  "id": "d_grid",
+  "env": {},
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ }
+]
