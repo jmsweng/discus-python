@@ -38,4 +38,4 @@ See `docs/VERIFIED_DISCUS_MACRO.md` for the verified macro syntax.
 
 ## Engine re-check (2026-11-02)
 
-`DISCUS_INTEGRATION=1 python -m pytest -q -rP tests/test_run_sample_fixture.py tests/test_integration_discus.py` on the owner's WSL machine, fresh LF clone of `fix/gaas-fixture-provenance` at `d770b74`: **7 passed**. DISCUS_SUITE 6.23.01 rerun of the recorded settings (qmax 30) against `result.pdf`: same 601-point r grid, **relative L2 = 2.454×10⁻¹⁶** (limit 1×10⁻⁶), i.e. identical to floating-point precision. Engine binary SHA-256: *to be added*.
+`DISCUS_INTEGRATION=1 python -m pytest -q -rP tests/test_run_sample_fixture.py tests/test_integration_discus.py` on the owner's WSL machine, fresh LF clone of `fix/gaas-fixture-provenance` at `d770b74`: **7 passed**. DISCUS_SUITE 6.23.01 rerun of the recorded settings (qmax 30) against `result.pdf`: same 601-point r grid, **relative L2 = 2.454×10⁻¹⁶** (limit 1×10⁻⁶), i.e. identical to floating-point precision. Engine `/usr/local/bin/discus_suite`, SHA-256 `d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3`, the same binary as the Gate 1–3 evidence runs.
