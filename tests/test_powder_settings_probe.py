@@ -45,3 +45,25 @@ def test_zero_last_matches_the_discus_loop():
 def test_analyzer_on_synthetic_evidence(tmp_path, name, kw, want):
     probe._synthetic(tmp_path, **kw)
     assert probe.analyze(tmp_path)["verdict"] == want
+
+
+spec2 = importlib.util.spec_from_file_location("powder_probe_v2", HERE / "probe_v2.py")
+probe_v2 = importlib.util.module_from_spec(spec2)
+spec2.loader.exec_module(probe_v2)
+
+
+def test_v2_committed_macros_are_what_the_generator_writes():
+    pred = json.loads((HERE / "predictions_v2.json").read_text(encoding="utf-8"))
+    for cid, over, _e, _p in probe_v2.CASES:
+        text = (HERE / "inputs_v2" / f"{cid}.mac").read_text(encoding="ascii")
+        assert text == probe_v2.case_macro(over)
+        assert hashlib.sha256(text.encode()).hexdigest() == pred["macro_sha256"][cid]
+
+
+@pytest.mark.parametrize("kw, want", [
+    ({}, "PASS"), ({"scale": 2 / 3.141592653589793}, "FAIL"), ({"no_shift": True}, "FAIL"),
+    ({"aborts": False}, "FAIL"), ({"qmin_changes_f": True}, "FAIL"),
+])
+def test_v2_analyzer_on_synthetic_evidence(tmp_path, kw, want):
+    probe_v2._synthetic(tmp_path, **kw)
+    assert probe_v2.analyze(tmp_path)["verdict"] == want

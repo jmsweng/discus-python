@@ -6,3 +6,4 @@ examples/gaas.cll -text
 benchmarks/discus_6_23_01/gate0_prereg/** -text
 # Registered probe macros: exact bytes (their SHA-256 is in predictions.json).
 benchmarks/discus_6_23_01/powder_settings/inputs/** -text
+benchmarks/discus_6_23_01/powder_settings/inputs_v2/** -text

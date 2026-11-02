@@ -206,15 +206,22 @@ def common(q1, f1, q2, f2, step=0.005):
 def analyze(ev: Path) -> dict:
     pred = json.loads(PREDICTIONS.read_text())
     data = {}
+    failed_runs = []
     for cid, over, _p in CASES:
         d = ev / cid
+        if not (d / "result.pdf").exists():  # engine produced no output (v1.1 run: set delta aborts)
+            failed_runs.append(cid)
+            continue
         r, g = read_xy(d / "result.pdf")
         entry = {"r": r, "g": g, "set": {**BASE, **over}}
         if (d / "fq.dat").exists():
             entry["q"], entry["f"] = read_xy(d / "fq.dat")
         data[cid] = entry
-    res = {"probe": pred["probe"], "limits": LIMITS, "cases": {}, "criteria": [], "effects": {}}
+    res = {"probe": pred["probe"], "limits": LIMITS, "cases": {}, "criteria": [], "effects": {},
+           "engine_failures": failed_runs}
     crit = res["criteria"]
+    for cid in failed_runs:
+        crit.append({"criterion": f"R {cid}: engine produced G(r)", "value": 0.0, "limit": None, "pass": False})
 
     def add(name, value, limit, ok, info=False):
         crit.append({"criterion": name, "value": value, "limit": limit,
@@ -251,7 +258,7 @@ def analyze(ev: Path) -> dict:
     v = float(np.max(np.abs(data["base_plain"]["g"] - base["g"])) / np.max(np.abs(base["g"])))
     add("T4 base_plain vs base: G(r)", v, LIMITS["T4_parity_rel"], v <= LIMITS["T4_parity_rel"])
     # I1: delta damping (informational)
-    for cid in ("delta002", "delta005", "delta010"):
+    for cid in [c for c in ("delta002", "delta005", "delta010") if c in data]:
         d = data[cid]["set"]["qsig"]
         pred_g = base["g"] * np.exp(-(d * base["r"]) ** 2 / 4)
         v = float(np.max(np.abs(data[cid]["g"] - pred_g)) / np.max(np.abs(base["g"])))
@@ -270,6 +277,9 @@ def table(res: dict) -> str:
              "| criterion | value | limit | pass |", "|---|---|---|---|"]
     for c in res["criteria"]:
         lim = "–" if c["limit"] is None else f"{c['limit']:.0e}"
+        if c["criterion"].startswith("R "):
+            lines.append(f"| {c['criterion']} | no output | – | FAIL |")
+            continue
         ok = "info" if c["pass"] is None else ("PASS" if c["pass"] else "FAIL")
         lines.append(f"| {c['criterion']} | {c['value']:.3e} | {lim} | {ok} |")
     lines += ["", "## Effect of each setting on G(r): max|G - G_base| / max|G_base|", "", "| case | settings | effect |", "|---|---|---|"]

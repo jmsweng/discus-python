@@ -1,0 +1,560 @@
+{
+ "probe": "powder-settings-v1",
+ "limits": {
+  "T1_transform_rel_max": 0.002,
+  "T1_scale_abs": 0.002,
+  "T3_fq_invariance_rel": 1e-06,
+  "T4_parity_rel": 1e-12
+ },
+ "cases": {
+  "base": {
+   "settings": {
+    "qmin": 0.5,
+    "qmax": 7.5,
+    "dq": 0.01,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    0.5,
+    7.5
+   ],
+   "fq_points": 701,
+   "fq_written_step": 0.009999999999999787,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.37352707715246086,
+      "scale": 1.5646320547616193
+     },
+     "shift0_nozero": {
+      "rel_max": 0.4074182245634528,
+      "scale": 1.4910007703289831
+     },
+     "shift1_zero": {
+      "rel_max": 0.36657202449942083,
+      "scale": 1.5701397364693068
+     },
+     "shift1_nozero": {
+      "rel_max": 0.4086861127164258,
+      "scale": 1.4953657829866047
+     }
+    },
+    "best_with_zeroing": "shift1_zero"
+   }
+  },
+  "base_plain": {
+   "settings": {
+    "qmin": 0.5,
+    "qmax": 7.5,
+    "dq": 0.01,
+    "qsig": 0.0
+   },
+   "n_r": 601
+  },
+  "qmin02": {
+   "settings": {
+    "qmin": 0.2,
+    "qmax": 7.5,
+    "dq": 0.01,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    0.2,
+    7.5
+   ],
+   "fq_points": 731,
+   "fq_written_step": 0.009999999999999787,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.445346879159719,
+      "scale": 1.581691572049406
+     },
+     "shift0_nozero": {
+      "rel_max": 0.47379477136707115,
+      "scale": 1.5082615779231514
+     },
+     "shift1_zero": {
+      "rel_max": 0.42082144441523905,
+      "scale": 1.588372653277914
+     },
+     "shift1_nozero": {
+      "rel_max": 0.47349238989173364,
+      "scale": 1.5138162683847884
+     }
+    },
+    "best_with_zeroing": "shift1_zero"
+   },
+   "effect_on_G_rel_max": 0.14231077474899656,
+   "fq_common_points_with_base": 701
+  },
+  "qmin10": {
+   "settings": {
+    "qmin": 1.0,
+    "qmax": 7.5,
+    "dq": 0.01,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    1.0,
+    7.5
+   ],
+   "fq_points": 651,
+   "fq_written_step": 0.009999999999999787,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.3787773612248355,
+      "scale": 1.5640544513894803
+     },
+     "shift0_nozero": {
+      "rel_max": 0.4023533857436182,
+      "scale": 1.4906443744013578
+     },
+     "shift1_zero": {
+      "rel_max": 0.3638514778314466,
+      "scale": 1.5695522504639792
+     },
+     "shift1_nozero": {
+      "rel_max": 0.4038294054457961,
+      "scale": 1.4950021083323612
+     }
+    },
+    "best_with_zeroing": "shift1_zero"
+   },
+   "effect_on_G_rel_max": 0.020406567972545104,
+   "fq_common_points_with_base": 651
+  },
+  "qmin20": {
+   "settings": {
+    "qmin": 2.0,
+    "qmax": 7.5,
+    "dq": 0.01,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    2.0,
+    7.5
+   ],
+   "fq_points": 551,
+   "fq_written_step": 0.009999999999999787,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.5632557633019841,
+      "scale": 1.382985731692456
+     },
+     "shift0_nozero": {
+      "rel_max": 0.6551610092401747,
+      "scale": 1.317319780281727
+     },
+     "shift1_zero": {
+      "rel_max": 0.5628730520581673,
+      "scale": 1.3898700476430053
+     },
+     "shift1_nozero": {
+      "rel_max": 0.6550003086924492,
+      "scale": 1.3229588495788314
+     }
+    },
+    "best_with_zeroing": "shift1_zero"
+   },
+   "effect_on_G_rel_max": 0.43563285228425475,
+   "fq_common_points_with_base": 551
+  },
+  "dq005": {
+   "settings": {
+    "qmin": 0.5,
+    "qmax": 7.5,
+    "dq": 0.005,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    0.5,
+    7.5
+   ],
+   "fq_points": 1401,
+   "fq_written_step": 0.004999999999999893,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.3636018095417793,
+      "scale": 1.5686792143383215
+     },
+     "shift0_nozero": {
+      "rel_max": 0.4082868356721647,
+      "scale": 1.4921609614630746
+     },
+     "shift1_zero": {
+      "rel_max": 0.366590876602277,
+      "scale": 1.5701421029235416
+     },
+     "shift1_nozero": {
+      "rel_max": 0.4092886389496784,
+      "scale": 1.4931109383433026
+     }
+    },
+    "best_with_zeroing": "shift0_zero"
+   },
+   "effect_on_G_rel_max": 0.0012825085293315238,
+   "fq_common_points_with_base": 701
+  },
+  "dq020": {
+   "settings": {
+    "qmin": 0.5,
+    "qmax": 7.5,
+    "dq": 0.02,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    0.5,
+    7.5
+   ],
+   "fq_points": 351,
+   "fq_written_step": 0.020000000000000018,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.41345569925731523,
+      "scale": 1.5488609558787814
+     },
+     "shift0_nozero": {
+      "rel_max": 0.4100903716429593,
+      "scale": 1.4811611420844455
+     },
+     "shift1_zero": {
+      "rel_max": 0.36652813845219584,
+      "scale": 1.5701337795859105
+     },
+     "shift1_nozero": {
+      "rel_max": 0.40744116712711775,
+      "scale": 1.4997409819978167
+     }
+    },
+    "best_with_zeroing": "shift1_zero"
+   },
+   "effect_on_G_rel_max": 0.0025709119729336667,
+   "fq_common_points_with_base": 351
+  },
+  "dq050": {
+   "settings": {
+    "qmin": 0.5,
+    "qmax": 7.5,
+    "dq": 0.05,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    0.5,
+    7.5
+   ],
+   "fq_points": 141,
+   "fq_written_step": 0.04999999999999982,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.6013168111575596,
+      "scale": 1.4425020549232084
+     },
+     "shift0_nozero": {
+      "rel_max": 0.5707701861690064,
+      "scale": 1.3939096836731928
+     },
+     "shift1_zero": {
+      "rel_max": 0.36633855751501665,
+      "scale": 1.570105038123418
+     },
+     "shift1_nozero": {
+      "rel_max": 0.40310194701059515,
+      "scale": 1.512709297336135
+     }
+    },
+    "best_with_zeroing": "shift1_zero"
+   },
+   "effect_on_G_rel_max": 0.010463274642078187,
+   "fq_common_points_with_base": 141
+  },
+  "qmax50": {
+   "settings": {
+    "qmin": 0.5,
+    "qmax": 5.0,
+    "dq": 0.01,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    0.5,
+    5.0
+   ],
+   "fq_points": 451,
+   "fq_written_step": 0.010000000000000009,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.3746605556245932,
+      "scale": 1.566176817109696
+     },
+     "shift0_nozero": {
+      "rel_max": 0.3836673918804076,
+      "scale": 1.571533287035024
+     },
+     "shift1_zero": {
+      "rel_max": 0.3747495675901751,
+      "scale": 1.570003026329746
+     },
+     "shift1_nozero": {
+      "rel_max": 0.38423361398341316,
+      "scale": 1.574807185181575
+     }
+    },
+    "best_with_zeroing": "shift0_zero"
+   },
+   "effect_on_G_rel_max": 0.584727346958877,
+   "fq_common_points_with_base": 451
+  },
+  "qmax60": {
+   "settings": {
+    "qmin": 0.5,
+    "qmax": 6.0,
+    "dq": 0.01,
+    "qsig": 0.0
+   },
+   "n_r": 601,
+   "fq_first_last": [
+    0.5,
+    6.0
+   ],
+   "fq_points": 551,
+   "fq_written_step": 0.009999999999999898,
+   "transform": {
+    "variants": {
+     "shift0_zero": {
+      "rel_max": 0.3725456720550749,
+      "scale": 1.5650239440993488
+     },
+     "shift0_nozero": {
+      "rel_max": 0.4024323188609608,
+      "scale": 1.5628919898316236
+     },
+     "shift1_zero": {
+      "rel_max": 0.3606195327627092,
+      "scale": 1.5701245517286497
+     },
+     "shift1_nozero": {
+      "rel_max": 0.38051634709958865,
+      "scale": 1.5676501590149063
+     }
+    },
+    "best_with_zeroing": "shift1_zero"
+   },
+   "effect_on_G_rel_max": 0.377286466249606,
+   "fq_common_points_with_base": 551
+  }
+ },
+ "criteria": [
+  {
+   "criterion": "R delta002: engine produced G(r)",
+   "value": 0.0,
+   "limit": null,
+   "pass": false
+  },
+  {
+   "criterion": "R delta005: engine produced G(r)",
+   "value": 0.0,
+   "limit": null,
+   "pass": false
+  },
+  {
+   "criterion": "R delta010: engine produced G(r)",
+   "value": 0.0,
+   "limit": null,
+   "pass": false
+  },
+  {
+   "criterion": "T1 base: G vs sine transform of own F(Q) (shift1_zero)",
+   "value": 0.36657202449942083,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 base: |scale - 1|",
+   "value": 0.5701397364693068,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmin02: G vs sine transform of own F(Q) (shift1_zero)",
+   "value": 0.42082144441523905,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmin02: |scale - 1|",
+   "value": 0.5883726532779141,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmin10: G vs sine transform of own F(Q) (shift1_zero)",
+   "value": 0.3638514778314466,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmin10: |scale - 1|",
+   "value": 0.5695522504639792,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmin20: G vs sine transform of own F(Q) (shift1_zero)",
+   "value": 0.5628730520581673,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmin20: |scale - 1|",
+   "value": 0.38987004764300526,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 dq005: G vs sine transform of own F(Q) (shift0_zero)",
+   "value": 0.3636018095417793,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 dq005: |scale - 1|",
+   "value": 0.5686792143383215,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 dq020: G vs sine transform of own F(Q) (shift1_zero)",
+   "value": 0.36652813845219584,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 dq020: |scale - 1|",
+   "value": 0.5701337795859105,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 dq050: G vs sine transform of own F(Q) (shift1_zero)",
+   "value": 0.36633855751501665,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 dq050: |scale - 1|",
+   "value": 0.5701050381234181,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmax50: G vs sine transform of own F(Q) (shift0_zero)",
+   "value": 0.3746605556245932,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmax50: |scale - 1|",
+   "value": 0.5661768171096959,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmax60: G vs sine transform of own F(Q) (shift1_zero)",
+   "value": 0.3606195327627092,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T1 qmax60: |scale - 1|",
+   "value": 0.5701245517286497,
+   "limit": 0.002,
+   "pass": false
+  },
+  {
+   "criterion": "T3 qmin02: F(Q) at 701 common Q vs base",
+   "value": 0.027955794038166656,
+   "limit": 1e-06,
+   "pass": false
+  },
+  {
+   "criterion": "T3 qmin10: F(Q) at 651 common Q vs base",
+   "value": 0.010054641973814126,
+   "limit": 1e-06,
+   "pass": false
+  },
+  {
+   "criterion": "T3 qmin20: F(Q) at 551 common Q vs base",
+   "value": 0.4737660618753099,
+   "limit": 1e-06,
+   "pass": false
+  },
+  {
+   "criterion": "T3 dq005: F(Q) at 701 common Q vs base",
+   "value": 0.05339911849250352,
+   "limit": 1e-06,
+   "pass": false
+  },
+  {
+   "criterion": "T3 dq020: F(Q) at 351 common Q vs base",
+   "value": 0.10686874131097707,
+   "limit": 1e-06,
+   "pass": false
+  },
+  {
+   "criterion": "T3 dq050: F(Q) at 141 common Q vs base",
+   "value": 0.4175386193354665,
+   "limit": 1e-06,
+   "pass": false
+  },
+  {
+   "criterion": "T3 qmax50: F(Q) at 451 common Q vs base",
+   "value": 4.120253234960537e-16,
+   "limit": 1e-06,
+   "pass": true
+  },
+  {
+   "criterion": "T3 qmax60: F(Q) at 551 common Q vs base",
+   "value": 7.416455822928967e-16,
+   "limit": 1e-06,
+   "pass": true
+  },
+  {
+   "criterion": "T4 base_plain vs base: G(r)",
+   "value": 4.401518450724239e-16,
+   "limit": 1e-12,
+   "pass": true
+  }
+ ],
+ "effects": {
+  "qmin02": 0.14231077474899656,
+  "qmin10": 0.020406567972545104,
+  "qmin20": 0.43563285228425475,
+  "dq005": 0.0012825085293315238,
+  "dq020": 0.0025709119729336667,
+  "dq050": 0.010463274642078187,
+  "qmax50": 0.584727346958877,
+  "qmax60": 0.377286466249606
+ },
+ "engine_failures": [
+  "delta002",
+  "delta005",
+  "delta010"
+ ],
+ "n_failed": 27,
+ "n_graded": 30,
+ "verdict": "FAIL"
+}
