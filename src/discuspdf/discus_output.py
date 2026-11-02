@@ -21,6 +21,8 @@ import hashlib
 import warnings
 import numpy as np
 
+from .lattice import Lattice
+
 _GROUP = "/entry/data"
 _REQUIRED = ("data_values", "data_dimension", "data_axes", "data_corner", "data_increment_vector",
              "coordinate_unit", "data_type_axes", "data_type_reciprocal", "data_type_content",
@@ -33,7 +35,11 @@ def _text(value) -> str:
 
 
 def _validated_direct_basis(lengths, angles) -> np.ndarray:
-    """Construct a cell basis without concealing degenerate/impossible metrics."""
+    """Construct a cell basis without concealing degenerate/impossible metrics.
+
+    Validation is performed here (preserving the exact error messages); the
+    canonical basis matrix is then obtained from :class:`Lattice`.
+    """
     lengths = np.asarray(lengths, dtype=float)
     angles = np.asarray(angles, dtype=float)
     if lengths.shape != (3,) or not np.isfinite(lengths).all() or np.any(lengths <= 0):
@@ -57,7 +63,7 @@ def _validated_direct_basis(lengths, angles) -> np.ndarray:
     basis = np.array([[a, 0.0, 0.0], [bx, by, 0.0], [cx, cy, np.sqrt(cz_sq)]])
     if not np.isfinite(basis).all() or np.linalg.det(basis) <= 0:
         raise ValueError("Invalid unit cell basis")
-    return basis
+    return Lattice.from_parameters(a, b, c, float(angles[0]), float(angles[1]), float(angles[2])).matrix
 
 
 @dataclass(frozen=True)
@@ -94,6 +100,11 @@ class DiscusVolume:
         _validated_direct_basis(self.cell_lengths, self.cell_angles)
 
     # -- geometry ---------------------------------------------------------
+    @property
+    def lattice(self) -> Lattice:
+        """The crystal lattice (canonical orientation) derived from the cell parameters."""
+        return Lattice.from_parameters(*self.cell_lengths, *self.cell_angles)
+
     def is_axis_aligned(self, tol: float = 1e-9) -> bool:
         off = self.increments - np.diag(np.diag(self.increments))
         return bool(np.all(np.abs(off) <= tol * np.max(np.abs(self.increments))))
@@ -107,16 +118,16 @@ class DiscusVolume:
 
     def direct_basis(self) -> np.ndarray:
         """Rows a, b, c in Cartesian Å; orientation is a convention."""
-        return _validated_direct_basis(self.cell_lengths, self.cell_angles)
+        return self.lattice.matrix
 
     def reciprocal_basis(self, two_pi: bool = True) -> np.ndarray:
         """Rows a*, b*, c*. Q (Å^-1) = h @ reciprocal_basis(two_pi=True); two_pi=False gives d* (Å^-1)."""
-        b = np.linalg.inv(self.direct_basis()).T
+        b = self.lattice.reciprocal_matrix
         return 2 * np.pi * b if two_pi else b
 
     @property
     def cell_volume(self) -> float:
-        return float(abs(np.linalg.det(self.direct_basis())))
+        return self.lattice.volume
 
     def is_orthogonal(self, tol: float = 1e-6) -> bool:
         return bool(np.allclose(self.cell_angles, 90.0, atol=tol))

@@ -89,7 +89,7 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Not done: symmetry expansion of `.cll`, occupancy < 1 in `.stru`, molecule/property columns, CIF/ASE (next PR).*
 - ✅ **A4 / Feature 4:** Atom selection, supercell generation, substitution and reproducible displacement/disorder editing. [`src/discuspdf/structure_ops.py`](../src/discuspdf/structure_ops.py); [PR #27](https://github.com/jmsweng/discus-python/pull/27) · [`tests/test_structure_ops_repeat.py`](../tests/test_structure_ops_repeat.py), [`tests/test_structure_ops_edit.py`](../tests/test_structure_ops_edit.py), [`tests/test_structure_ops_sample.py`](../tests/test_structure_ops_sample.py), [`tests/test_structure_ops_discus.py`](../tests/test_structure_ops_discus.py).
 - ✅ **A5 / Feature 5:** General direct/reciprocal lattice metrics, validated fractional↔Cartesian conversions, triclinic Q and PBC distance utilities. [`src/discuspdf/lattice.py`](../src/discuspdf/lattice.py); [PR #10](https://github.com/jmsweng/discus-python/pull/10) · [`tests/test_lattice.py`](../tests/test_lattice.py).
-  - *Consolidate `DiscusVolume` / `discus_output` onto `Lattice` (separate PR, with Gate 2/3 evidence parity).*
+  - ✅ Consolidate `DiscusVolume` / `discus_output` onto `Lattice` (separate PR, with Gate 2/3 evidence parity). [PR #60](https://github.com/jmsweng/discus-python/pull/60)
 
 ### Package B — [Reciprocal-space grids and data](02_reciprocal_space_and_data.md)
 
