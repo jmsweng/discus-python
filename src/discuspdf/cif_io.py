@@ -292,6 +292,7 @@ def _build_structure(
     *,
     model: str = "average",
     defaults_applied: list[str] | None = None,
+    min_separation: float | None = 0.1,
 ) -> Structure:
     """Build a ``Structure`` from the expanded rows.
 
@@ -386,7 +387,7 @@ def _build_structure(
         cell_index=cell_index,
         supercell=(1, 1, 1),
         pbc=(True, True, True),
-        min_separation=0.1,
+        min_separation=min_separation,
     )
 
 
@@ -397,7 +398,7 @@ def parse_cif(
     block: str | None = None,
     model: str = "average",
     allow_loss: bool = False,
-    min_separation: float = 0.1,
+    min_separation: float | None = 0.1,
 ) -> CifImport:
     """Parse CIF text into a :class:`CifImport`.
 
@@ -754,7 +755,8 @@ def parse_cif(
                     )
 
         structure = _build_structure(
-            rows, lattice, model=model, defaults_applied=defaults_applied
+            rows, lattice, model=model, defaults_applied=defaults_applied,
+            min_separation=min_separation,
         )
 
         # If B was determined at the listed-site level, apply it.
@@ -765,7 +767,7 @@ def parse_cif(
             if np.all(b_full == 0.0):
                 b_full = None
             if b_full is not None:
-                structure = structure.replace(b_iso=b_full)
+                structure = structure.replace(b_iso=b_full, min_separation=min_separation)
 
     # Loss policy.
     if losses.losses:
@@ -791,7 +793,7 @@ def read_cif(
     block: str | None = None,
     model: str = "average",
     allow_loss: bool = False,
-    min_separation: float = 0.1,
+    min_separation: float | None = 0.1,
 ) -> CifImport:
     """Read a CIF file from ``path``."""
     _import_gemmi()

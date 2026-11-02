@@ -109,7 +109,7 @@ def from_ase(
     *,
     model: str | None = None,
     allow_loss: bool = False,
-    min_separation: float = 0.1,
+    min_separation: float | None = 0.1,
 ) -> Structure:
     """Convert an ``ase.Atoms`` object to a :class:`Structure`.
 
