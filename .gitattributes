@@ -3,3 +3,4 @@
 # Hash-pinned reference fixtures: keep the exact committed bytes on every platform (no CRLF conversion).
 examples/run_sample/** -text
 examples/gaas.cll -text
+benchmarks/discus_6_23_01/gate0_prereg/** -text

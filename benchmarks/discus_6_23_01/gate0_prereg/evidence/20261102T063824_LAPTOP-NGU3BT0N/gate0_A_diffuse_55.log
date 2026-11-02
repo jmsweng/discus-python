@@ -1,0 +1,173 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\g0run\benchmarks\discus_6_23_01\gate0_prereg\evidence\20261102T063824_LAPTOP-NGU3BT0N\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mgate0_A_diffuse_55.mac
+ suite>  
+ suite> discus
+ discus> read
+ discus/read> stru gate0_A_55.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    3.75000    3.75000    3.75000   90.00000   90.00000   90.00000    52.7344    
+
+ Metric Tensor     :
+      14.06250      0.00000      0.00000
+       0.00000     14.06250      0.00000
+       0.00000      0.00000     14.06250
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.26667    0.26667    0.26667   90.00000   90.00000   90.00000   0.189630E-01
+
+ Reciprocal metric tensor     : 
+       0.07111     -0.00000     -0.00000
+      -0.00000      0.07111     -0.00000
+      -0.00000     -0.00000      0.07111
+
+ discus> eval n[1]
+ Value of n[1] =    2048.00000000    
+ discus> eval n[2]
+ Value of n[2] =    2.00000000000    
+ discus> eval n[3]
+ Value of n[3] =    4.00000000000    
+ discus> fourier
+ discus/fourier> xray
+ discus/fourier> wvle moa1
+ discus/fourier> ll 0.0,0.0,0.0
+ discus/fourier> lr  3.0,0.0,0.0
+ discus/fourier> ul 0.0, 3.0,0.0
+ discus/fourier> tl 0.0,0.0, 3.0
+ discus/fourier> na 25
+ discus/fourier> no 25
+ discus/fourier> nt 25
+ discus/fourier> abs h
+ discus/fourier> ord k
+ discus/fourier> top l
+ discus/fourier> temp ignore
+ discus/fourier> disp off
+ discus/fourier> lots off
+ discus/fourier> set technique:turbo
+ discus/fourier> set aver,100.0
+ discus/fourier> show
+ Fourier technique    : turbo Fourier, minus <F> (based on 100.0% of cryst.)
+ Fourier calculated by: atom form factors taken from: Waasmeier & Kirfel         
+   Fourier volume     : complete crystal
+   Radiation          : X-ray   , wavelength = MOA1 =  0.7093 A
+   Temp. factors      : ignored
+   Anomalous scat.    : ignored
+   Symmetry averaging : Friedel pairs merged
+   Exctinction Param. : No extinction correction applied
+   Filter function    : Not applied 
+   Intensity scale    :     1.0000
+
+ Reciprocal layer     : 
+   lower left  corner :      0.0000     0.0000     0.0000
+   lower right corner :      3.0000     0.0000     0.0000
+   upper left  corner :      0.0000     3.0000     0.0000
+   top   left  corner :      0.0000     0.0000     3.0000
+
+   hor. increment     :      0.1250     0.0000     0.0000   ->    0.0333 A**-1
+   vert. increment    :      0.0000     0.1250     0.0000   ->    0.0333 A**-1
+   top   increment    :      0.0000     0.0000     0.1250   ->    0.0333 A**-1
+   # of points        :     25 x   25 x   25  (h,k,l)
+   Angle Ratio Aver v/h     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver h/t     90.0000 degrees        1.0000     1.0000
+   Angle Ratio Aver t/v     90.0000 degrees        1.0000     1.0000
+ discus/fourier> run
+ Computing complex exponent table ...
+ Computing sin(theta)/lambda table ...
+ Computing formfactor lookup table ...
+ Calculating <F> with 100.0 % of the crystal ...
+ Used 100.0 % of the crystal to calculate <F> ...
+
+ Lot #    1/   1 : complete crystal
+                   Atom typ = AU         (#       520 )
+                   Atom typ = CU         (#      1528 )
+
+ 
+ Bragg scat.     :   0.00000      ->   0.00000    
+ Diffuse scat.   :   57.8105      ->  0.573945E+07
+      Average    :   533491.      +-   562031.    
+
+ Elapsed time    :  0.186975     sec
+ discus/fourier> exit
+ discus> output
+ discus/output> value int
+ discus/output> form nexus
+ discus/output> outf gate0_A_diffuse_55.h5
+ discus/output> run
+
+      Partial dump of unified data 
+
+   Crystal Meta information
+audit_conform_dict_name    Disorder unified data
+audit_conform_dict_version 0.0.0
+audit_creation_date        2026-11-02
+audit_creation_method      6.23.01
+audit_author_name          DISCUS
+
+ Unit cell params     3.750000    3.750000    3.750000
+ Unit cell angles    90.000000   90.000000   90.000000
+ Symmetry H_M     P 1                             
+ Symmetry Origin      1
+ Symmetry abc     abc
+ Symmetry n MAT       1
+ Symmetry 1 fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry 1 scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry 1 lst      0.000000   0.000000   1.000000   0.000000
+ Symmetry N fst      1.000000   0.000000   0.000000   0.000000
+ Symmetry N scnd     0.000000   1.000000   0.000000   0.000000
+ Symmetry N lst      0.000000   0.000000   1.000000   0.000000
+
+ Data experiment  calculated                      
+ Data with  bragg bragg_subtracted                
+ Data symmetrized none                            
+ Data number                                      
+ Data axes        hkl                             
+ Data radiation   xray                            
+ Data dimensions     25   25   25
+ Data abs,ord,top     1    2    3
+ Data style       single_diffraction              
+ Data content     intensity                       
+ Data symbol      MOA1            
+ Data length         0.709260   0.709260   0.000000
+
+Axes coordinates: basecell_fractional             
+
+ Data corner         0.000000   0.000000   0.000000
+
+ Data abscissa       0.125000   0.000000   0.000000
+ Data ordinate       0.000000   0.125000   0.000000
+ Data top_axis       0.000000   0.000000   0.125000
+
+  DATA_VALUES   0.0000000000000000        227192.97261487570     
+  DATA_MINMAX   0.0000000000000000        5739449.9311188627     
+
+ discus/output> exit
+ discus> exit
+ suite> exit
