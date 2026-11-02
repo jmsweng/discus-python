@@ -1,0 +1,133 @@
+{
+ "probe": "powder-settings-v1",
+ "engine": "DISCUS_SUITE 6.23.01",
+ "base": {
+  "qmin": 0.5,
+  "qmax": 7.5,
+  "dq": 0.01,
+  "qsig": 0.0
+ },
+ "cases": [
+  {
+   "id": "base",
+   "changed": {},
+   "purpose": "reference case"
+  },
+  {
+   "id": "base_plain",
+   "changed": {},
+   "purpose": "same as base, without the F(Q) block: the extra output must not change G(r)"
+  },
+  {
+   "id": "delta002",
+   "changed": {
+    "qsig": 0.02
+   },
+   "purpose": "set delta"
+  },
+  {
+   "id": "delta005",
+   "changed": {
+    "qsig": 0.05
+   },
+   "purpose": "set delta"
+  },
+  {
+   "id": "delta010",
+   "changed": {
+    "qsig": 0.1
+   },
+   "purpose": "set delta"
+  },
+  {
+   "id": "qmin02",
+   "changed": {
+    "qmin": 0.2
+   },
+   "purpose": "Qmin"
+  },
+  {
+   "id": "qmin10",
+   "changed": {
+    "qmin": 1.0
+   },
+   "purpose": "Qmin"
+  },
+  {
+   "id": "qmin20",
+   "changed": {
+    "qmin": 2.0
+   },
+   "purpose": "Qmin above the first GaAs reflection (111), Q = 1.925"
+  },
+  {
+   "id": "dq005",
+   "changed": {
+    "dq": 0.005
+   },
+   "purpose": "DQ"
+  },
+  {
+   "id": "dq020",
+   "changed": {
+    "dq": 0.02
+   },
+   "purpose": "DQ"
+  },
+  {
+   "id": "dq050",
+   "changed": {
+    "dq": 0.05
+   },
+   "purpose": "DQ"
+  },
+  {
+   "id": "qmax50",
+   "changed": {
+    "qmax": 5.0
+   },
+   "purpose": "termination at another Qmax"
+  },
+  {
+   "id": "qmax60",
+   "changed": {
+    "qmax": 6.0
+   },
+   "purpose": "termination at another Qmax"
+  }
+ ],
+ "structure_sha256": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691",
+ "macro_sha256": {
+  "base": "3742abe7733f63e6d93061877e0f3fb7f35873c0cd5fefad5d1111e41b785ba3",
+  "base_plain": "dd2c7f9067f2f3002dbdab6fee894635ab9b1ce4ea7c83f10a888393674d15ae",
+  "delta002": "6dab94fe6eb03591eddfc7e28680adf7231bade9790d2320211a6ace8e77d4a1",
+  "delta005": "0c5b0eb131e0cbc4f1865d969a141fda5d2b4a9a3043ee0f32db69d2dae1268c",
+  "delta010": "684b13af856153132d4f149717f3ca66b428aa1049ee370811e57cdc25f8ad4a",
+  "qmin02": "2c27306c06ce86c99b66209b0036a8f1b9c00c1f23bac28f1fe7070910174c62",
+  "qmin10": "3588109092360b5c6f679fa7d7396999cbc891c56812153c9e57f8adcc460019",
+  "qmin20": "16fe0b36a45490d0d873db7ff146f3d4aac552aa0025591ffeb1ca77b0ccf039",
+  "dq005": "a9a0578ccaf78debe630c16d9bfcdcc8b5f3c92c6eeb4732fb9ee7f809e9c94f",
+  "dq020": "5970a52a08dfa3e217b3b5562787cc82435d65fe3a7f426788d572c1df5f1748",
+  "dq050": "df4ad7c7f3a4d967109c931403baf51462588b066f67cb393d240b7409d9120f",
+  "qmax50": "c583d38f134beae83cc81e1a4c9063456f2899d802c507aa83ac1ac9284ac51f",
+  "qmax60": "2f1280e68c01c7eab837992fc00fe2a177b08496149c1f732ac4381c990b76dd"
+ },
+ "code_sha256": {
+  "probe.py": "d5e7bc9ba1c7ed3b6906764a7b76c8fcfe2f74248daa600091a90870121e78ad"
+ },
+ "limits": {
+  "T1_transform_rel_max": 0.002,
+  "T1_scale_abs": 0.002,
+  "T3_fq_invariance_rel": 1e-06,
+  "T4_parity_rel": 1e-12
+ },
+ "informational": {
+  "I1_delta_damping": "max|G_delta - G_0 exp(-delta^2 r^2/4)| / max|G_0|"
+ },
+ "expectations": {
+  "T1": "every case: G(r) = (2/pi) sum F sin(Qr) dQ of its own F(Q), F zeroed from its last sign change, linear below Qmin; at least one Q placement variant within the limits",
+  "T3": "F(Q) is a pointwise Debye sum: at common Q it does not depend on qmin, dq or qmax",
+  "T4": "the F(Q) output block does not change G(r)",
+  "I1": "set delta,d convolves along Q with exp(-x^2/d^2)/(sqrt(pi) d), i.e. G(r) ~ G_0(r) exp(-d^2 r^2/4)"
+ }
+}

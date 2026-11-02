@@ -94,10 +94,10 @@ exit
 | `radiation` | `xray` / `neutron` / `electron` | powder-menu radiation selector |
 | — (fixed) | `set axis,q` | calculate on a uniform Q grid |
 | — (fixed) | `set calc,debye` | Debye-scattering-equation powder mode |
-| — (fixed) | `set qmin,0.5` | Q-grid start (Å⁻¹) |
-| `qmax` | `set qmax,<qmax>` | **omitted when `qmax == 0`** (disables Qmax termination) |
-| — (fixed) | `set dq,0.01` | Q-grid step (Å⁻¹) |
-| `qsig` | `set delta,<qsig>` | Gaussian convolution width; `0.0` = off |
+| `qmin` | `set qmin,<qmin>` | Q-grid start (Å⁻¹), default 0.5 |
+| `qmax` | `set qmax,<qmax>` | must be > 0 (`qmax = 0` is rejected); limit ≈ 12.3/λ, see below |
+| `dq` | `set dq,<dq>` | Q-grid step (Å⁻¹), default 0.01 |
+| `qsig` | `set delta,<qsig>` | Gaussian convolution width; `0.0` = off. **Values > 0 crash DISCUS 6.23.01 on most grids**, see below |
 | — (derived) | `set wvle,<λ>` | 1.5406 Å (Cu-Kα) for xray; 1.5400 Å reference for neutron |
 | `rmax`, `dr` | `form pdf, r, 0.0, <rmax>, <dr>` | PDF distance range and step |
 | — (fixed) | `value PDF` | write the powder PDF |
@@ -157,3 +157,26 @@ Above the limit `set qmax` has no effect at all: at λ = 1.5406 Å, Qmax 10, 12,
 | 30 | 0.4 vs 0.2 / 0.05 | 6.4e-3 / 7.1e-3 | 2.9e-2 / 3.2e-2 |
 
 Neutron radiation shows the same effect (Qmax 15, λ 0.2 vs 0.05: 2.4e-1 in G(r)), so it is not caused by X-ray form factors or anomalous scattering. F(Q) (written with `form powder, q` / `value F(Q)`) already differs, so the source is the DISCUS powder calculation (debye mode), not the PDF transform. Cause unknown; to be raised with the DiffuseCode maintainers. Until then, Qmax ≤ about 8 Å⁻¹ at the default wavelength is the range in which this macro gives wavelength-independent results.
+
+## Powder settings: set delta, Qmin, DQ and termination (measured 2026-11-02)
+
+Two runs: the pre-registered probe v1.1 and its confirmation v2, in [`benchmarks/discus_6_23_01/powder_settings/`](../benchmarks/discus_6_23_01/powder_settings/). Both used DISCUS_SUITE 6.23.01 (binary `d4274f13…45706f3`) on this macro: GaAs 5×5×5, `set calc,debye`, `set axis,q`, X-ray and neutron. Each run also wrote F(Q) (`form powder, q` / `value F(Q)`), so every G(r) could be checked against its own F(Q). Results: [`RESULT_v1_1.md`](../benchmarks/discus_6_23_01/powder_settings/RESULT_v1_1.md) (registered FAIL; the model below was found from these data) and [`RESULT_v2.md`](../benchmarks/discus_6_23_01/powder_settings/RESULT_v2.md) (the model passed every registered criterion on new settings; one `set delta` prediction failed).
+
+**How DISCUS gets G(r) from F(Q).** This reproduces every run to ≤ 2.2×10⁻⁴ with no fitted parameter. A free scale fits 1.00000.
+- F(Q) is set to zero from its last sign change up to Qmax.
+- Below Qmin, F(Q) is replaced by a straight line to F(0) = 0.
+- The values are placed on the multiples of ΔQ, the first one at nint(Qmin/ΔQ)·ΔQ. If Qmin is not a multiple of ΔQ, that is up to ΔQ/2 away from the Q where F was computed. Choose Qmin as a multiple of ΔQ.
+- G(r) = Σ F(Q) sin(Qr) ΔQ over that grid. **There is no 2/π factor:** this is π/2 ≈ 1.571 times the textbook (2/π)∫F sin(Qr) dQ of DISCUS's own F(Q). The absolute scale of DISCUS G(r) compared with other programs also depends on its S(Q) normalisation, which was not tested here.
+
+**F(Q) files are labelled one ΔQ too high.** The value written at Q was computed at Q − ΔQ, and the first line is a placeholder (S = 0, i.e. F = −Q). Shift the labels before using a DISCUS F(Q) file. The PDF transform itself uses the correct Q.
+
+**Effect of each setting on G(r)** (max |G − G_base| / max |G_base|; base qmin 0.5, qmax 7.5, ΔQ 0.01, λ 1.5406 Å):
+
+| Setting | Values | Effect on G(r) | Mechanism |
+|---|---|---|---|
+| Qmin | 0.2 / 1.0 / 2.0 | 0.14 / 0.020 / 0.44 | which part of F enters; F itself unchanged (≤ 7×10⁻¹⁶) |
+| Qmax (termination) | 5.0 / 6.0 | 0.58 / 0.38 | truncation at the last sign change of F below Qmax; F unchanged |
+| ΔQ | 0.005 / 0.02 / 0.05 | 1.3×10⁻³ / 2.6×10⁻³ / 1.0×10⁻² | F itself changes slightly with ΔQ (0.2–1.4 %), cause not identified |
+| `set delta` | 0.02 / 0.03 / 0.05 / 0.10 | engine aborts on 5 of 6 grid/thread combinations | see below |
+
+**`set delta` (`qsig`) is not usable with 6.23.01.** Any value > 0 aborted DISCUS with `double free or corruption` in `powder_convolute` on 5 of 6 grid/thread combinations, including `OMP_NUM_THREADS=1`. On the sixth (qmin 0.5, qmax 7.0, ΔQ 0.02) it ran: G(r) changed by 2.8 % and F(Q) was smoothed roughly as a Gaussian of σ = δ/√2 in Q. The likely cause from the source is a write one point past the end of the pattern array (`powder_conv_res` runs to `xmax + xdel`). That would also make a run that does not crash unreliable. To be reported to the DiffuseCode maintainers together with the wavelength question above.

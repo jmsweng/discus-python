@@ -1,0 +1,109 @@
+[
+ {
+  "id": "base",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "base_plain",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "delta002",
+  "exit": -6,
+  "engine_error": null,
+  "outputs": []
+ },
+ {
+  "id": "delta005",
+  "exit": -6,
+  "engine_error": null,
+  "outputs": []
+ },
+ {
+  "id": "delta010",
+  "exit": -6,
+  "engine_error": null,
+  "outputs": []
+ },
+ {
+  "id": "qmin02",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "qmin10",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "qmin20",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "dq005",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "dq020",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "dq050",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "qmax50",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ },
+ {
+  "id": "qmax60",
+  "exit": 0,
+  "engine_error": null,
+  "outputs": [
+   "fq.dat",
+   "result.pdf"
+  ]
+ }
+]

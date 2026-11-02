@@ -1,0 +1,104 @@
+{
+ "probe": "powder-settings-v2",
+ "engine": "DISCUS_SUITE 6.23.01",
+ "base": {
+  "qmin": 0.35,
+  "qmax": 6.83,
+  "dq": 0.012,
+  "qsig": 0.0,
+  "radiation": "xray"
+ },
+ "cases": [
+  {
+   "id": "b",
+   "changed": {},
+   "env": {},
+   "purpose": "new base (qmin 0.35, qmax 6.83, dq 0.012)"
+  },
+  {
+   "id": "b_qmin",
+   "changed": {
+    "qmin": 1.31
+   },
+   "env": {},
+   "purpose": "P3: qmin (base grid + 80 steps)"
+  },
+  {
+   "id": "b_qmax",
+   "changed": {
+    "qmax": 5.51
+   },
+   "env": {},
+   "purpose": "P3: qmax / termination (430 steps)"
+  },
+  {
+   "id": "b_dq",
+   "changed": {
+    "dq": 0.008
+   },
+   "env": {},
+   "purpose": "I1: dq"
+  },
+  {
+   "id": "n",
+   "changed": {
+    "qmin": 0.5,
+    "qmax": 7.5,
+    "dq": 0.01,
+    "radiation": "neutron"
+   },
+   "env": {},
+   "purpose": "I2: neutron"
+  },
+  {
+   "id": "d",
+   "changed": {
+    "qsig": 0.03
+   },
+   "env": {},
+   "purpose": "P4: set delta"
+  },
+  {
+   "id": "d_omp1",
+   "changed": {
+    "qsig": 0.03
+   },
+   "env": {
+    "OMP_NUM_THREADS": "1"
+   },
+   "purpose": "P4: set delta, one thread"
+  },
+  {
+   "id": "d_grid",
+   "changed": {
+    "qsig": 0.03,
+    "qmin": 0.5,
+    "qmax": 7.0,
+    "dq": 0.02
+   },
+   "env": {},
+   "purpose": "P4: set delta, other grid"
+  }
+ ],
+ "structure_sha256": "7559500312b1f141d7baaf0799da1f0c5a851dcae259396663aee54a4fe15691",
+ "macro_sha256": {
+  "b": "d299acbd632c5d219326cb9934e5207f24a92386e447904d537c4c58e9435922",
+  "b_qmin": "985884f4006264a3bf782da8ac6479a9e9d8ecf7b6a816278e05b87934b45ddb",
+  "b_qmax": "d1a25221c50b8cf20bd12fdd1fd19f8f19a4ed68364e530f59d9dd0c63d54b8f",
+  "b_dq": "e4038f50062d1d471ad16361f4f7ea3b93b052c0b65665f0833b93df4320580c",
+  "n": "6da73a36707a84fb57b3a560ad94145a68e37ecd6059fd304d12a5f963e0ed1b",
+  "d": "4b5ba8ec916dd0496ed2ab4a65b0473318c14cfccf1e13343bde21160c49b077",
+  "d_omp1": "4b5ba8ec916dd0496ed2ab4a65b0473318c14cfccf1e13343bde21160c49b077",
+  "d_grid": "ca5456510c7ffcb976d9434b27bd251e246be08387467fd197b284bbf3e2d9eb"
+ },
+ "code_sha256": {
+  "probe_v2.py": "4131008672afaaddcce23d4fb37fecbb0a186ff750995e787513d63476a7c238",
+  "probe.py": "05f348b0d2f1fbf75138af31f3b2440a35d58926f10b8aec8e0579d8f99daf72"
+ },
+ "limits": {
+  "P1_placeholder": 0.01,
+  "P2_transform_rel_max": 0.001,
+  "P3_invariance_rel": 1e-12
+ },
+ "predictions": "Powder settings probe v2: pre-registered test of the model diagnosed (post hoc) from the v1.1 run.\n\nSee RESULT_v1_1.md. Registered predictions for DISCUS_SUITE 6.23.01, on settings not used in v1.1:\n\n  P1  F(Q) output: the value written at label Q was computed at Q - dQ; the first written point is a\n      placeholder with S = 0, i.e. F = -Q (|F0/Q0 + 1| <= 1e-2).\n  P2  G(r) = sum_j F(Q_j) sin(Q_j r) dQ (no 2/pi) on the grid j*dQ, where F is the written F from the\n      second point on, placed at label - dQ, set to zero from its last sign change, and below Qmin a\n      straight line F(Q) = Q * F1 / Qlabel1. No fitted parameter. Max rel deviation <= 1e-3.\n  P3  F at the true Q does not depend on qmin or qmax: <= 1e-12 at common Q.\n  P4  set delta > 0 aborts the engine (no result.pdf), also with OMP_NUM_THREADS=1 and on another grid.\n  I1  (informational) dQ dependence of F at the true Q.\n  I2  (informational) neutron radiation follows P1-P3 as well (graded as P1-P2 like the others)."
+}

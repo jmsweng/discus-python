@@ -1,0 +1,6 @@
+run_id: 20261102T220205Z_LAPTOP-NGU3BT0N
+git_head: 67bfd621df9b579fd804c5327734b732e0f72858
+discus_path: /usr/local/bin/discus_suite
+discus_sha256: d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3
+platform: Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.35
+python: 3.12.7  numpy 2.5.4
