@@ -118,3 +118,9 @@ __all__ += [
     "occupational_correlation_table", "displacement_correlation", "displacement_correlation_table",
     "displacements", "concentrations",
 ]
+
+# Independent structure-factor reference (Package D, Feature 10). The functions stay in the module
+# (``from discuspdf import reference_scattering as ref``) so they are not mistaken for DISCUS results.
+from . import reference_scattering
+from .reference_scattering import ScatteringFactors
+__all__ += ["reference_scattering", "ScatteringFactors"]
