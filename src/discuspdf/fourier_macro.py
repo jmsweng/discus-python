@@ -12,6 +12,12 @@ commands whose behaviour was observed on DISCUS_SUITE 6.23.01
 * ``set technique:nufft`` is **not offered**: in 6.23.01 it wrote all-zero files with exit code 0
   (FINUFFT ``setpts error``). Only ``turbo`` is generated.
 * ``set symm:{friedel|ignore|apply}``; ``friedel`` is the engine default.
+* Radiation ``xray`` or ``neutron`` (macro keywords ``xray`` / ``neut``, both run in the D reference
+  probe, ``benchmarks/discus_6_23_01/d_reference``). The radiation line is written **before** ``wvle``:
+  ``neut`` clears a previously set wavelength symbol.
+* ``wvle`` takes a DISCUS tube symbol (``moa1``, ``cua1``, …) or a number in Å. Because the macro
+  always writes ``disp off`` (no anomalous dispersion), DISCUS 6.23.01 uses the wavelength only for
+  metadata in that case: X-ray f₀(sinθ/λ) and neutron b do not depend on it.
 
 The macro is plain text you can read before running it (``render``). Nothing here runs DISCUS;
 :func:`prepare_fourier_run` stages the macro for :class:`~discuspdf.diffuse3d.Diffuse3DRunner`.
@@ -31,10 +37,15 @@ import numpy as np
 from .reciprocal_grid import ReciprocalGrid
 
 SCHEMA_NAME = "discuspdf.FourierConfig"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2          # v2 added 'radiation' and numeric wavelengths; v1 descriptions still read
 OUTPUT_VALUES = ("int", "real", "imag", "3DPDF")
 SYMMETRY = ("friedel", "ignore", "apply")
-WAVELENGTHS = ("moa1",)
+RADIATIONS = ("xray", "neutron")
+_RADIATION_KEYWORD = {"xray": "xray", "neutron": "neut"}   # the keywords run in the probes
+# DISCUS 6.23.01 wavelength symbols (lib_f90/element_data_mod.f90, per_symwl): K-alpha1, K-alpha2 and
+# K-beta of the usual anodes. 'moa1' is the default and the one run in all probes.
+_ANODES = ("ti", "cr", "fe", "co", "cu", "mo", "ag", "ta", "w", "au")
+WAVELENGTHS = tuple(f"{a}{line}" for a in _ANODES for line in ("a1", "a2", "b"))
 _NAME_RE = re.compile(r"^[A-Za-z0-9_.\-]+$")
 _LABELS = ("h", "k", "l")
 
@@ -150,6 +161,22 @@ class StructureSource:
         return ["read", f"  {arg}", "eval n[1]", "eval n[2]", "eval n[3]"]
 
 
+def _check_wavelength(w) -> str | float:
+    """A known DISCUS symbol (stored lower case) or a finite positive number of Å."""
+    if isinstance(w, str):
+        sym = w.strip().lower()
+        if sym not in WAVELENGTHS:
+            raise ValueError(f"wavelength symbol {w!r} is not a DISCUS 6.23.01 symbol {WAVELENGTHS}; "
+                             "or give a number in Å")
+        return sym
+    if isinstance(w, (bool, np.bool_)) or not isinstance(w, (int, float, np.integer, np.floating)):
+        raise ValueError(f"wavelength must be a DISCUS symbol or a number in Å, got {w!r}")
+    w = float(w)
+    if not np.isfinite(w) or w <= 0:
+        raise ValueError(f"wavelength must be finite and > 0 Å, got {w!r}")
+    return w
+
+
 def axis_labels(grid: ReciprocalGrid, tol: float = 1e-12) -> tuple[str, str, str]:
     """``abs/ord/top`` labels for DISCUS: each active axis must have a nonzero hkl component along its
     label (6.23.01 refused an hhl plane labelled ``ord k``: 'Component of increment vector is zero').
@@ -179,6 +206,9 @@ class FourierConfig:
     temperature: ``'ignore'`` or ``'use'`` (``temp``). DISCUS 6.23.01 replaces B < 0.001 by 1.0 when
         reading, so ``'use'`` with B = 0 in the file gives B = 1 Å².
     symmetry: ``set symm:`` value, or ``None`` to keep the engine default (Friedel merging).
+    radiation: ``'xray'`` (default) or ``'neutron'``.
+    wavelength: a DISCUS symbol from :data:`WAVELENGTHS` (default ``'moa1'``, 0.70926 Å in DISCUS) or a
+        number in Å (> 0). With ``disp off`` it changes only the file metadata, not the intensities.
     """
     grid: ReciprocalGrid
     outputs: tuple[tuple[str, str], ...]
@@ -187,7 +217,8 @@ class FourierConfig:
     seed: Seed | None = None
     temperature: str = "ignore"
     symmetry: str | None = None
-    wavelength: str = "moa1"
+    wavelength: str | float = "moa1"
+    radiation: str = "xray"
     labels: tuple[str, str, str] | None = field(default=None)
 
     def __post_init__(self) -> None:
@@ -209,8 +240,9 @@ class FourierConfig:
             raise ValueError("temperature must be 'ignore' or 'use'")
         if self.symmetry is not None and self.symmetry not in SYMMETRY:
             raise ValueError(f"symmetry must be one of {SYMMETRY} or None")
-        if self.wavelength not in WAVELENGTHS:
-            raise ValueError(f"wavelength must be one of {WAVELENGTHS} (only these were verified)")
+        if self.radiation not in RADIATIONS:
+            raise ValueError(f"radiation must be one of {RADIATIONS}")
+        object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
         outs = tuple(tuple(o) for o in self.outputs)
         if not outs:
             raise ValueError("at least one output is required")
@@ -246,6 +278,11 @@ class FourierConfig:
         return "bragg_subtracted" if self.aver_percent > 0 else "bragg_present"
 
     @property
+    def wvle_argument(self) -> str:
+        """The ``wvle`` argument: the symbol, or the wavelength in Å with up to 12 significant digits."""
+        return self.wavelength if isinstance(self.wavelength, str) else f"{self.wavelength:.12g}"
+
+    @property
     def labels_verified(self) -> bool:
         """True when the labels are (h, k, l) on an hkl-aligned grid — the case run in the probes."""
         return self.labels == _LABELS and self.grid.is_hkl_axis_aligned()
@@ -261,7 +298,7 @@ class FourierConfig:
 
     def fourier_lines(self) -> list[str]:
         c = self.grid.discus_corners()
-        lines = ["fourier", "  xray", f"  wvle {self.wavelength}",
+        lines = ["fourier", f"  {_RADIATION_KEYWORD[self.radiation]}", f"  wvle {self.wvle_argument}",
                  f"  ll {_fmt(c['ll'])}", f"  lr {_fmt(c['lr'])}", f"  ul {_fmt(c['ul'])}", f"  tl {_fmt(c['tl'])}",
                  f"  na {c['na']}", f"  no {c['no']}", f"  nt {c['nt']}",
                  f"  abs {self.labels[0]}", f"  ord {self.labels[1]}", f"  top {self.labels[2]}",
@@ -307,20 +344,22 @@ class FourierConfig:
                                                        "count": self.lots.count, "periodic": self.lots.periodic},
                 "seed": None if self.seed is None else list(self.seed.values),
                 "temperature": self.temperature, "symmetry": self.symmetry, "wavelength": self.wavelength,
-                "labels": list(self.labels), "technique": "turbo", "engine": "DISCUS_SUITE 6.23.01",
+                "radiation": self.radiation, "labels": list(self.labels), "technique": "turbo", "engine": "DISCUS_SUITE 6.23.01",
                 "bragg": self.bragg, "labels_verified": self.labels_verified}
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "FourierConfig":
-        if d.get("schema") != SCHEMA_NAME or d.get("version") != SCHEMA_VERSION:
-            raise ValueError(f"not a {SCHEMA_NAME} v{SCHEMA_VERSION} description")
+        if d.get("schema") != SCHEMA_NAME or d.get("version") not in (1, SCHEMA_VERSION):
+            raise ValueError(f"not a {SCHEMA_NAME} v1/v{SCHEMA_VERSION} description")
+        # v1 had no 'radiation' key: every v1 configuration was X-ray.
+        radiation = d["radiation"] if d["version"] >= 2 else "xray"
         lots = None if d["lots"] is None else Lots(d["lots"]["shape"], tuple(d["lots"]["size"]),
                                                    d["lots"]["count"], d["lots"]["periodic"])
         return cls(ReciprocalGrid.from_dict(d["grid"]), tuple(tuple(o) for o in d["outputs"]),
                    aver_percent=d["aver_percent"], lots=lots,
                    seed=None if d["seed"] is None else Seed(tuple(d["seed"])),
                    temperature=d["temperature"], symmetry=d["symmetry"], wavelength=d["wavelength"],
-                   labels=tuple(d["labels"]))
+                   radiation=radiation, labels=tuple(d["labels"]))
 
 
 def prepare_fourier_run(runner, config: FourierConfig, structure: StructureSource, structure_path,

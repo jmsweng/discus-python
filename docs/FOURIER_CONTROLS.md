@@ -6,7 +6,8 @@ from a [`ReciprocalGrid`](RECIPROCAL_GRID.md) and a few options:
 - **Bragg subtraction** (`set aver`), to get diffuse scattering without the Bragg peaks;
 - **LOTS**, to average the scattering of many small pieces of a large crystal;
 - a fixed random **seed**, so runs can be repeated exactly;
-- which **outputs** to write (intensity, real/imaginary part, 3D-PDF) as NeXus files.
+- which **outputs** to write (intensity, real/imaginary part, 3D-PDF) as NeXus files;
+- the **radiation** (X-ray or neutron) and the **wavelength**.
 
 It only offers commands whose behaviour was checked on DISCUS 6.23.01, and it refuses settings
 that were seen to give wrong or unrepeatable results. The macro is plain text: you can print it and
@@ -70,7 +71,8 @@ model is a scientific judgement (see "Not covered" below).
 | a seed with one number | not repeatable in 6.23.01 (two runs gave different files) |
 | any output other than `int` with LOTS | DISCUS stops with error −60 |
 | a piece (lot) larger than the crystal | DISCUS stops with error −101 (checked in Python; give `crystal_cells`) |
-| `value amp`, other wavelengths, neutrons, `disp` | not checked on 6.23.01 yet |
+| `value amp`, electrons, `disp anom` (anomalous dispersion) | not checked on 6.23.01 yet |
+| a wavelength symbol DISCUS does not know (e.g. `cuka`) | DISCUS would stop; use `cua1` or a number in Å |
 | file names with spaces, commas or folders | they break DISCUS macro arguments |
 
 **Axis labels.** For each grid axis DISCUS needs an `abs`/`ord`/`top` label (h, k or l) along which
@@ -78,6 +80,31 @@ the axis actually moves; otherwise it stops with error −4. `FourierConfig` use
 works and otherwise picks a working order (for an h h l plane: `abs h, ord l, top k`).
 `cfg.labels_verified` is True when the labels are the plain `h, k, l` on a grid along h, k, l. The
 reordered case was run for one h h l plane, and other oblique planes follow the same rule.
+
+## Radiation and wavelength
+
+```python
+cfg = FourierConfig(grid, outputs=(("int", "diffuse.h5"),), aver_percent=100,
+                    radiation="neutron", wavelength=1.54)      # or wavelength="cua1"
+```
+
+| Option | Values | Macro |
+|---|---|---|
+| `radiation` | `"xray"` (default), `"neutron"` | `xray` / `neut` |
+| `wavelength` | a DISCUS symbol (`"moa1"` default, `"cua1"`, `"aga1"`, `"mob"`, … — `WAVELENGTHS`) or a number in Å | `wvle moa1` / `wvle 1.54` |
+
+The radiation line is always written before `wvle`, because `neut` clears a wavelength symbol set
+earlier. X-ray and neutron runs (with `moa1`) are checked against an independent calculation in the
+[D reference probe](../benchmarks/discus_6_23_01/d_reference/RESULT.md) (PASS, ≤ 1.8e-13); the
+generated `fourier` block equals the macros that probe ran, byte for byte.
+
+**The wavelength does not change the intensities** in these macros. They always contain `disp off`
+(no anomalous dispersion), and then DISCUS 6.23.01 uses the wavelength only for the file's metadata
+(`data_rad_symbol`, `data_rad_length`): X-ray form factors depend on sin θ/λ = |Q|/4π, not on λ, and
+neutron scattering lengths are constants. In the 6.23.01 source the Fourier calculation uses λ only for
+anomalous terms (`disp anom`) and extinction, neither of which these macros switch on. Setting it
+still documents the experiment, and `load_scattering_volume()` checks that the file's radiation,
+symbol or length (to 1e-4) match the configuration.
 
 ## Running and checking
 
@@ -96,7 +123,9 @@ The measurements behind every row above are in
 - Models with atomic displacements or nonzero B values (Bragg subtraction then also changes the
   scattering away from Bragg points), and cells with several sites.
 - `set aver` on grids that do not fit the crystal (an earlier test left a 1.8 % residual).
-- `set mode:accumulate`, `value 3DPDF` together with LOTS, `nufft`, neutron or electron radiation.
+- `set mode:accumulate`, `value 3DPDF` together with LOTS, `nufft`, electron radiation, anomalous
+  dispersion. A numeric `wvle` has not yet been run in DISCUS (the source accepts it; the symbol `moa1`
+  has, for X-rays and neutrons).
 
 <details>
 <summary>How this was checked</summary>

@@ -209,7 +209,8 @@ class ScatteringVolume:
                                 "path": str(p), "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
                                 "content": content, "discus_metadata": {k: meta[k] for k in sorted(meta)}}
         if config is not None:
-            prov["fourier_config"] = _check_against_config(config, p.name, grid, bragg, content)
+            prov["fourier_config"] = _check_against_config(config, p.name, grid, bragg, content,
+                                                           radiation=_file_radiation(meta, raw))
         return cls(grid, values, units or f"DISCUS {content} (whole crystal)", bragg=bragg, provenance=prov)
 
     # -- derived volumes --------------------------------------------------------
@@ -428,8 +429,26 @@ class ScatteringVolume:
 _DISCUS_CONTENT = {"int": "intensity", "real": "real part", "imag": "imaginary part"}
 
 
-def _check_against_config(config, name: str, grid: ReciprocalGrid, bragg: str, content: str) -> dict:
-    """Refuse a file that the given FourierConfig cannot have written; return the config as a dict."""
+# DISCUS 6.23.01 data_radiation values (observed in the D reference probe).
+_DISCUS_RADIATION = {"xray": "xray", "neutron": "neutron"}
+
+
+def _file_radiation(meta: dict, raw: dict) -> dict:
+    """Radiation metadata of a DISCUS file: data_radiation, data_rad_symbol, data_rad_length[0] (Å)."""
+    out = {"radiation": meta.get("data_radiation"), "symbol": meta.get("data_rad_symbol"), "length": None}
+    if "data_rad_length" in raw:
+        length = np.ravel(np.asarray(raw["data_rad_length"], float))
+        if length.size and np.isfinite(length[0]) and length[0] > 0:
+            out["length"] = float(length[0])
+    return out
+
+
+def _check_against_config(config, name: str, grid: ReciprocalGrid, bragg: str, content: str,
+                          radiation: dict | None = None) -> dict:
+    """Refuse a file that the given FourierConfig cannot have written; return the config as a dict.
+
+    ``radiation`` (from :func:`_file_radiation`) is compared where the file records it: the radiation
+    always, the symbol for a symbolic wavelength, the length (rel. 1e-4) for a numeric one."""
     from .fourier_macro import FourierConfig
     if not isinstance(config, FourierConfig):
         raise TypeError("config must be a FourierConfig")
@@ -442,6 +461,18 @@ def _check_against_config(config, name: str, grid: ReciprocalGrid, bragg: str, c
     if bragg != config.bragg:
         raise ValueError(f"{name}: file says {bragg!r}, configuration (set aver,{config.aver_percent:g}) "
                          f"implies {config.bragg!r}")
+    if radiation is not None:
+        rad = radiation.get("radiation")
+        if rad is not None and rad.strip().lower() != _DISCUS_RADIATION[config.radiation]:
+            raise ValueError(f"{name}: file radiation {rad!r} but the configuration used {config.radiation!r}")
+        sym, length = radiation.get("symbol"), radiation.get("length")
+        if isinstance(config.wavelength, str):
+            if sym and sym.strip() and sym.strip().lower() != config.wavelength:
+                raise ValueError(f"{name}: file wavelength symbol {sym!r} but the configuration used "
+                                 f"{config.wavelength!r}")
+        elif length is not None and abs(length - config.wavelength) > 1e-4 * config.wavelength:
+            raise ValueError(f"{name}: file wavelength {length:g} Å but the configuration used "
+                             f"{config.wavelength:g} Å")
     cg = config.grid
     if cg.shape != grid.shape:
         raise ValueError(f"{name}: grid shape {grid.shape} != configured {cg.shape}")

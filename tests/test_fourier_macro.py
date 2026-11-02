@@ -124,7 +124,10 @@ def test_seed_rules():
     (dict(aver_percent=101), r"\[0, 100\]"),
     (dict(temperature="on"), "temperature"),
     (dict(symmetry="mirror"), "symmetry"),
-    (dict(wavelength="cua1"), "wavelength"),
+    (dict(wavelength="cuka"), "wavelength"),
+    (dict(wavelength=0.0), "wavelength"),
+    (dict(wavelength=True), "wavelength"),
+    (dict(radiation="electron"), "radiation"),
     (dict(labels=("h", "h", "l")), "permutation"),
     (dict(outputs=()), "at least one"),
 ])
@@ -311,4 +314,4 @@ def test_round_trip_and_bragg_label():
     assert again == cfg
     assert cfg.bragg == "bragg_subtracted" and FourierConfig(G32, outs("x")).bragg == "bragg_present"
     with pytest.raises(ValueError):
-        FourierConfig.from_dict({**cfg.to_dict(), "version": 2})
+        FourierConfig.from_dict({**cfg.to_dict(), "version": 3})
