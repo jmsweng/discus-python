@@ -90,12 +90,12 @@ def _get_oracle(arm: str, k: int, work_dir: Path | None = None) -> tuple[np.ndar
     stru_path = HERE / "inputs" / f"gate0_{arm}_{k:02d}.stru"
     b_cu, b_au = (O.B_CU_A, O.B_AU_A) if arm == "A" else (O.B_CU_B, O.B_AU_B)
 
-    # File-based cache keyed by input SHA-256
+    # File-based cache keyed by input SHA-256 (np.savez_compressed appends .npz)
     if work_dir is not None:
         cache_dir = work_dir / "oracle_cache"
         cache_dir.mkdir(exist_ok=True)
         sha = hashlib.sha256(stru_path.read_bytes()).hexdigest()[:16]
-        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npy"
+        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npz"
         if cache_file.exists():
             data = np.load(cache_file)
             _ORACLE_CACHE[key] = (data["D"], data["I"])
@@ -104,10 +104,10 @@ def _get_oracle(arm: str, k: int, work_dir: Path | None = None) -> tuple[np.ndar
     result = O.realization_exact(stru_path, "engine", b_cu, b_au)
     _ORACLE_CACHE[key] = result
 
-    # Save to file cache
+    # Save to file cache (np.savez_compressed appends .npz, so name the file .npz)
     if work_dir is not None:
         sha = hashlib.sha256(stru_path.read_bytes()).hexdigest()[:16]
-        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npy"
+        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npz"
         np.savez_compressed(cache_file, D=result[0], I=result[1])
 
     return result
@@ -444,6 +444,28 @@ def _real_logs_case(work: Path) -> tuple[bool, list]:
     return True, notes
 
 
+def _cache_hit_case(work: Path) -> tuple[bool, list]:
+    """cache_hit: a second oracle call with a cache dir must hit the .npz cache.
+
+    Writes the oracle for (A, 0) to the cache, clears the in-memory cache, and
+    checks that a second call reads it back (values identical, file exists).
+    """
+    cache_dir = work / "cache_hit_check"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    stru_path = HERE / "inputs" / "gate0_A_00.stru"
+    sha = hashlib.sha256(stru_path.read_bytes()).hexdigest()
+    cache_file = cache_dir / f"oracle_A_00_{sha}.npz"
+    if cache_file.exists():
+        cache_file.unlink()
+    D1, I1 = AN._oracle_cached("A", 0, stru_path, cache_dir)
+    if not cache_file.exists():
+        return False, [f"cache file not written: {cache_file.name}"]
+    _ORACLE_CACHE.clear()
+    D2, I2 = AN._oracle_cached("A", 0, stru_path, cache_dir)
+    ok = bool(np.array_equal(D1, D2) and np.array_equal(I1, I2))
+    return ok, [f"cache file {cache_file.name} written and re-read; values identical"]
+
+
 def run_selftest(work: Path) -> list:
     report = []
     _make_clean_run(work)  # Create the clean run once
@@ -452,6 +474,10 @@ def run_selftest(work: Path) -> list:
     # real_logs: the analyzer's log parser on the four committed v1.5 logs
     rl_ok, rl_note = _real_logs_case(work)
     report.append(("real_logs", "PASS", "PASS" if rl_ok else "FAIL", rl_ok, rl_note))
+
+    # cache_hit: the --cache .npz file is written and re-read
+    ch_ok, ch_note = _cache_hit_case(work)
+    report.append(("cache_hit", "PASS", "PASS" if ch_ok else "FAIL", ch_ok, ch_note))
 
     # Print all criterion values for the clean case
     clean_res = _analyze_with_temp_pred(work / "clean", work)

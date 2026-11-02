@@ -90,7 +90,8 @@ def _oracle_cached(arm: str, k: int, stru_path: Path, cache_dir: Path | None) ->
     if cache_dir is not None:
         cache_dir.mkdir(parents=True, exist_ok=True)
         sha = O.sha256_file(stru_path)
-        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npy"
+        # np.savez_compressed() appends .npz, so name the file .npz
+        cache_file = cache_dir / f"oracle_{arm}_{k:02d}_{sha}.npz"
         if cache_file.exists():
             data = np.load(cache_file)
             return data["D"], data["I"]
