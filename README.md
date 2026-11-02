@@ -38,7 +38,7 @@ Worked examples; except where noted they run on DISCUS output committed to this 
 | Notebook | What it shows | Needs DISCUS? |
 |---|---|---|
 | [`01_powder_pdf_with_discus`](notebooks/01_powder_pdf_with_discus.ipynb) | Powder PDF macro generation, execution and a Qmax sweep (incl. the 6.23.01 limit) | yes (to run) |
-| [`02_3d_delta_pdf_synthetic_example`](notebooks/02_3d_delta_pdf_synthetic_example.ipynb) | 3D-ΔPDF transform of a synthetic Cartesian-Q volume; diagnostics | no |
+| [`02_3d_delta_pdf_synthetic_example`](notebooks/02_3d_delta_pdf_synthetic_example.ipynb) | 3D-ΔPDF transform of a synthetic Cartesian-Q volume; diagnostics; X-ray/neutron radiation and wavelength in DISCUS 3D macros (recorded runs) | no |
 | [`03_lattices_and_coordinates`](notebooks/03_lattices_and_coordinates.ipynb) | Lattice metric, coordinate transforms, Q and d-spacings, minimum image in skewed cells | no |
 | [`04_building_and_editing_structures`](notebooks/04_building_and_editing_structures.ipynb) | Average vs configuration models, selection, editing, wrapping, validation | no |
 | [`05_reading_and_writing_discus_files`](notebooks/05_reading_and_writing_discus_files.ipynb) | `.cll` vs `.stru`, unit-cell ↔ supercell fractions, B-value handling | no (optional live check) |
