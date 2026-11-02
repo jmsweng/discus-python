@@ -1,0 +1,163 @@
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\collab_c\reports\002\work\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+
+
+[31m ------ > Reading macro: [39mmixed_bcc.mac
+ suite> discus
+ discus> read
+ discus/read> stru mixed_bcc.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    3.20000    3.20000    3.20000   90.00000   90.00000   90.00000    32.7680    
+
+ Metric Tensor     :
+      10.24000      0.00000      0.00000
+       0.00000     10.24000      0.00000
+       0.00000      0.00000     10.24000
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.31250    0.31250    0.31250   90.00000   90.00000   90.00000   0.305176E-01
+
+ Reciprocal metric tensor     : 
+       0.09766     -0.00000     -0.00000
+      -0.00000      0.09766     -0.00000
+      -0.00000     -0.00000      0.09766
+
+ discus> chem
+ discus/chem> set mode, quick, period
+ discus/chem> set vec, 1, 1, 2, 0, 0, 0
+ discus/chem> set vec, 2, 1, 1, 0, 0, 1
+ discus/chem> set vec, 3, 1, 2, 0, 0, 0
+ discus/chem> set neig, rese
+ discus/chem> set neig, vec, 1, number:1
+ discus/chem> set neig, dir, 0, 0, 1, 0, 0, 1, number:1
+ discus/chem> set neig, vec, 2, number:2
+ discus/chem> set neig, dir, 0, 0, 1, 0, 0, 1, number:2
+ discus/chem> set neig, vec, 3, number:3
+ discus/chem> set neig, dir, 1, 1, 0, 1, 1, 0, number:3
+ discus/chem> show
+    Neighbour determination mode   : quick = T
+    Periodic boundaries (x,y,z)    : T T T
+    Crystal consists of unit cells:    6   6   6
+    Crystal dimensions x min/max  :   -0.02228   5.52692
+    Crystal dimensions y min/max  :   -0.02262   5.52829
+    Crystal dimensions z min/max  :   -0.02038   5.53058
+    Current operation mode         : atoms
+    Sample volume for homo-check   : complete crystal
+    Allowed bond length range      :  1.500 A to  7.500 A
+    # points for histogramms       :    601
+
+    Neighbour definitions          : 
+
+        #  Mode  Neighbour (or vec.)  fsig  wsig   rmin[A] rmax[A] ang sym
+       -------------------------------------------------------------------
+        1  vec      1
+        2  vec      2
+        3  vec      3
+
+    Defined correlation vectors    : 
+
+       Correlation vector   1      : Site  1 -> site  2, neig =  0  0  0
+       Correlation vector   2      : Site  1 -> site  1, neig =  0  0  1
+       Correlation vector   3      : Site  1 -> site  2, neig =  0  0  0
+
+    Defined correlation angles     : 
+
+       ** none defined **
+
+    Defined correlation environments: 
+
+       ** none defined **
+
+    Defined correlation ranges: 
+
+       ** none defined **
+
+    Defined displacement direc.    : 
+
+       Displacement corr. #  1     : A: 0.00  0.00  1.00  B: 0.00  0.00  1.00
+       Displacement corr. #  2     : A: 0.00  0.00  1.00  B: 0.00  0.00  1.00
+       Displacement corr. #  3     : A: 1.00  1.00  0.00  B: 1.00  1.00  0.00
+
+    Defined correlation connectiv. : 
+
+       ** none defined **
+ discus/chem> corr disp, Au, Cu
+ Calculating correlations 
+    Atom type: A =   Au B =   Cu
+
+    Neig.     Displacement A      Displacement B      # pairs     correlation
+    -------------------------------------------------------------------------
+       1     0.00  0.00  1.00    0.00  0.00  1.00         119     -0.2371
+       2     0.00  0.00  1.00    0.00  0.00  1.00          55     -0.0437
+       3     1.00  1.00  0.00    1.00  1.00  0.00         119      0.1184
+ discus/chem> eval res[0]
+ Value of res[0] =    3.00000000000    
+ discus/chem> eval res[1]
+ Value of res[1] =  -0.237067872859    
+ discus/chem> eval res[2]
+ Value of res[2] =  -0.436565578524E-01
+ discus/chem> eval res[3]
+ Value of res[3] =   0.118442678535    
+ discus/chem> corr disp, Cu, Cu
+ Calculating correlations 
+    Atom type: A =   Cu B =   Cu
+
+    Neig.     Displacement A      Displacement B      # pairs     correlation
+    -------------------------------------------------------------------------
+       1     0.00  0.00  1.00    0.00  0.00  1.00         112      0.0171
+       2     0.00  0.00  1.00    0.00  0.00  1.00          61      0.1394
+       3     1.00  1.00  0.00    1.00  1.00  0.00         112     -0.1189
+ discus/chem> eval res[0]
+ Value of res[0] =    3.00000000000    
+ discus/chem> eval res[1]
+ Value of res[1] =   0.171312503078E-01
+ discus/chem> eval res[2]
+ Value of res[2] =   0.139382993939    
+ discus/chem> eval res[3]
+ Value of res[3] =  -0.118850948069    
+ discus/chem> corr disp, all, all
+ Calculating correlations 
+    Atom type: A =  all B =  all
+
+    Neig.     Displacement A      Displacement B      # pairs     correlation
+    -------------------------------------------------------------------------
+       1     0.00  0.00  1.00    0.00  0.00  1.00         432     -0.1495
+       2     0.00  0.00  1.00    0.00  0.00  1.00         216      0.0752
+       3     1.00  1.00  0.00    1.00  1.00  0.00         432      0.0301
+ discus/chem> eval res[0]
+ Value of res[0] =    3.00000000000    
+ discus/chem> eval res[1]
+ Value of res[1] =  -0.149502647471    
+ discus/chem> eval res[2]
+ Value of res[2] =   0.752313140599E-01
+ discus/chem> eval res[3]
+ Value of res[3] =   0.301304144377E-01
+ discus/chem> exit
+ discus> exit
+ suite> exit

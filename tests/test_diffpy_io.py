@@ -428,3 +428,17 @@ def test_module_importorskip():
 
     assert callable(to_diffpy)
     assert callable(from_diffpy)
+
+
+def test_from_diffpy_min_separation():
+    """from_diffpy passes min_separation to Structure (default 0.1 Å; None skips the check)."""
+    diffpy = pytest.importorskip("diffpy.structure")
+    from discuspdf.diffpy_io import from_diffpy
+
+    lat = diffpy.Lattice(10, 10, 10, 90, 90, 90)
+    ds = diffpy.Structure([diffpy.Atom("H", [0, 0, 0], label="H1"),
+                           diffpy.Atom("H", [0.005, 0, 0], label="H2")], lattice=lat)
+    with pytest.raises(ValueError, match="0.050000"):
+        from_diffpy(ds, model="configuration")
+    for ms in (0.01, None):
+        assert from_diffpy(ds, model="configuration", min_separation=ms).n_atoms == 2

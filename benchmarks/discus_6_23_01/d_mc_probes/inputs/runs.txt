@@ -1,0 +1,11 @@
+r1_occ_corr -
+r1b_occ_corr_repeat -
+r1c_occ_corr_omp4 4
+r1d_occ_corr_omp4_repeat 4
+r2_occ_ener_zero -
+r3_occ_ener_hot -
+r3b_occ_ener_cold -
+r4_shift_spring -
+r4b_shift_no_move -
+r5_shift_lennard -
+r6_swdisp_cd -

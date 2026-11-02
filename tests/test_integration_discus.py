@@ -7,7 +7,8 @@ Run locally in the WSL2 environment, e.g.:
 
 It runs the verified 1D PDF macro (docs/VERIFIED_DISCUS_MACRO.md) on the
 committed ``examples/gaas.cll`` sample and compares the produced G(r) to the
-committed reference ``examples/run_sample/result.pdf`` with tolerant metrics:
+committed reference ``examples/run_sample/result.pdf``, with the parameters recorded in
+``examples/run_sample/config.json``, using tolerant metrics:
 same grid, finite values, and a small relative L2 deviation. Tolerances are
 deliberately empirical, not bitwise identity.
 
@@ -24,7 +25,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from discuspdf import PDFConfig, PDFRunner, read_pdf
+from discuspdf import PDFRunner, read_pdf
+
+from tests.test_run_sample_fixture import recorded_config
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REFERENCE = REPO_ROOT / "examples" / "run_sample" / "result.pdf"
@@ -41,8 +44,10 @@ def _discus_available() -> bool:
     if shutil.which("discus_suite") is None:
         return False
     try:
+        # stdin=DEVNULL: with ``pytest -s`` the suite would otherwise wait at its prompt on the terminal
+        # until the timeout, and the test would be skipped as "not available".
         proc = subprocess.run(["discus_suite", "-noautorun", "-macro", "-h"],
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
     except (OSError, subprocess.TimeoutExpired):
         return False
     # The suite does not support -h (it treats it as a macro name); a fast,
@@ -52,17 +57,14 @@ def _discus_available() -> bool:
 
 @pytest.mark.skipif(not _discus_available(), reason="DISCUS_SUITE not available (set DISCUS_INTEGRATION=1)")
 def test_real_discus_1d_pdf_matches_reference(tmp_path):
-    cfg = PDFConfig(
-        structure=STRUCTURE,
-        supercell=(5, 5, 5),
-        rmax=12.0,
-        dr=0.02,
-        qmax=25.0,
-        qsig=0.0,
-        radiation="xray",
-    )
+    # The settings of the archived reference run, read from its config.json (qmax 30, as recorded),
+    # so this test and the fixture cannot drift apart again. Fixture consistency itself is checked in
+    # standard CI by tests/test_run_sample_fixture.py.
+    cfg = recorded_config()
     runner = PDFRunner(runs_directory=tmp_path / "runs")
     prepared = runner.prepare(cfg)
+    # The engine gets exactly the archived macro.
+    assert (prepared.directory / "run.mac").read_bytes() == (REFERENCE.parent / "run.mac").read_bytes()
     result = runner.execute(prepared)
 
     st = json.loads((result.directory / "status.json").read_text())
@@ -76,4 +78,6 @@ def test_real_discus_1d_pdf_matches_reference(tmp_path):
     assert np.allclose(r, ref_r, rtol=0, atol=GRID_ATOL)
     assert np.all(np.isfinite(gr))
     rel = float(np.linalg.norm(gr - ref_gr) / max(np.linalg.norm(ref_gr), 1e-30))
+    print(f"\nGaAs reference comparison: relative L2 = {rel:.3e} (limit {REL_L2_TOLERANCE:g}); "
+          f"run directory {result.directory}")
     assert rel < REL_L2_TOLERANCE, f"Relative L2 deviation {rel:.3g} exceeds {REL_L2_TOLERANCE}"

@@ -18,6 +18,7 @@ cif = ["gemmi>=0.7.5"]
 ase = ["ase>=3.29"]
 diffpy = ["diffpy.structure>=3.2.3"]
 interop = ["gemmi>=0.7.5", "ase>=3.29", "diffpy.structure>=3.2.3"]
+reference = ["xraydb>=4.5", "periodictable>=1.7"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

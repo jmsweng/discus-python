@@ -1,0 +1,37 @@
+{
+ "directory": "C:\\tmp\\mclive\\r6_swdisp_cd\\cc7f4ae8811049f58a38b172eef48c9e",
+ "measure": [
+  {
+   "type": "DisplacementTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Cu",
+   "pairs": 10368,
+   "value": 0.05225740800708997
+  }
+ ],
+ "final": {
+  "gen": 17280,
+  "tries": 17281,
+  "accepted": [
+   7194,
+   81,
+   4982
+  ],
+  "fraction": null,
+  "rows": [
+   {
+    "neighborhood": 1,
+    "kind": "displacement",
+    "a": "CU",
+    "b": "CU",
+    "target": 0.3,
+    "achieved": 0.052,
+    "sigma": null,
+    "diff": 0.248,
+    "rel_diff": 0.826,
+    "pairs": 10368
+   }
+  ]
+ }
+}

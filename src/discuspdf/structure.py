@@ -1009,6 +1009,16 @@ class Structure:
         from . import structure_ops
         return structure_ops.sample_configuration(self, seed=seed).structure
 
+    def neighbors(self, cutoff: float, **select):
+        """Directed periodic neighbor list up to ``cutoff`` Å (Package C).
+
+        Keyword arguments are passed to :meth:`NeighborList.select`.  See
+        :func:`discuspdf.neighbors.neighbor_list`.
+        """
+        from .neighbors import neighbor_list
+        nl = neighbor_list(self, cutoff)
+        return nl.select(**select) if select else nl
+
     __hash__ = None  # type: ignore
 
     def __repr__(self) -> str:

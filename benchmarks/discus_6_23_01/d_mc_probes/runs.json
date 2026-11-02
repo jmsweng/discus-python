@@ -1,0 +1,70 @@
+{
+ "runs": [
+  {
+   "id": "r1_occ_corr",
+   "structure": "cuau.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r1b_occ_corr_repeat",
+   "structure": "cuau.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r1c_occ_corr_omp4",
+   "structure": "cuau.stru",
+   "omp_num_threads": "4",
+   "serial": false
+  },
+  {
+   "id": "r1d_occ_corr_omp4_repeat",
+   "structure": "cuau.stru",
+   "omp_num_threads": "4",
+   "serial": false
+  },
+  {
+   "id": "r2_occ_ener_zero",
+   "structure": "cuau.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r3_occ_ener_hot",
+   "structure": "cuau.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r3b_occ_ener_cold",
+   "structure": "cuau.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r4_shift_spring",
+   "structure": "cu_disp.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r4b_shift_no_move",
+   "structure": "cu_disp.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r5_shift_lennard",
+   "structure": "cu_disp.stru",
+   "omp_num_threads": null,
+   "serial": true
+  },
+  {
+   "id": "r6_swdisp_cd",
+   "structure": "cu_disp.stru",
+   "omp_num_threads": null,
+   "serial": true
+  }
+ ]
+}

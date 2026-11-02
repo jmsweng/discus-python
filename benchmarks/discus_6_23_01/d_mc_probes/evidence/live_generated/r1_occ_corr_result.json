@@ -1,0 +1,38 @@
+{
+ "directory": "C:\\tmp\\mclive\\r1_occ_corr\\665fa8e2755b49dcb9e468ac87989c34",
+ "measure": [
+  {
+   "type": "OccupationalTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Au",
+   "pairs": 24576,
+   "value": -0.30631510416666674,
+   "pooled_alpha": -0.30631510416666663
+  }
+ ],
+ "final": {
+  "gen": 40960,
+  "tries": 40961,
+  "accepted": [
+   4955,
+   2521,
+   3987
+  ],
+  "fraction": null,
+  "rows": [
+   {
+    "neighborhood": 1,
+    "kind": "occupational",
+    "a": "AU",
+    "b": "CU",
+    "target": -0.3,
+    "achieved": -0.306,
+    "sigma": null,
+    "diff": 0.006,
+    "rel_diff": 0.021,
+    "pairs": 24576
+   }
+  ]
+ }
+}

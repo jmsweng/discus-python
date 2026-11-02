@@ -1,0 +1,403 @@
+{
+ "discus_version": "6.23.01",
+ "disp_sc": {
+  "neighborhoods": [
+   {
+    "Cu_Cu": {
+     "discus_convention": 0.4862792264668457,
+     "n_pairs": 432,
+     "pearson": 0.4862792264668457
+    },
+    "def": [
+     1,
+     1,
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ]
+    ]
+   },
+   {
+    "Cu_Cu": {
+     "discus_convention": -0.4849792358367515,
+     "n_pairs": 432,
+     "pearson": -0.4849792358367515
+    },
+    "def": [
+     1,
+     1,
+     [
+      2,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ]
+    ]
+   },
+   {
+    "Cu_Cu": {
+     "discus_convention": -0.9700415218876581,
+     "n_pairs": 432,
+     "pearson": -0.9700415218876581
+    },
+    "def": [
+     1,
+     1,
+     [
+      3,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ]
+    ]
+   },
+   {
+    "Cu_Cu": {
+     "discus_convention": 0.9750561323116885,
+     "n_pairs": 432,
+     "pearson": 0.9750561323116885
+    },
+    "def": [
+     1,
+     1,
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ]
+    ]
+   },
+   {
+    "Cu_Cu": {
+     "discus_convention": 0.8329711443261485,
+     "n_pairs": 432,
+     "pearson": 0.8329711443261485
+    },
+    "def": [
+     1,
+     1,
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ]
+    ]
+   },
+   {
+    "Cu_Cu": {
+     "discus_convention": 0.4723003371673857,
+     "n_pairs": 432,
+     "pearson": 0.4723003371673857
+    },
+    "def": [
+     1,
+     1,
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ]
+    ]
+   }
+  ]
+ },
+ "input_sha256": {
+  "disp_sc.mac": "3813e1f219d79e7cbf9ea69b01a9ad57939cfb57b7e93aaa739574d4db4f6f65",
+  "disp_sc.stru": "5a5a41ae6ac8d6aa415b9aeec40e9c59b9dc4d4d9b337a0a6405baae2448370f",
+  "mixed_bcc.mac": "38160258ab5d59a8e79f6068287735273f429036b4020452deba6a3fc883a78a",
+  "mixed_bcc.stru": "6eef853ce14b2273d51d841c0a8c996da6bfd40862e3569f541b961cb54f756c",
+  "occ_bcc.mac": "9229af15d9dd0d3c1b5c04803a987b0d12f868d357f2f5e20b0a52002f523096",
+  "occ_bcc.stru": "96903ebc4c32b00831b6c8d4cc0d127523f84490e842bcf6e042ca8000592e35"
+ },
+ "mixed_bcc": {
+  "neighborhoods": [
+   {
+    "Au_Cu": {
+     "discus_convention": -0.23706787285933384,
+     "n_pairs": 119,
+     "pearson": -0.12771504032127345
+    },
+    "Cu_Cu": {
+     "discus_convention": 0.017131250307774477,
+     "n_pairs": 112,
+     "pearson": -0.16490842523134114
+    },
+    "all_all": {
+     "discus_convention": -0.14950264747147204,
+     "n_pairs": 432,
+     "pearson": -0.1503279159377692
+    },
+    "def": [
+     1,
+     2,
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "Au_Cu": {
+     "discus_convention": -0.04365655785239289,
+     "n_pairs": 55,
+     "pearson": 0.08426037675917632
+    },
+    "Cu_Cu": {
+     "discus_convention": 0.13938299393944353,
+     "n_pairs": 61,
+     "pearson": 0.004236791357067784
+    },
+    "all_all": {
+     "discus_convention": 0.07523131405988838,
+     "n_pairs": 216,
+     "pearson": 0.07523131405988838
+    },
+    "def": [
+     1,
+     1,
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ]
+   },
+   {
+    "Au_Cu": {
+     "discus_convention": 0.11844267853460123,
+     "n_pairs": 119,
+     "pearson": 0.11930626902291418
+    },
+    "Cu_Cu": {
+     "discus_convention": -0.11885094806929881,
+     "n_pairs": 112,
+     "pearson": -0.1217605732934058
+    },
+    "all_all": {
+     "discus_convention": 0.030130414437749893,
+     "n_pairs": 432,
+     "pearson": 0.03013034494781704
+    },
+    "def": [
+     1,
+     2,
+     [
+      0,
+      0,
+      0
+     ],
+     [
+      1,
+      1,
+      0
+     ],
+     [
+      1,
+      1,
+      0
+     ]
+    ]
+   }
+  ]
+ },
+ "note": "values from the written files read back",
+ "occ_bcc": {
+  "neighborhoods": [
+   {
+    "corr_AuCu": -0.1952407741204655,
+    "corr_CuAu": -0.1952407741204655,
+    "def": [
+     1,
+     2,
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    "kind": "vec",
+    "n_pairs_discus": 1024,
+    "pearson_AuAu": -0.1952407741204655,
+    "warren_cowley_AuCu": -0.1952407741204656
+   },
+   {
+    "corr_AuCu": -0.18740312970000345,
+    "corr_CuAu": -0.18740312970000345,
+    "def": [
+     1,
+     2,
+     [
+      -1,
+      -1,
+      -1
+     ]
+    ],
+    "kind": "vec",
+    "n_pairs_discus": 1024,
+    "pearson_AuAu": -0.18740312970000345,
+    "warren_cowley_AuCu": -0.18740312970000342
+   },
+   {
+    "corr_AuCu": 0.041666666666666664,
+    "corr_CuAu": 0.041666666666666664,
+    "def": [
+     1,
+     1,
+     [
+      1,
+      0,
+      0
+     ]
+    ],
+    "kind": "vec",
+    "n_pairs_discus": 512,
+    "pearson_AuAu": 0.041666666666666664,
+    "warren_cowley_AuCu": 0.04166666666666663
+   },
+   {
+    "corr_AuCu": -0.03805508208486588,
+    "corr_CuAu": -0.03805508208486588,
+    "def": [
+     2,
+     2,
+     [
+      0,
+      1,
+      0
+     ]
+    ],
+    "kind": "vec",
+    "n_pairs_discus": 512,
+    "pearson_AuAu": -0.03805508208486588,
+    "warren_cowley_AuCu": -0.03805508208486581
+   },
+   {
+    "corr_AuCu": -0.2187537073818517,
+    "corr_CuAu": -0.2187537073818517,
+    "def": [
+     2,
+     1,
+     [
+      1,
+      0,
+      1
+     ]
+    ],
+    "kind": "vec",
+    "n_pairs_discus": 1024,
+    "pearson_AuAu": -0.2187537073818517,
+    "warren_cowley_AuCu": -0.2187537073818516
+   },
+   {
+    "corr_AuCu": -0.1864234241474457,
+    "corr_CuAu": -0.1864234241474457,
+    "def": [
+     [
+      0.5,
+      0.5,
+      0.5
+     ],
+     0.1
+    ],
+    "distance": 2.598076211353316,
+    "kind": "dis",
+    "n_pairs_ours": 8192
+   },
+   {
+    "corr_AuCu": 0.1835787062018679,
+    "corr_CuAu": 0.1835787062018679,
+    "def": [
+     [
+      1.0,
+      0.0,
+      0.0
+     ],
+     0.1
+    ],
+    "distance": 3.0,
+    "kind": "dis",
+    "n_pairs_ours": 6144
+   }
+  ]
+ }
+}

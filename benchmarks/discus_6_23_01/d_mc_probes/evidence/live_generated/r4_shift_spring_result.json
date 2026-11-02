@@ -1,0 +1,38 @@
+{
+ "directory": "C:\\tmp\\mclive\\r4_shift_spring\\203fe60bb9554f9ea657b220204b9059",
+ "measure": [
+  {
+   "type": "SpringTarget",
+   "neighborhood": 0,
+   "a": "Cu",
+   "b": "Cu",
+   "pairs": 10368,
+   "value": 3.003835844185051,
+   "std": 0.09561807540939948
+  }
+ ],
+ "final": {
+  "gen": 17280,
+  "tries": 17281,
+  "accepted": [
+   6126,
+   199,
+   5509
+  ],
+  "fraction": null,
+  "rows": [
+   {
+    "neighborhood": 1,
+    "kind": "spring",
+    "a": "CU",
+    "b": "CU",
+    "target": 3.0,
+    "achieved": 3.004,
+    "sigma": 0.096,
+    "diff": -0.004,
+    "rel_diff": -0.001,
+    "pairs": 20736
+   }
+  ]
+ }
+}

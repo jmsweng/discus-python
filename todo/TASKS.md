@@ -1,6 +1,6 @@
 # Development task tracker
 
-**Review snapshot:** 2026-11-01 (America/New_York) · **Evidence:** repository `main` at [`6888905`](https://github.com/jmsweng/discus-python/commit/68889053e31f0652fd9bc9fc1130d86c2bfef415), [PRs](https://github.com/jmsweng/discus-python/pulls?q=is%3Apr) and GitHub Actions. **This is a living checklist, not a promise that an agent is working on a task.**
+**Review snapshot:** 2026-11-01 (America/New_York) · **Evidence:** repository `main` at [`5a6e2b5`](https://github.com/jmsweng/discus-python/commit/5a6e2b5) (open items re-checked against the merged Gate 1–3, B8 and D10 evidence on 2026-11-01; GaAs fixture 2026-11-02), [PRs](https://github.com/jmsweng/discus-python/pulls?q=is%3Apr) and GitHub Actions. **This is a living checklist, not a promise that an agent is working on a task.**
 
 - ✅ means the specified deliverable has been **implemented or recorded with evidence**, **not** that all related science is verified.
 - ⬜ means still needed, insufficiently verified, or only partly built. When some groundwork exists, it is explicitly described.
@@ -16,7 +16,7 @@
 - ✅ Expose and validate `qmin`, `qmax`, `dq`, `qsig`, wavelength and real-space grid settings. Ambiguous `qmax=0` is rejected. [`pdf.py`](../src/discuspdf/pdf.py).
 - ✅ Run the exact prepared 1D macro via `execute(prepared)`; validate hashes, engine failure, expected radial sample count and grid before success. [`pdf.py`](../src/discuspdf/pdf.py).
 - ✅ Commit a real GaAs 1D sample consisting of a structure, macro, log and numeric `result.pdf`. [`examples/run_sample/`](../examples/run_sample/).
-- ✅ Add a **locally opt-in** DISCUS-vs-reference 1D regression test. It is skipped in default CI unless `DISCUS_INTEGRATION=1` and the binary is available; fixture consistency is an open item below. [`tests/test_integration_discus.py`](../tests/test_integration_discus.py).
+- ✅ Add a **locally opt-in** DISCUS-vs-reference 1D regression test. It is skipped in default CI unless `DISCUS_INTEGRATION=1` and the binary is available; the fixture itself is checked in standard CI and was re-run on the engine on 2026-11-02 (P0 item below). [`tests/test_integration_discus.py`](../tests/test_integration_discus.py).
 
 ### 3D infrastructure and FFT prototype
 
@@ -26,7 +26,7 @@
 - ✅ Implement the synthetic, uniform-Cartesian-Q FFT prototype returning a complex `FFTResult`, real-space axes and numerical diagnostics, plus a plotting helper. [`src/discuspdf/volume.py`](../src/discuspdf/volume.py).
 - ✅ Add configurable imaginary-component tolerance, diagnostic reporting and `FFTValidationError.result` to retain the computed complex data on failure. [PR #4](https://github.com/jmsweng/discus-python/pull/4).
 - ✅ Add analytical and negative-case Python tests for FFT behavior, basic metadata, HDF5 corruption, missing datasets, and run-status transitions. [`tests/`](../tests/).
-- ✅ Keep the 3D Jupyter notebook explicitly **synthetic only**. [`notebooks/02_3d_delta_pdf.ipynb`](../notebooks/02_3d_delta_pdf.ipynb).
+- ✅ Keep the 3D Jupyter notebook explicitly **synthetic only**. [`notebooks/02_3d_delta_pdf_synthetic_example.ipynb`](../notebooks/02_3d_delta_pdf_synthetic_example.ipynb).
 
 ### Engineering and documentation
 
@@ -39,10 +39,14 @@
 
 ### Reference and scientific reliability
 
-- ⬜ **P0 — Reconcile the GaAs reference fixture with its opt-in integration test.** The archived [`config.json`](../examples/run_sample/config.json) and [`run.mac`](../examples/run_sample/run.mac) specify `qmax=30`, but [`tests/test_integration_discus.py`](../tests/test_integration_discus.py) runs `qmax=25`; the archived macro uses `outf result.csv` while the retained artifact is `result.pdf`. Establish which output is authoritative, regenerate or correct the fixture/provenance, and run the opt-in comparison under DISCUS 6.23.01; **do not change numerical tolerances just to make the test pass**.
+- ✅ **P0 — Reconcile the GaAs reference fixture with its opt-in integration test.** [PR #57](https://github.com/jmsweng/discus-python/pull/57). The archived qmax-30 run is authoritative: `run.log` and `result.pdf` belong to it, and `run.mac` had been hand-edited after the run (`outf result.csv`, commit `6ff7fac`) and is restored to its original content, byte-identical to today's `render_pdf_macro`. The test now reads the recorded settings from `config.json` (qmax 30, was 25; both above the DISCUS limit at 1.5406 Å, identical G(r)). Fixture consistency is checked in standard CI by [`tests/test_run_sample_fixture.py`](../tests/test_run_sample_fixture.py) (manifest, macro vs generator and vs log, structure hash, grid). **Engine re-check 2026-11-02:** opt-in comparison on DISCUS_SUITE 6.23.01 (binary SHA-256 `d4274f13…45706f3`, same as Gates 1–3): 7 passed, relative L2 = 2.5×10⁻¹⁶, tolerances unchanged. Record in [`examples/run_sample/README.md`](../examples/run_sample/README.md).
+  - *Decision: the fixture stays at qmax 30 (above the limit, so effectively Qmax ≈ 8 Å⁻¹) rather than being regenerated below the limit; the Qmax limit itself is covered by notebook 01 and [`VERIFIED_DISCUS_MACRO.md`](../docs/VERIFIED_DISCUS_MACRO.md).*
 - ⬜ **P1 — Verify powder settings against real DISCUS outputs**, including `set delta`/Gaussian width, Qmin, Qmax, DQ, wavelength and termination behavior. Record test inputs and numeric differences.
-- ⬜ **P1 — Validate FFT normalization and real-space scale** against independent analytical and trusted diffuse-scattering/3D-ΔPDF references, not only internal NumPy consistency tests. Follow [the reproducible scientific benchmark plan](../docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md); the current C3/C4 real fixtures are Bragg-present Patterson tests.
+  - *Groundwork: Qmax limit and wavelength dependence measured ([PR #22](https://github.com/jmsweng/discus-python/pull/22), [`tests/test_pdf_live.py`](../tests/test_pdf_live.py), `QmaxLimitWarning`). Open: `set delta`/qsig, Qmin, DQ, termination, and the unexplained wavelength dependence above Q ≈ 8 Å⁻¹ (to raise with DiffuseCode).*
+- ✅ **P1 — Validate 3D-ΔPDF normalization and real-space scale against an independent analytical reference.** [Gate 3](../benchmarks/discus_6_23_01/gate3/RESULT.md): `delta_pdf_fractional` is absolute (e² Å⁻³, whole crystal) and matches the independent physics prediction to 1.1×10⁻⁵ ρ(0) at every predeclared lattice vector; the native `value 3DPDF` convention and its axis mislabelling are derived. Scope: B = 0, one site per cell, commensurate cubic grid.
+- ⬜ **P1 — Compare with an external trusted 3D-ΔPDF / diffuse-scattering reference** (another program or a published dataset), not only references written in this repository. Follow [the reproducible scientific benchmark plan](../docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md).
 - ⬜ **P2 — Keep smoke tests reproducible** in supported WSL and report engine version, executable, fixture checksums, logs, output hashes, numerical tolerances and observed outcomes.
+  - *Groundwork: every evidence directory keeps `ENGINE_ENV.txt` (binary SHA-256), `MANIFEST.sha256`, logs and `RUN_STATUS.txt`; [`regenerate_evidence.py`](../benchmarks/discus_6_23_01/regenerate_evidence.py) reruns them and checks date-independent content hashes (real-engine MATCH in Gate 3). Open: one entry point that runs all opt-in live tests (`DISCUS_INTEGRATION`, `DISCUS_LIVE`) and writes the same report.*
 
 ### Native runner integration (merged PR #7)
 
@@ -58,14 +62,19 @@
 
 ### Real 3D DISCUS pipeline (critical path)
 
-- ⬜ **P0 — Create and verify a genuine DISCUS_SUITE 6.23.01 macro** that calculates a 3D diffuse-scattering reciprocal-space dataset from a known disordered supercell. Retain input structure, exact macro, engine log and output.
+- ✅ **P0 — Create and verify a genuine DISCUS_SUITE 6.23.01 macro** that calculates a 3D diffuse-scattering reciprocal-space dataset from a known disordered supercell. [Gate 2 v4](../benchmarks/discus_6_23_01/gate2_prereg/RESULT_v4.md): blind-seeded correlated (block) and random Au/Cu supercells, total and `set aver,100` diffuse macros; structure, exact macro, engine log, binary hash and manifest are committed in [`evidence/20261029T010305Z_…`](../benchmarks/discus_6_23_01/gate2_prereg/evidence/20261029T010305Z_LAPTOP-NGU3BT0N/). The HDF5 outputs are kept as content hashes and regenerated by [`regenerate_evidence.py`](../benchmarks/discus_6_23_01/regenerate_evidence.py) (real-engine MATCH), see [`EVIDENCE_VOLUMES.md`](../benchmarks/discus_6_23_01/EVIDENCE_VOLUMES.md). `FourierConfig` generates such macros ([B8](#package-b--reciprocal-space-grids-and-data)).
 - ✅ **P0 — Identify actual native output layout and metadata.** C3/C4 real DISCUS 6.23.01 NeXus fixtures establish the `/entry/data` layout, `data_values`, `data_corner`, and `data_increment_vector` semantics. The [native reader](../src/discuspdf/discus_output.py) validates these values. This checks **file interpretation**, not scientific absolute normalization.
-- ⬜ **P0 — Calibrate Q coordinates** from lattice/reciprocal basis or trustworthy file metadata; correctly handle r.l.u. ↔ Cartesian-Q, (2\pi), axis orientation, centering and non-orthogonal cells. Reject unsupported geometry.
-- ⬜ **P0 — Produce physically characterized diffuse-only scattering** using a verified Bragg exclusion/average-structure handling workflow; document whether correction acts on amplitudes or intensities.
-- ⬜ **P0 — Demonstrate end-to-end `structure → real DISCUS 3D intensity → calibrated Python volume → 3D-ΔPDF`**, record numerical evidence and compare to at least one independently trusted reference.
+- ✅ **P0 — Calibrate Q coordinates** from lattice/reciprocal basis or trustworthy file metadata; correctly handle r.l.u. ↔ Cartesian-Q, (2\pi), axis orientation, centering and non-orthogonal cells. Reject unsupported geometry. The native reader takes the hkl grid from `data_corner`/`data_increment_vector` and refuses Cartesian Q unless the grid is axis-aligned in an orthogonal cell ([`discus_output.py`](../src/discuspdf/discus_output.py)); `ReciprocalGrid`/`ScatteringVolume` give Q = 2π B·hkl for any cell, checked on the real C3 and skewed C4 grids ([B6](#package-b--reciprocal-space-grids-and-data)); `delta_pdf_fractional` works in fractional coordinates for any cell; DISCUS intensity on a displaced monoclinic crystal matches the independent reference to 9×10⁻⁶ ([D10 result](../benchmarks/discus_6_23_01/d_reference/RESULT.md)).
+- ⬜ **P1 — Finish the geometry consolidation and non-orthogonal 3D-ΔPDF check.** Move `DiscusVolume` / `discus_output` onto `Lattice` / `ReciprocalGrid` (A5, B6 notes, with Gate 2/3 evidence parity); support transforms on skewed hkl grids (currently refused); run a pre-registered off-origin 3D-ΔPDF test on a non-orthogonal disordered cell.
+- ✅ **P0 — Produce physically characterized diffuse-only scattering** using a verified Bragg exclusion/average-structure handling workflow; document whether correction acts on amplitudes or intensities. DISCUS `set aver` subtracts on **amplitudes**: diffuse = |F − ⟨F⟩·L|², exactly 0 at Bragg points ([B8 probes](../benchmarks/discus_6_23_01/b_probes/RESULT.md), [Gate 2 v4](../benchmarks/discus_6_23_01/gate2_prereg/RESULT_v4.md) C1 ≤ 7×10⁻¹⁵); documented in [`FOURIER_CONTROLS.md`](../docs/FOURIER_CONTROLS.md); Gate 1 passed on a dyadic grid. Scope: commensurate grids, one site per cell, B = 0.
+- ⬜ **P1 — Extend diffuse-only scattering beyond the verified scope:** B ≠ 0 (Gate 2 v2 saw `temp use` apply B = 1 Å² that the files did not declare; cause not identified), multi-site cells, non-commensurate grids, partial `set aver` < 100, and the attributed-but-unproven Gate 1 residual (≈ 1.77 % on non-dyadic steps).
+- ✅ **P0 — Demonstrate end-to-end `structure → real DISCUS 3D intensity → calibrated Python volume → 3D-ΔPDF`**, record numerical evidence and compare to at least one independently trusted reference. [Gate 2 v4](../benchmarks/discus_6_23_01/gate2_prereg/RESULT_v4.md) (0/37 failed): off-origin peak positions, signs and amplitudes match the blind prediction to 4.5×10⁻⁶ ρ/ρ₀, random control featureless, reviewer re-ran the evaluator on another machine; [Gate 3](../benchmarks/discus_6_23_01/gate3/RESULT.md) (0/15 failed) adds absolute normalization. The references are independent oracles in this repository; an external reference is the open P1 item above.
 - ⬜ **P1 — Handle masks/windowing/background and missing Bragg voxels** without silently distorting intensity or Fourier normalization.
+  - *Groundwork: `ScatteringVolume` carries masks and `mask_near_bragg` is checked against brute force ([B7](#package-b--reciprocal-space-grids-and-data)); the FFT paths refuse NaN/missing voxels rather than filling them ([`volume.py`](../src/discuspdf/volume.py)). Open: a defined fill/window policy and a test showing its effect on normalization.*
 - ⬜ **P1 — Extend real 3D integration and numerical benchmark tests**, including a near-perfect crystal, a simple known disorder model, nonorthogonal lattice geometry and failure cases.
+  - *Done so far: known correlated and random disorder models (Gate 2), skewed C4 grid geometry, monoclinic intensity (D10), corrupt/missing HDF5 failure cases. Open: a near-perfect crystal, a non-orthogonal 3D-ΔPDF run, and making these live tests runnable from one opt-in suite (see P2).*
 - ⬜ **P1 — Document definitive scientific acceptance criteria** (Q/r axis positions, symmetry, intensity/peak amplitudes, normalization, uncertainty and tolerances).
+  - *Groundwork: each gate has pre-registered criteria ([Gate 2](../benchmarks/discus_6_23_01/gate2_prereg/PREREGISTRATION.md), [Gate 3](../benchmarks/discus_6_23_01/gate3/PREREGISTRATION.md)). Open: one general document that new benchmarks follow.*
 
 ## Javelin-inspired expansion — 21 features, grouped by package
 
@@ -74,7 +83,7 @@ The existing DISCUS engine may implement some of these physical methods already.
 ### Package A — [Structure and interoperability](01_structure_and_interoperability.md)
 
 - ✅ **A1 / Feature 1:** Editable, validated `Structure` (atomic species, sites, fractional/cartesian positions, occupancy, cell, PBC and supercell metadata). [`src/discuspdf/structure.py`](../src/discuspdf/structure.py); [PR A-2](https://github.com/jmsweng/discus-python/pull/11) · [`tests/test_structure.py`](../tests/test_structure.py).
-  - *Open items: magnetic moments (Package D11), anisotropic ADPs, mixed-PBC distances.*
+  - *Open items: magnetic moments (DISCUS 6.23.01 cannot keep them, see D11), anisotropic ADPs, mixed-PBC distances.*
 - ✅ **A2 / Feature 2:** CIF, ASE and optional DiffPy imports/exports with occupancy/PBC fidelity and round-trip tests. [`src/discuspdf/cif_io.py`](../src/discuspdf/cif_io.py); [PR #15](https://github.com/jmsweng/discus-python/pull/15) · [`tests/test_cif_io.py`](../tests/test_cif_io.py), [`tests/test_ase_io.py`](../tests/test_ase_io.py), [`tests/test_diffpy_io.py`](../tests/test_diffpy_io.py).
 - ✅ **A3 / Feature 3:** Real-format, version-aware DISCUS `.cll` / `.stru` import/export and round-trip tests. [`src/discuspdf/discus_io.py`](../src/discuspdf/discus_io.py); [PR A3](https://github.com/jmsweng/discus-python/pull/12) · [`tests/test_discus_io_cll.py`](../tests/test_discus_io_cll.py), [`tests/test_discus_io_stru.py`](../tests/test_discus_io_stru.py).
   - *Not done: symmetry expansion of `.cll`, occupancy < 1 in `.stru`, molecule/property columns, CIF/ASE (next PR).*
@@ -98,27 +107,38 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Open items: Zarr (not needed yet); first real schema migration when v2 exists.*
 - ✅ **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. [`src/discuspdf/viz.py`](../src/discuspdf/viz.py) · [`tests/test_viz.py`](../tests/test_viz.py) · [`docs/VISUALIZATION.md`](../docs/VISUALIZATION.md); slices in true geometry, `.vti` only for axis-aligned grids, `.vts` otherwise; files read back by VTK 9.7 with matching coordinates.
   - *Open: interactive viewer; DISCUS plane files straight into `SampledVolume` (via `ScatteringVolume`).*
-- ✅ Example notebook for reciprocal-space grids and scattering data (Features 6–9 and 18–20) on committed data. [`notebooks/07_reciprocal_space_data.ipynb`](../notebooks/07_reciprocal_space_data.ipynb).
+- ✅ Example notebook for reciprocal-space grids and scattering data (Features 6–9 and 18–20) on committed data. [`notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb`](../notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb).
 
 ### Package C — [Disorder and correlations](03_disorder_and_correlations.md)
 
-- ⬜ **C12 / Feature 12:** Site/species/distance/shell-resolved periodic neighbor lists on a general lattice.
-- ⬜ **C13 / Feature 13:** Clearly defined occupational pair probabilities and short-range-order coefficients with reference tests.
-- ⬜ **C14 / Feature 14:** Reference-structure displacement covariances and normalized, directional correlations.
+- ✅ **C12 / Feature 12:** Site/species/distance/shell-resolved periodic neighbor lists on a general lattice. [`src/discuspdf/neighbors.py`](../src/discuspdf/neighbors.py); [PR #30](https://github.com/jmsweng/discus-python/pull/30) · [`tests/test_neighbors.py`](../tests/test_neighbors.py) · [`docs/NEIGHBORS.md`](../docs/NEIGHBORS.md); checked against an independent brute-force enumeration (cubic, tetragonal, triclinic, cutoff > cell, open boundaries) and textbook shells; DISCUS `set vec` pairs reproduced.
+  - *Open: mixed PBC, molecules, angle neighborhoods (`set ang`), symmetry-generated vectors (`apply_symmetry`).*
+- ✅ **C13 / Feature 13:** Clearly defined occupational pair probabilities and short-range-order coefficients with reference tests. [`src/discuspdf/correlations.py`](../src/discuspdf/correlations.py); [PR #31](https://github.com/jmsweng/discus-python/pull/31) · [`tests/test_correlations.py`](../tests/test_correlations.py) · [`docs/CORRELATIONS.md`](../docs/CORRELATIONS.md); Warren–Cowley and correlation coefficients with null-model standard errors; B2 and L1₂ textbook values; DISCUS `chem corr occ` reproduced to 5e-13 on DISCUS 6.23.01 ([probe](../benchmarks/discus_6_23_01/c_probes/RESULT.md)).
+  - *Open: ensemble averages over several configurations; `corr` with lots.*
+- ✅ **C14 / Feature 14:** Reference-structure displacement covariances and normalized, directional correlations. Same module and PR; analytic displacement waves (incl. cross terms and a triclinic cell); DISCUS `chem corr disp` (explicit directions, species filters) reproduced to 5e-13.
+  - *Open: DISCUS `dir all` mode; molecules.*
+- ✅ Example notebook for neighbors and correlations (Features 12–14). [`notebooks/09_neighbors_and_short_range_order.ipynb`](../notebooks/09_neighbors_and_short_range_order.ipynb).
 
 ### Package D — [Monte Carlo and advanced physics](04_monte_carlo_and_advanced_physics.md)
 
-- ⬜ **D10 / Feature 10:** Limited independent Python scattering reference calculator for physics verification, not a replacement for DISCUS.
-- ⬜ **D11 / Feature 11:** Magnetic neutron diffuse-scattering support with validated form factors, moments and Q-dependent projection.
-- ⬜ **D15 / Feature 15:** Typed Python Monte Carlo/disorder configuration compiled to validated DISCUS MMC macros.
-- ⬜ **D16 / Feature 16:** Multiple targeted occupational/displacement correlations with convergence and achievement reporting.
-- ⬜ **D17 / Feature 17:** Site-restricted occupancy/displacement move and energy configuration; verified detailed balance, units and seeded reproducibility.
-- ⬜ **D21 / Feature 21:** Notebook-friendly atomistic structure and selected-neighbor visualization, with optional exports.
+- ✅ **D10 / Feature 10:** Limited independent Python scattering reference calculator for physics verification, not a replacement for DISCUS. [`src/discuspdf/reference_scattering.py`](../src/discuspdf/reference_scattering.py); [PR #34](https://github.com/jmsweng/discus-python/pull/34) · [`tests/test_reference_scattering.py`](../tests/test_reference_scattering.py) · [`docs/REFERENCE_SCATTERING.md`](../docs/REFERENCE_SCATTERING.md); analytical benchmarks (single atom, two atoms, Laue function, Warren–Cowley sums, triclinic brute force) and a pre-registered DISCUS 6.23.01 comparison: 2.5e-15 … 1.8e-13 relative L2 with DISCUS's table rounding emulated ([result](../benchmarks/discus_6_23_01/d_reference/RESULT.md)).
+  - *Open: anomalous dispersion, anisotropic ADPs, partial `set aver`, lots.*
+- ✅ **D11 / Feature 11:** Investigation and specification done; **experimental** reference only. DISCUS 6.23.01 computes no magnetic scattering and drops moments in `.stru` I/O; Javelin's projection is wrong outside a Cartesian a = 1 Å cell. [`src/discuspdf/magnetic_reference.py`](../src/discuspdf/magnetic_reference.py) (not exported); [PR #36](https://github.com/jmsweng/discus-python/pull/36) · [`tests/test_magnetic_reference.py`](../tests/test_magnetic_reference.py) · [`docs/MAGNETIC_SCATTERING.md`](../docs/MAGNETIC_SCATTERING.md); analytical benchmarks only.
+  - *Open (before any production use): an independent numerical comparison (e.g. Spinvert/SCATTY), moments in `Structure` with I/O that keeps them, magnetic symmetry.*
+- ✅ **D15 / Feature 15:** Typed Python Monte Carlo configuration compiled to verified DISCUS MMC macros, staged and executed per run directory. [`src/discuspdf/mc.py`](../src/discuspdf/mc.py); [PR #37](https://github.com/jmsweng/discus-python/pull/37) · [`tests/test_mc_config.py`](../tests/test_mc_config.py) · [`docs/MONTE_CARLO.md`](../docs/MONTE_CARLO.md) · source facts [`docs/MC_FACTS.md`](../docs/MC_FACTS.md); engine probe ([result](../benchmarks/discus_6_23_01/d_mc_probes/RESULT.md)) and live runs of generated macros (four bit-identical to the probe).
+  - *Open: temperature schedules, molecules, angle/environment neighbourhoods, `site` pairing not yet engine-run.*
+- ✅ **D16 / Feature 16:** Several occupational/displacement targets with achievement reporting: rows matched to targets, `target_report` (reached / not reached), feedback history and acceptance, independent `measure()` with DISCUS's definitions, `replica_summary` for seed spread. Same module; [`tests/test_mc_results.py`](../tests/test_mc_results.py).
+  - *Open: DISCUS `set finish` convergence (unverified, not offered); only one feedback target per run.*
+- ✅ **D17 / Feature 17:** Swap, displacement-swap and shift moves with occupational, displacement, spring and Lennard-Jones energies wrapped from DISCUS MMC; units, sign convention, acceptance rule (heat bath, **not** detailed balance with exp(−E/kT)), periodicity, composition conservation, zero-energy acceptance (½) and fixed-seed reproducibility verified on the engine. Same module and PR.
+  - *Open: `unid`, `cn`, `group`, `heli`, `bucking`, `repulsive`; site-restricted atom lists (DISCUS bug, refused).*
+- ✅ **D21 / Feature 21:** Notebook-friendly structure, displacement and neighbor-bond pictures with checked viewer export. [`src/discuspdf/structure_viz.py`](../src/discuspdf/structure_viz.py); [PR #35](https://github.com/jmsweng/discus-python/pull/35) · [`tests/test_structure_viz.py`](../tests/test_structure_viz.py) · [`docs/STRUCTURE_VIZ.md`](../docs/STRUCTURE_VIZ.md).
+  - *Open: interactive viewer.*
+- ✅ Example notebook for Package D (Features 10, 11, 15–17, 21) on committed data. [`notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb`](../notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb).
 
 ## Maintenance rules
 
 1. Update this file **in the same PR** that delivers a feature; link the commit/PR and test or reference dataset.
-2. Use `[x]` only when the **specific checkbox's scope** is demonstrably satisfied; separate any remaining work into a new `[ ]` entry rather than overstating completion.
+2. Use ✅ only when the **specific item's scope** is demonstrably satisfied; separate any remaining work into a new ⬜ entry rather than overstating completion.
 3. Report software-level tests and real scientific validation as distinct evidence. Passing CI or generating a synthetic FFT **does not establish** valid 3D-ΔPDF physics.
 4. Keep package specs stable; use this page to track progress instead of transient references to people, agents, or work currently assigned.
 5. Revisit P0/P1 priorities after every validated scientific milestone; dependencies and numerical units take precedence over visualization or optimization.
