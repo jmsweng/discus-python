@@ -165,6 +165,7 @@ Two runs: the pre-registered probe v1.1 and its confirmation v2, in [`benchmarks
 **How DISCUS gets G(r) from F(Q).** This reproduces every run to ≤ 2.2×10⁻⁴ with no fitted parameter. A free scale fits 1.00000.
 - F(Q) is set to zero from its last sign change up to Qmax.
 - Below Qmin, F(Q) is replaced by a straight line to F(0) = 0.
+- The values are placed on the multiples of ΔQ, the first one at nint(Qmin/ΔQ)·ΔQ. If Qmin is not a multiple of ΔQ, that is up to ΔQ/2 away from the Q where F was computed. Choose Qmin as a multiple of ΔQ.
 - G(r) = Σ F(Q) sin(Qr) ΔQ over that grid. **There is no 2/π factor:** this is π/2 ≈ 1.571 times the textbook (2/π)∫F sin(Qr) dQ of DISCUS's own F(Q). The absolute scale of DISCUS G(r) compared with other programs also depends on its S(Q) normalisation, which was not tested here.
 
 **F(Q) files are labelled one ΔQ too high.** The value written at Q was computed at Q − ΔQ, and the first line is a placeholder (S = 0, i.e. F = −Q). Shift the labels before using a DISCUS F(Q) file. The PDF transform itself uses the correct Q.
