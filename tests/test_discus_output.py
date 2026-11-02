@@ -14,7 +14,9 @@ import h5py
 import numpy as np
 import pytest
 
-from discuspdf.discus_output import (delta_pdf_fractional, evaluate_real_space, read_discus_volume)
+from discuspdf.discus_output import (delta_pdf_fractional, evaluate_real_space, read_discus_volume,
+                                     _validated_direct_basis, DiscusVolume)
+from discuspdf.lattice import Lattice
 from discuspdf.volume import delta_pdf_from_diffuse
 
 FIX = Path(__file__).parent / "fixtures" / "discus_6.23.01"
@@ -145,3 +147,124 @@ def test_missing_group_and_non_hdf5_are_rejected(tmp_path):
     t = tmp_path / "t.txt"; t.write_text("nope")
     with pytest.raises(ValueError, match="Not an HDF5"):
         read_discus_volume(t)
+
+
+# --------------------------- Lattice delegation tests ---------------------------
+
+def _make_volume(cell=(4.0, 4.0, 4.0), angles=(90.0, 90.0, 90.0), n=8, d=0.125):
+    """Build a minimal DiscusVolume for geometry tests."""
+    values = np.ones((n, n, n))
+    corner = np.array([-(n // 2) * d] * 3)
+    increments = np.eye(3) * d
+    return DiscusVolume(values, corner, increments, np.array(cell), np.array(angles), "bragg_subtracted")
+
+
+def test_lattice_property_returns_lattice_from_parameters():
+    """DiscusVolume.lattice must equal Lattice.from_parameters(*lengths, *angles)."""
+    v = _make_volume(cell=(5.0, 6.0, 7.0), angles=(90.0, 105.0, 90.0))
+    lat = v.lattice
+    expected = Lattice.from_parameters(5.0, 6.0, 7.0, 90.0, 105.0, 90.0)
+    assert lat == expected
+    assert np.array_equal(lat.matrix, expected.matrix)
+
+
+def test_direct_basis_delegates_to_lattice():
+    """direct_basis() must return the same matrix as self.lattice.matrix."""
+    v = _make_volume()
+    assert np.array_equal(v.direct_basis(), v.lattice.matrix)
+
+
+def test_reciprocal_basis_delegates_to_lattice():
+    """reciprocal_basis(two_pi=True/False) must match Lattice.reciprocal_matrix (± 2π)."""
+    v = _make_volume(cell=(5.0, 6.0, 7.0), angles=(90.0, 105.0, 90.0))
+    B = v.lattice.reciprocal_matrix
+    np.testing.assert_allclose(v.reciprocal_basis(two_pi=False), B, rtol=1e-14)
+    np.testing.assert_allclose(v.reciprocal_basis(two_pi=True), 2 * np.pi * B, rtol=1e-14)
+
+
+def test_cell_volume_delegates_to_lattice():
+    """cell_volume must equal self.lattice.volume."""
+    v = _make_volume(cell=(5.0, 6.0, 7.0), angles=(90.0, 105.0, 90.0))
+    assert v.cell_volume == pytest.approx(v.lattice.volume, rel=1e-14)
+
+
+# ---- 203-cell parity: direct basis bit-identical, reciprocal/volume ≤ 1e-14 ----
+
+def _generate_203_cells():
+    """Replicate the compare_bases.py cell set: 200 random + C1 + Gate2 + triclinic."""
+    rng = np.random.default_rng(0)
+    cells = []
+    for _ in range(200):
+        lengths = rng.uniform(2.0, 20.0, size=3)
+        angles = rng.uniform(60.0, 120.0, size=3)
+        a, b, c = lengths
+        alpha, beta, gamma = np.radians(angles)
+        cos_a, cos_b, cos_c = np.cos(alpha), np.cos(beta), np.cos(gamma)
+        det = 1.0 - cos_a**2 - cos_b**2 - cos_c**2 + 2.0 * cos_a * cos_b * cos_c
+        if det > 0:
+            cells.append((lengths, angles))
+    # C1 cubic
+    cells.append(([5.6537] * 3, [90.0] * 3))
+    # Gate 2 cubic
+    cells.append(([4.0] * 3, [90.0] * 3))
+    # Triclinic fixture
+    cif_path = Path(__file__).parent / "fixtures" / "interop" / "triclinic_p1bar.cif"
+    if cif_path.exists():
+        from discuspdf.cif_io import read_cif
+        model = read_cif(cif_path)
+        a, b, c, alpha, beta, gamma = model.structure.lattice.parameters
+        cells.append(([a, b, c], [alpha, beta, gamma]))
+    return cells
+
+
+def test_203_cell_direct_basis_bit_identical():
+    """For all 203 cells, _validated_direct_basis must be bit-identical to Lattice.from_parameters().matrix."""
+    cells = _generate_203_cells()
+    assert len(cells) >= 203, f"Expected ≥203 cells, got {len(cells)}"
+    for lengths, angles in cells:
+        old = _validated_direct_basis(lengths, angles)
+        new = Lattice.from_parameters(*lengths, *angles).matrix
+        assert np.array_equal(old, new), (
+            f"Direct basis not bit-identical for a={lengths[0]:.4g} b={lengths[1]:.4g} "
+            f"c={lengths[2]:.4g} α={angles[0]:.2f} β={angles[1]:.2f} γ={angles[2]:.2f}"
+        )
+
+
+def test_203_cell_reciprocal_basis_within_1e_14():
+    """For all 203 cells, reciprocal_basis(two_pi=False/True) must agree with Lattice to ≤ 1e-14 rel.
+
+    Uses atol=1e-15 to handle near-zero elements (where relative tolerance is ill-defined).
+    """
+    cells = _generate_203_cells()
+    for lengths, angles in cells:
+        v = _make_volume(cell=tuple(lengths), angles=tuple(angles))
+        B = Lattice.from_parameters(*lengths, *angles).reciprocal_matrix
+        np.testing.assert_allclose(v.reciprocal_basis(two_pi=False), B, rtol=1e-14, atol=1e-15,
+                                   err_msg=f"reciprocal (no 2π) mismatch for {lengths} {angles}")
+        np.testing.assert_allclose(v.reciprocal_basis(two_pi=True), 2 * np.pi * B, rtol=1e-14, atol=1e-15,
+                                   err_msg=f"reciprocal (2π) mismatch for {lengths} {angles}")
+
+
+def test_203_cell_volume_within_1e_14():
+    """For all 203 cells, cell_volume must agree with Lattice.volume to ≤ 1e-14 rel."""
+    cells = _generate_203_cells()
+    for lengths, angles in cells:
+        v = _make_volume(cell=tuple(lengths), angles=tuple(angles))
+        vol = Lattice.from_parameters(*lengths, *angles).volume
+        assert abs(v.cell_volume - vol) <= 1e-14 * vol, (
+            f"Volume mismatch: {v.cell_volume} vs {vol} for {lengths} {angles}"
+        )
+
+
+# ---- invalid inputs: exact old ValueError texts preserved ----
+
+@pytest.mark.parametrize("lengths,angles,match", [
+    ([1.0, 2.0], [90.0, 90.0, 90.0], "unit_cell_lengths"),
+    ([1.0, 2.0, 3.0], [0.0, 90.0, 90.0], "unit_cell_angles"),
+    ([1.0, 2.0, 3.0], [180.0, 90.0, 90.0], "unit_cell_angles"),
+    ([5.0, 5.0, 5.0], [90.0, 90.0, 0.0], "unit_cell_angles"),
+])
+def test_invalid_inputs_raise_exact_old_messages(lengths, angles, match):
+    """_validated_direct_basis must raise the exact old ValueError texts."""
+    with pytest.raises(ValueError, match=match):
+        _validated_direct_basis(lengths, angles)
