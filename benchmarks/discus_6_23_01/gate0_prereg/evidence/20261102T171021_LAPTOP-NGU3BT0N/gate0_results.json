@@ -1,0 +1,145 @@
+{
+ "predictions_sha256": "7c45945c12e84ac89774e3b1785608e8d714e2924c681ddca78080af15774be4",
+ "run_dir": "/mnt/c/tmp/g0run21/benchmarks/discus_6_23_01/gate0_prereg/evidence/20261102T171021_LAPTOP-NGU3BT0N",
+ "arms": {
+  "A": {
+   "criteria": [
+    {
+     "criterion": "E1 A: max total vs realization engine oracle (relL2)",
+     "value": 8.62020875329902e-15,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "E2 A: max diffuse vs realization engine oracle (relL2)",
+     "value": 7.25106426654876e-15,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "E3 A: max diffuse at integer h / max diffuse",
+     "value": 0.0,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "E4 A total: log shows 'Temp. factors : ignored'",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "E4 A diffuse: log shows 'Temp. factors : ignored'",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "S1 A: |mean x - 1|",
+     "value": 0.0018510877048183438,
+     "limit": 0.0393712992717945,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "S2 A: |var x - 1|",
+     "value": 0.004067185153784125,
+     "limit": 0.11135885079684349,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "S3 A: n_voxels outside Gamma interval (15561 tested)",
+     "value": 0.0,
+     "limit": 0.0,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "S4 A: max |E_phys - E_eng| / E_eng",
+     "value": 0.0010379546603763042,
+     "limit": 0.005,
+     "op": "<=",
+     "pass": true
+    }
+   ],
+   "info": {}
+  },
+  "B": {
+   "criteria": [
+    {
+     "criterion": "E1 B: max total vs realization engine oracle (relL2)",
+     "value": 6.726825272476667e-15,
+     "limit": 1e-09,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "E2 B: max diffuse vs realization engine oracle (relL2)",
+     "value": 7.764500887358044e-15,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "E3 B: max diffuse at integer h / max diffuse",
+     "value": 0.0,
+     "limit": 1e-06,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "E4 B total: log shows 'Temp. factors : used'",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "E4 B diffuse: log shows 'Temp. factors : used'",
+     "value": 1.0,
+     "limit": 1.0,
+     "op": ">=",
+     "pass": true
+    },
+    {
+     "criterion": "S1 B: |mean x - 1|",
+     "value": 0.0018510877048183438,
+     "limit": 0.0393712992717945,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "S2 B: |var x - 1|",
+     "value": 0.004067185153784347,
+     "limit": 0.11135885079684349,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "S3 B: n_voxels outside Gamma interval (15561 tested)",
+     "value": 0.0,
+     "limit": 0.0,
+     "op": "<=",
+     "pass": true
+    },
+    {
+     "criterion": "S4 B: max |E_phys - E_eng| / E_eng",
+     "value": 0.0018992154356816302,
+     "limit": 0.005,
+     "op": "<=",
+     "pass": true
+    }
+   ],
+   "info": {}
+  }
+ },
+ "n_criteria": 18,
+ "n_failed": 0,
+ "status": "PASS"
+}
