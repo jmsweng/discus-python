@@ -1,0 +1,59 @@
+<title>DISCUS Disorder Builder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Build disordered crystal models with molecules in preferred orientations and export a discus-python script for diffuse scattering, 3D-ΔPDF and PDF.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/*STYLE*/
+</style>
+<header class="top">
+  <div class="brand">
+    <svg class="lattice-mark" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".55"><path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4V11M21 7v10l-9 4"/></g><circle cx="12" cy="11" r="2.2" fill="var(--accent)"/><circle cx="3" cy="7" r="1.4" fill="currentColor"/><circle cx="21" cy="17" r="1.4" fill="currentColor"/><circle cx="12" cy="21" r="1.4" fill="var(--accent)" opacity=".6"/></svg>
+    <h1>DISCUS Disorder Builder</h1><span class="sub">disordered crystals → discus-python script</span>
+  </div>
+  <div class="top-actions"><span id="status"></span>
+    <button type="button" class="btn" data-a="import">Import</button><button type="button" class="btn" data-a="export">Export model</button>
+    <input type="file" id="file-in" accept=".json,.py,application/json,text/x-python" hidden>
+  </div>
+</header>
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="Steps"></nav>
+  <main class="editor" id="editor"></main>
+  <aside class="bench" aria-label="Preview">
+    <section class="block">
+      <h3>Crystal preview <span class="grow"></span><button type="button" class="btn small" data-a="reseed">New draw</button></h3>
+      <div class="canvas-box"><canvas id="xcv"></canvas><div class="overlay">drag · shift-drag · wheel</div></div>
+      <div class="fields"><span class="hint">Colour by</span>
+        <button type="button" class="btn small" data-a="color" data-v="orientation">orientation</button><button type="button" class="btn small" data-a="color" data-v="element">element</button><button type="button" class="btn small" data-a="color" data-v="site">site</button>
+        <span class="hint">Cells</span><button type="button" class="btn small" data-a="cells" data-v="2">2³</button><button type="button" class="btn small" data-a="cells" data-v="3">3³</button><button type="button" class="btn small" data-a="cells" data-v="5">5³</button></div>
+      <div class="legend" id="xlegend"></div>
+      <div class="stats" id="xstats"></div>
+    </section>
+    <section class="block">
+      <h3>Diffuse preview <span class="grow"></span><button type="button" class="btn small primary" data-a="diffuse">Compute</button></h3>
+      <div class="fields"><span id="planes"></span>
+        <label class="f"><span>± range</span><input type="number" id="pv-range" step="0.5" min="0.5" class="w-s"></label>
+        <label class="f"><span>cells/axis</span><input type="number" id="pv-n" step="1" min="2" max="16" class="w-s"></label>
+        <label class="f"><span>crystals</span><input type="number" id="pv-d" step="1" min="1" max="16" class="w-s"></label></div>
+      <div class="progress" id="dprog"><span></span></div>
+      <canvas id="dcv" style="width:100%;aspect-ratio:1;image-rendering:pixelated;border-radius:4px;background:var(--view);max-width:100%"></canvas>
+      <div class="heat-axes" id="daxes"></div>
+      <p class="hint" id="dstate">Direct sum in your browser on a small random crystal.</p>
+    </section>
+  </aside>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script type="text/plain" id="engine-template">/*ENGINE*/</script>
+<script>
+/*CORE*/
+</script>
+<script>
+/*EXAMPLES*/
+</script>
+<script>
+/*VIEWER*/
+</script>
+<script>
+/*APP*/
+</script>
