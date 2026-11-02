@@ -1,85 +1,41 @@
-# discuspdf starter — PDF and 3D-ΔPDF notebooks
+# discuspdf — Python tools for disorder, diffuse scattering and PDF with DISCUS
 
-A **prototype** Python package around the existing [DiffuseCode](https://github.com/tproffen/DiffuseCode) executable. It does **not** reimplement atomic pair-distribution calculations.
+**What this is.** Many crystals are not perfectly ordered: atoms swap places, sit slightly off their ideal
+positions, or prefer certain neighbours. This disorder shows up in diffraction as weak **diffuse scattering**
+between the sharp Bragg peaks, and in real space as the **pair distribution function** (PDF, the 1D histogram of
+interatomic distances) and the **3D-ΔPDF** (a 3D map of how pair correlations differ from the average crystal).
 
-## Scope
+[DISCUS](https://github.com/tproffen/DiffuseCode) (part of DiffuseCode) is an established program that builds
+disordered crystal models and calculates their scattering. It is driven by text command files (macros).
+**discuspdf** is a Python package around it: you describe structures and calculations in Python, read the exact
+DISCUS macro before anything runs, run DISCUS in a separate folder for every job, and load the results back as
+labelled data for analysis in notebooks. It does **not** replace DISCUS's own calculations; where it computes
+something itself (3D-ΔPDF transforms, correlations, a small scattering check), that code is tested against
+DISCUS and against textbook results.
 
-- Implemented: prepare reproducible per-run directories, compile a basic 1D atomic PDF macro from a `.cll` unit-cell file, launch DISCUS, validate and plot its ASCII output, sweep parameters.
-- Implemented independently: FFT of an **already Bragg-subtracted 3D diffuse intensity volume** on a uniform *Cartesian* Q grid in Å⁻¹, and a 2D slice viewer.
-- Implemented for **DISCUS_SUITE 6.23.01 native common/NeXus**: a source-metadata-checked `read_discus_volume` adapter, physical cell metric and a fractional hkl Fourier transform; the 3D runner can load the native file from a configurable output name. The runner integration has been evidenced against the real 6.23.01 engine (see [3D integration](docs/3D_INTEGRATION.md)).
-- **Validated (PR #8, pre-registered):** for a commensurate grid, one-site cells and B = 0, the DISCUS 6.23.01 `set aver,100` diffuse volume plus `delta_pdf_fractional` reproduces an independently predicted signed off-origin 3D-ΔPDF in **relative** amplitude (ρ/ρ₀). Absolute units: e² Å⁻³ for the whole crystal. Scope and limits: [Gate 2 result](benchmarks/discus_6_23_01/gate2_prereg/RESULT_v4.md), [Gate 3 result](benchmarks/discus_6_23_01/gate3/RESULT.md), [validation report](docs/SCIENTIFIC_VALIDATION_REPORT.md).
-- **DISCUS native `value 3DPDF` files:** the values are a unitary FFT (÷√N, no physical units), and the written axis step is wrong by n/(n−1), with the origin one voxel off on even grids. Prefer `value int` + `delta_pdf_fractional`; to convert native files, see the [Gate 3 result](benchmarks/discus_6_23_01/gate3/RESULT.md).
-- **Not yet complete:** automatic 3D macro generation from arbitrary input structures, validation beyond the Gate 2/3 scope (multi-site cells, B ≠ 0, non-commensurate grids), robust Bragg/background/mask processing, direct `.cif` import, advanced atom-pair selection, or general 3D visualization/export.
+The package is a working prototype. Everything that is described as checked below has a recorded test or a
+comparison with real DISCUS 6.23.01 output in this repository; limits are stated where they apply.
 
-## Installation
+## What you can do with it
 
-1. Install the binary for DISCUS_SUITE separately from the [DiffuseCode releases](https://github.com/tproffen/DiffuseCode/releases). Confirm `discus_suite` works interactively and check its `-macro` command-line invocation on your platform.
-2. Set up Python in this repository:
+| Task | Main tools | Docs |
+|---|---|---|
+| **Describe crystals**: unit cells, coordinates, reciprocal space, periodic distances | `Lattice` | [LATTICE](docs/LATTICE.md) |
+| **Build and edit atomic structures**: average (partial occupancy) or realised models, select/edit atoms, supercells, substitution, displacements | `Structure`, `structure_ops` | [STRUCTURE](docs/STRUCTURE.md), [STRUCTURE_OPS](docs/STRUCTURE_OPS.md) |
+| **Exchange structures** with DISCUS (`.cll`, `.stru`), CIF, ASE and DiffPy | `read_stru`/`write_stru`, `read_cif`, `to_ase`, `to_diffpy` | [DISCUS_IO](docs/DISCUS_IO.md), [INTEROP](docs/INTEROP.md) |
+| **Calculate a powder PDF** G(r) with DISCUS | `PDFConfig`, `PDFRunner` | [VERIFIED_DISCUS_MACRO](docs/VERIFIED_DISCUS_MACRO.md) |
+| **Calculate single-crystal diffuse scattering** with DISCUS, with Bragg-peak subtraction (`set aver`) and LOTS averaging | `ReciprocalGrid`, `FourierConfig`, `Diffuse3DRunner` | [RECIPROCAL_GRID](docs/RECIPROCAL_GRID.md), [FOURIER_CONTROLS](docs/FOURIER_CONTROLS.md) |
+| **Work with scattering data**: labelled volumes with masks and units, xarray/HDF5, Mantid MDHisto files | `ScatteringVolume`, `read_mantid_mdhisto` | [SCATTERING_DATA](docs/SCATTERING_DATA.md), [MANTID_IO](docs/MANTID_IO.md) |
+| **Compute and view a 3D-ΔPDF**, slices in true geometry, isosurfaces, ParaView (VTK) files | `delta_pdf_fractional`, `SampledVolume`, `plot_slice`, `write_vtk` | [3D_INTEGRATION](docs/3D_INTEGRATION.md), [VISUALIZATION](docs/VISUALIZATION.md) |
+| **Measure local order**: neighbour shells, Warren–Cowley short-range order, displacement correlations | `neighbor_list`, `correlations` | [NEIGHBORS](docs/NEIGHBORS.md), [CORRELATIONS](docs/CORRELATIONS.md) |
+| **Make disordered models with DISCUS Monte Carlo**: target correlations, energies, swap/shift moves, with a report of target vs achieved | `discuspdf.mc` | [MONTE_CARLO](docs/MONTE_CARLO.md), [MC_FACTS](docs/MC_FACTS.md) |
+| **Check scattering independently** with a small direct-sum calculator | `discuspdf.reference_scattering` | [REFERENCE_SCATTERING](docs/REFERENCE_SCATTERING.md) |
+| **Draw structures**: atoms, displacement arrows, neighbour bonds; export for VESTA/OVITO | `discuspdf.structure_viz` | [STRUCTURE_VIZ](docs/STRUCTURE_VIZ.md) |
+| **Magnetic neutron scattering** (experimental; DISCUS has none) | `discuspdf.magnetic_reference` | [MAGNETIC_SCATTERING](docs/MAGNETIC_SCATTERING.md) |
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -e '.[notebook,dev]'
-jupyter lab
-```
+## Notebooks
 
-Open `notebooks/01_powder_pdf_with_discus.ipynb`.
-
-## First run
-
-```python
-from discuspdf import PDFConfig, PDFRunner
-
-cfg = PDFConfig(
-    structure="examples/gaas.cll",
-    supercell=(5, 5, 5), rmax=12.0, dr=0.02,
-    qmax=25.0, qsig=0.0, radiation="xray",
-)
-runner = PDFRunner(runs_directory="runs")
-prepared = runner.prepare(cfg)  # no execution; inspect generated run.mac
-print((prepared.directory / "run.mac").read_text())
-
-# After confirming the macro runs in your DISCUS installation:
-result = runner.execute(prepared)  # runs the exact inspected macro
-r, gr = result.load()
-result.plot()
-```
-
-**Important:** The macro syntax follows [documented DISCUS 1D PDF examples](https://www.xray.cz/ecm-cd/soft/xray/general/discus/discus/disman/node57.html), which are older than the latest release; validate with your local version. `result.csv` is a **plain-text numeric PDF G(r) file**. This prototype uses the conventional program name/flags `discus_suite -noautorun -macro run.mac`; override the runner `launcher` if needed.
-
-## Explicit powder settings
-
-`PDFConfig` exposes `qmin`, `qmax`, `dq`, `qsig` (DISCUS `set delta`), and optional `wavelength` (Å), in addition to `rmax` and `dr`. They are saved with every run. `qmax=0` is rejected: omitting the command does not establish that the termination correction is disabled. The real-space range must be divisible by `dr`. **Qmax limit:** DISCUS 6.23.01 cannot use Q above about 12.3/λ, i.e. about 8.0 Å⁻¹ at the default X-ray wavelength of 1.5406 Å. A larger `qmax` (including the default of 25) is still written to the macro and the calculation runs unchanged, but the resulting G(r) is the same as for Qmax ≈ 8; `PDFConfig` issues a `QmaxLimitWarning` when `qmax * wavelength > 12.0`. See `docs/VERIFIED_DISCUS_MACRO.md`, "Qmax limit and wavelength".
-
-## Notebook working-directory convention
-
-The example notebook sets the working directory to the project root if launched from `notebooks/`. For other launch locations, edit the path near the top.
-
-## Safety/reproducibility
-
-Each run directory records the copied `.cll` input, a SHA-256 hash, the generated `run.mac`, parameters (`config.json`), log (`run.log`) and status. Do not delete these when comparing calculations. The wrapper also verifies the expected r-grid and checks basic engine errors; always inspect DISCUS logs and benchmark one result manually.
-
-## 3D-ΔPDF analysis
-
-See `notebooks/02_3d_delta_pdf_synthetic_example.ipynb` for a **synthetic demonstration only**. For DISCUS 6.23.01 `form nexus` outputs, use `read_discus_volume()` or `Diffuse3DRun.load_discus_volume()` and `delta_pdf_fractional()`, which preserve hkl axes and the cell metric. For other HDF5 files with independently verified centered uniform Cartesian-Q arrays, use `read_hdf5_volume(...)` or load NumPy arrays. A grid in h,k,l reciprocal-lattice units must never be relabeled as Cartesian Q. See [3D integration](docs/3D_INTEGRATION.md) and the [reproducible-science benchmark plan](docs/SCIENTIFIC_BENCHMARK_REPRODUCTION.md).
-
-For quantitative work, add mask/window handling, correct reciprocal-space intensity normalization, and compare one FFT result to a trusted 3D-ΔPDF workflow. **Breaking change:** the 3D FFT no longer returns a tuple — it returns an `FFTResult` containing `complex_volume`, `r_axes`, and `diagnostics`; `real_volume` is available for plotting. Do not unpack the result as a tuple. If the imaginary/real norm ratio exceeds `imaginary_tolerance` (default `1e-4`), the transform raises `FFTValidationError` (a `ValueError` subclass) that carries the computed `FFTResult` on `exc.result`; pass `raise_on_imaginary=False` to get a warning and the same computed values instead. No 3D-ΔPDF calculations are run automatically inside DISCUS by this starter; integration history is recorded in [docs/INTEGRATION_HISTORY.md](docs/INTEGRATION_HISTORY.md).
-
-For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='cartesian_q'`, `units='1/angstrom'`, and confirmed Bragg-removal metadata. See [3D integration notes](docs/3D_INTEGRATION.md). This does not by itself validate quantitative 3D-ΔPDF interpretation.
-
-## Repository layout
-
-| Path | Contents |
-|---|---|
-| `src/discuspdf/` | The Python package. |
-| `tests/` | Unit tests (`python -m pytest -q`; run by CI on every push). They use stubbed engines, so they do not validate a real DISCUS run; see the separately documented manual DISCUS integration check. |
-| `examples/`, `notebooks/` | Example unit cells, a recorded real 1D run, and the notebooks listed below. |
-| `docs/` | Verified macro syntax, 3D integration notes, integration history and the [validation report](docs/SCIENTIFIC_VALIDATION_REPORT.md). |
-| `benchmarks/discus_6_23_01/` | The pre-registered validation of DISCUS 6.23.01 (Gates 1–3): inputs, predictions, analysis scripts, results and small evidence files. Large engine volumes are not committed; `regenerate_evidence.py` recreates them. |
-| `spike_discus_3d/` | The original 3D probe kit: verified macros (used by the 3D runner example and its tests), case runner and historical findings. |
-| `todo/` | Open work items. |
-
-### Notebooks
+Each notebook is a guided walkthrough with explanations; most run on data stored in this repository.
 
 | Notebook | What it shows | Needs DISCUS? |
 |---|---|---|
@@ -91,97 +47,116 @@ For new work, pass a `ReciprocalVolume` carrying explicit `coordinate_system='ca
 | [`06_cif_ase_and_diffpy_conversion`](notebooks/06_cif_ase_and_diffpy_conversion.ipynb) | Read a CIF, convert to and from ASE and DiffPy, write `.cll` and CIF | no |
 | [`07_diffuse_scattering_data_and_3d_delta_pdf`](notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb) | Reciprocal-space grids, DISCUS output, Bragg subtraction or masking, 3D-ΔPDF, xarray/HDF5, VTK and Mantid export | no (uses stored DISCUS data) |
 | [`08_disordered_supercells`](notebooks/08_disordered_supercells.ipynb) | From an average structure to a disordered supercell: sampling, substitution, displacements | no |
-| [`09_neighbors_and_short_range_order`](notebooks/09_neighbors_and_short_range_order.ipynb) | Neighbor shells and how ordered a crystal is: occupational and displacement correlations, compared with DISCUS | no |
+| [`09_neighbors_and_short_range_order`](notebooks/09_neighbors_and_short_range_order.ipynb) | Neighbour shells and how ordered a crystal is: occupational and displacement correlations, compared with DISCUS | no |
 | [`10_monte_carlo_scattering_checks_and_magnetism`](notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb) | Independent scattering check against DISCUS, structure pictures, analysing a DISCUS Monte Carlo run, magnetic scattering basics | no (uses stored DISCUS data) |
 
-## Next stages
+Notebooks set the working directory to the repository root when started from `notebooks/`; if you start them
+elsewhere, edit the path near the top.
 
-1. Run the unit tests and validate the 1D PDF output against your local DISCUS version.
-2. Add your frequently changed structure/disorder command blocks and partial PDFs.
-3. Integrate a validated real-DISCUS 3D intensity macro with the native adapter and record full model-level benchmarking.
-4. Standardize Q-grid metadata and mask/Bragg subtraction for 3D-ΔPDF analysis.
-5. Add optimized parameter sweeps and experimental comparison metrics.
+## Installation
 
-## Lattice core
+1. **DISCUS** (only needed to run new calculations): install DISCUS_SUITE from the
+   [DiffuseCode releases](https://github.com/tproffen/DiffuseCode/releases) and check that
+   `discus_suite -noautorun -macro <file>` works on your system. The checks in this repository used
+   DISCUS_SUITE 6.23.01 (on Windows through WSL Ubuntu 22.04).
+2. **Python 3.10 or newer**:
 
-`discuspdf.Lattice` is the shared crystal-lattice value type (direct/reciprocal basis, Q, d-spacings, PBC distances). See [docs/LATTICE.md](docs/LATTICE.md) and `examples/lattice_basics.py`.
-
-## Structure model
-
-`discuspdf.Structure` is an immutable atomic-structure value type (per-atom NumPy arrays + `Lattice`). Supports `"average"` (site-occupancy) and `"configuration"` (realised) models. See [docs/STRUCTURE.md](docs/STRUCTURE.md) and `examples/structure_basics.py`.
-
-## DISCUS file I/O
-
-`discuspdf` reads and writes DISCUS_SUITE 6.23.01 `.cll` (unit-cell source) and `.stru` (saved structure) files. See [docs/DISCUS_IO.md](docs/DISCUS_IO.md) and `examples/discus_io_basics.py`.
-
-## Structure editing
-
-`discuspdf.structure_ops` provides reproducible structure editing on `Structure` values: `repeat` (supercell generation), `substitute` (site substitution), `displace` (seeded atomic displacements), `sample_configuration` (occupancy-based configuration sampling), and `check_composition` (composition verification). See [docs/STRUCTURE_OPS.md](docs/STRUCTURE_OPS.md).
-
-## Reciprocal-space grids
-
-`discuspdf.ReciprocalGrid` describes regular reciprocal-space volumes, oblique planes and lines in hkl on a `Lattice`, with Cartesian Q, DISCUS `ll/lr/ul/tl` corners and a report of which 3D transform is exact for the grid. See [docs/RECIPROCAL_GRID.md](docs/RECIPROCAL_GRID.md).
-
-## Labelled scattering data
-
-`discuspdf.ScatteringVolume` holds reciprocal-space values on a `ReciprocalGrid` with variance, an explicit mask, units, Bragg treatment, corrections and provenance; it converts to/from xarray and has a versioned HDF5 format. See [docs/SCATTERING_DATA.md](docs/SCATTERING_DATA.md).
-
-## DISCUS Fourier controls
-
-`discuspdf.FourierConfig` writes DISCUS 6.23.01 `fourier`/`output` macro blocks for a `ReciprocalGrid` with `set aver` (Bragg subtraction) and LOTS, using only probe-verified commands. See [docs/FOURIER_CONTROLS.md](docs/FOURIER_CONTROLS.md).
-
-## Visualisation and VTK export
-
-`discuspdf.SampledVolume` puts reciprocal-space data and 3D-ΔPDF results on physical coordinates (Å⁻¹ or Å); `plot_slice` draws layers in their true geometry, `plot_isosurfaces` needs the `viz` extra (scikit-image), and `write_vtk` writes ParaView files (`.vti` only for axis-aligned grids, `.vts` otherwise). See [docs/VISUALIZATION.md](docs/VISUALIZATION.md).
-
-## Mantid MDHisto files
-
-`discuspdf.read_mantid_mdhisto` / `write_mantid_mdhisto` convert between Mantid `SaveMD` (v2) MDHistoWorkspace files in the HKL frame and `ScatteringVolume`, including projections (`[H,H,0]`-style axes, `W_MATRIX`), errors² and masks. Checked against files written by Mantid 7.0.0, and Mantid loads the files we write. See [docs/MANTID_IO.md](docs/MANTID_IO.md).
-
-`notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb` walks through these reciprocal-space and data features (grids, DISCUS output loading, Fourier macros, Bragg subtraction and masking, xarray/HDF5, slices, isosurfaces and VTK, Mantid files) on data committed to this repository.
-
-## Neighbors and disorder correlations (Package C)
-
-`discuspdf.neighbor_list` lists every site pair within a cutoff on any lattice (all periodic images, exact for triclinic cells), with selection by site, species, shell, distance, direction and DISCUS-style neighbor vectors (`set vec`). `discuspdf.correlations` computes occupational correlations (pair probabilities, Warren–Cowley α, correlation coefficients, null-model standard errors) and displacement correlations (covariances, directional correlations, Pearson or DISCUS convention) on those pairs. The DISCUS `chem corr` definitions are reproduced and were checked against DISCUS 6.23.01 (29/29 values to 5 × 10⁻¹³, [probe result](benchmarks/discus_6_23_01/c_probes/RESULT.md)). See [docs/NEIGHBORS.md](docs/NEIGHBORS.md), [docs/CORRELATIONS.md](docs/CORRELATIONS.md) and `notebooks/09_neighbors_and_short_range_order.ipynb`.
-
-## Monte Carlo models, reference scattering and structure pictures (Package D)
-
-`discuspdf.mc` configures DISCUS MMC (Monte Carlo) runs in Python — neighbourhoods, occupational/displacement/spring/
-Lennard-Jones targets, swap/shift moves, a fixed 8-value seed, always serial — renders the exact macro, runs it and
-loads the result with the feedback history, target vs achieved and an independent measurement. The commands and the
-engine's behaviour (heat-bath acceptance, not Metropolis) were read in the DISCUS source and checked on the engine
-([probe result](benchmarks/discus_6_23_01/d_mc_probes/RESULT.md)). `discuspdf.reference_scattering` is a small
-independent structure-factor calculator that reproduces DISCUS 6.23.01 intensities to ~1e-15 once DISCUS's table
-rounding is emulated ([result](benchmarks/discus_6_23_01/d_reference/RESULT.md)); `discuspdf.structure_viz` draws
-structures, displacements and neighbor bonds and exports checked files for viewers; `discuspdf.magnetic_reference`
-is an experimental magnetic-scattering reference (DISCUS computes none). See [docs/MONTE_CARLO.md](docs/MONTE_CARLO.md),
-[docs/REFERENCE_SCATTERING.md](docs/REFERENCE_SCATTERING.md), [docs/STRUCTURE_VIZ.md](docs/STRUCTURE_VIZ.md),
-[docs/MAGNETIC_SCATTERING.md](docs/MAGNETIC_SCATTERING.md) and `notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb`.
-Optional extra: `pip install 'discuspdf-starter[reference]'` (xraydb, periodictable).
-
-## Interoperability (CIF, ASE, DiffPy)
-
-`discuspdf` can read CIF files (via `gemmi`) and convert its `Structure` type to and from `ase.Atoms` and `diffpy.structure.Structure`. These are optional extras:
-
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -e '.[notebook,dev]'
+jupyter lab
 ```
-pip install 'discuspdf-starter[cif]'       # gemmi (CIF reading)
-pip install 'discuspdf-starter[ase]'      # ASE
-pip install 'discuspdf-starter[diffpy]'   # DiffPy
-pip install 'discuspdf-starter[interop]'  # all three
-```
+
+Optional extras (`pip install -e '.[name]'`): `data` (xarray, HDF5), `viz` (isosurfaces), `cif` (CIF reading),
+`ase`, `diffpy`, `interop` (all three converters), `reference` (X-ray form factors and neutron lengths for the
+scattering checks). `import discuspdf` works without them; a feature that needs one says which.
+
+## A first calculation: powder PDF
 
 ```python
-from discuspdf.cif_io import read_cif
-from discuspdf.ase_io import to_ase, from_ase
+from discuspdf import PDFConfig, PDFRunner
 
-s = read_cif("structure.cif").structure
-atoms = to_ase(s)          # full state in atoms.arrays (dp_*) and atoms.info
-s2 = from_ase(atoms)      # exact round trip
-assert s2.isclose(s)
+cfg = PDFConfig(structure="examples/gaas.cll", supercell=(5, 5, 5), rmax=12.0, dr=0.02,
+                qmax=7.5, qsig=0.0, radiation="xray")
+runner = PDFRunner(runs_directory="runs")
+prepared = runner.prepare(cfg)                     # writes the job folder; nothing runs yet
+print((prepared.directory / "run.mac").read_text())  # read the exact DISCUS macro
+
+result = runner.execute(prepared)                  # runs exactly that macro
+r, gr = result.load()
+result.plot()
 ```
 
-`import discuspdf` works without the extras; the adapters raise a helpful `ImportError` naming the extra. Losses (partial occupancy to ASE, anisotropic ADPs, DiffPy orientation/supercell) raise `InteropError` by default and warn with `allow_loss=True`. See [docs/INTEROP.md](docs/INTEROP.md), `examples/interop_basics.py` and `notebooks/06_cif_ase_and_diffpy_conversion.ipynb`.
+Every job folder keeps a copy of the input with its SHA-256 hash, the macro (`run.mac`), the settings
+(`config.json`), the DISCUS log and a status file, so a result can always be traced back. The runner checks the
+expected r-grid and DISCUS error messages; still look at the log for new kinds of calculations. To run DISCUS
+some other way (for example through WSL on Windows), pass a different `launcher`.
+
+**Qmax limit.** DISCUS 6.23.01 cannot use Q above about 12.3/λ — about 8.0 Å⁻¹ at the default X-ray wavelength
+of 1.5406 Å. A larger `qmax` still runs, but gives the same G(r) as Qmax ≈ 8; `PDFConfig` warns
+(`QmaxLimitWarning`) when `qmax × wavelength > 12`. Details: [VERIFIED_DISCUS_MACRO](docs/VERIFIED_DISCUS_MACRO.md).
+
+## What has been checked against DISCUS
+
+The comparisons are pre-registered (expected results and pass/fail limits committed before DISCUS was run) and
+their inputs, macros, logs and analysis scripts are in [`benchmarks/discus_6_23_01/`](benchmarks/discus_6_23_01/).
+
+* **3D-ΔPDF from DISCUS diffuse scattering** — for commensurate grids, one atom per cell and B = 0, DISCUS's
+  Bragg-subtracted intensity (`set aver,100`) transformed with `delta_pdf_fractional` reproduces an independently
+  predicted 3D-ΔPDF, in relative and in absolute units (e² Å⁻³ for the whole crystal).
+  [Gate 2](benchmarks/discus_6_23_01/gate2_prereg/RESULT_v4.md), [Gate 3](benchmarks/discus_6_23_01/gate3/RESULT.md),
+  [validation report](docs/SCIENTIFIC_VALIDATION_REPORT.md).
+* **Single-crystal intensities** — the independent scattering calculator reproduces DISCUS X-ray and neutron
+  intensities, with and without Bragg subtraction, to ~10⁻¹⁵ once DISCUS's form-factor table rounding is
+  reproduced. [Result](benchmarks/discus_6_23_01/d_reference/RESULT.md).
+* **Fourier options** — macros written by `FourierConfig` reproduce DISCUS probe runs byte for byte
+  (`set aver`, LOTS, seeds). [Probe result](benchmarks/discus_6_23_01/b_probes/RESULT.md).
+* **Short-range order** — DISCUS `chem corr` values are reproduced (29/29 to 5 × 10⁻¹³).
+  [Probe result](benchmarks/discus_6_23_01/c_probes/RESULT.md).
+* **Monte Carlo** — the generated MMC macros reproduce hand-written DISCUS runs exactly, and the achieved
+  correlations are confirmed by an independent measurement. [Probe result](benchmarks/discus_6_23_01/d_mc_probes/RESULT.md).
+
+Things found along the way that matter when using DISCUS 6.23.01:
+
+* Its native `value 3DPDF` output is a unitary FFT (divided by √N, no physical units) and its written axis step is
+  wrong by n/(n−1), with the origin one voxel off on even grids. Use `value int` + `delta_pdf_fractional` instead.
+* Its Monte Carlo keeps uphill and zero-energy moves with probability `1/(1+e^{ΔE/kT})` (not the Metropolis rule),
+  and multi-threaded runs are not reproducible; `discuspdf.mc` always runs single-threaded with a full seed.
+* It stores magnetic moments but calculates no magnetic scattering.
+
+**Not covered yet:** 3D-ΔPDF validation beyond the scope above (several atoms per cell, B ≠ 0, non-commensurate
+grids), automatic background and absorption handling, molecules, and a production magnetic workflow. The
+[task tracker](todo/TASKS.md) lists open items.
+
+## Working with 3D data: points to know
+
+* A grid in h, k, l (reciprocal-lattice units) is not a Cartesian Q grid. For DISCUS NeXus output
+  (`form nexus`), use `read_discus_volume()` / `Diffuse3DRun.load_discus_volume()` and `delta_pdf_fractional()`,
+  which keep the hkl axes and the cell metric. For other HDF5 files with checked, centred Cartesian-Q axes, use
+  `read_hdf5_volume(...)` and a `ReciprocalVolume` with explicit coordinate system, units and Bragg treatment.
+* The Cartesian-Q FFT returns an `FFTResult` (complex volume, real-space axes, diagnostics). If the imaginary part
+  is larger than `imaginary_tolerance` (default 10⁻⁴ of the real part) it raises `FFTValidationError`, which still
+  carries the computed result; pass `raise_on_imaginary=False` to get a warning instead.
+* Notebook `02` uses a synthetic volume only. Quantitative work needs masking/windowing, correct intensity
+  normalisation and a comparison with a trusted reference.
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/discuspdf/` | The Python package. |
+| `notebooks/` | The walkthrough notebooks listed above. |
+| `examples/` | Small scripts, the GaAs unit cell and a recorded real 1D PDF run. |
+| `docs/` | User guides for each feature, DISCUS facts found in the source and in test runs, and the validation report. |
+| `benchmarks/discus_6_23_01/` | The pre-registered comparisons with DISCUS 6.23.01: inputs, predictions, analysis scripts, results and small evidence files. Large engine volumes are not committed; `regenerate_evidence.py` recreates them. |
+| `tests/` | Unit tests (`python -m pytest -q`, run by GitHub Actions on every push). Tests that need a real DISCUS installation are opt-in (`DISCUS_LIVE=1`). |
+| `spike_discus_3d/` | The original 3D probe kit (verified macros used by the 3D runner example and its tests) and early findings. |
+| `todo/` | Roadmap and [task tracker](todo/TASKS.md). |
 
 ## Notes
 
-The DiffuseCode repository contains an initial, explicitly *not release-ready* F2PY bridge in `python/suite_python.f90`. This MVP does not depend on it. Inspect DiffuseCode's license and check permission for intended commercial use.
+* DiffuseCode contains an early, explicitly not release-ready Python (F2PY) bridge in `python/suite_python.f90`;
+  this package does not use it and talks to DISCUS only through macros.
+* DISCUS is intended as a public-domain program; commercial use needs the authors' permission. Check DiffuseCode's
+  licence for your use.
