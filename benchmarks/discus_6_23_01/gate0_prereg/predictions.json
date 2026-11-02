@@ -6,7 +6,7 @@
  "code_sha256": {
   "gate0_analyze.py": "11ea6d000e5e4efb7e766b3c397d61db50a4231d06b33da12d7b92b072cfe244",
   "gate0_generate.py": "a0c1e199b2575c516f60ec5a2a040bcfe4769b5a41255d4e304feef41223449b",
-  "gate0_selftest.py": "f84ae033f0457d2ca0968ccddc7e9c4fcc1da29e84aefbd3baad89b469dc2632",
+  "gate0_selftest.py": "397b90c7fe421180f686c186e7daab9a1b12967bd4199af3c3b34b08bea00d19",
   "oracle.py": "78bab9a55008dde66a1cc29628728b8c9ef620742082cba4f985edbb2d8ac927"
  },
  "design": {

@@ -1,0 +1,48 @@
+================================================================================
+CLEAN CASE - All criterion values:
+================================================================================
+
+Arm A:
+  E1 A: max total vs realization engine oracle (relL2)         = 0.000000e+00  (limit <= 1.000e-09)  [PASS]
+  E2 A: max diffuse vs realization engine oracle (relL2)       = 0.000000e+00  (limit <= 1.000e-06)  [PASS]
+  E3 A: max diffuse at integer h / max diffuse                 = 0.000000e+00  (limit <= 1.000e-06)  [PASS]
+  E4 A total: log shows 'temp ignore'                          = 1.000000e+00  (limit >= 1.000e+00)  [PASS]
+  E4 A diffuse: log shows 'temp ignore'                        = 1.000000e+00  (limit >= 1.000e+00)  [PASS]
+  S1 A: |mean x - 1|                                           = 7.114977e-03  (limit <= 3.937e-02)  [PASS]
+  S2 A: |var x - 1|                                            = 1.501212e-02  (limit <= 1.114e-01)  [PASS]
+  S3 A: n_voxels outside Gamma interval (15561 tested)         = 0.000000e+00  (limit <= 0.000e+00)  [PASS]
+  S4 A: max |E_phys - E_eng| / E_eng                           = 1.037955e-03  (limit <= 5.000e-03)  [PASS]
+
+Arm B:
+  E1 B: max total vs realization engine oracle (relL2)         = 0.000000e+00  (limit <= 1.000e-09)  [PASS]
+  E2 B: max diffuse vs realization engine oracle (relL2)       = 0.000000e+00  (limit <= 1.000e-06)  [PASS]
+  E3 B: max diffuse at integer h / max diffuse                 = 0.000000e+00  (limit <= 1.000e-06)  [PASS]
+  E4 B total: log shows B values                               = 1.000000e+00  (limit >= 1.000e+00)  [PASS]
+  E4 B diffuse: log shows B values                             = 1.000000e+00  (limit >= 1.000e+00)  [PASS]
+  S1 B: |mean x - 1|                                           = 7.114977e-03  (limit <= 3.937e-02)  [PASS]
+  S2 B: |var x - 1|                                            = 1.501212e-02  (limit <= 1.114e-01)  [PASS]
+  S3 B: n_voxels outside Gamma interval (15561 tested)         = 0.000000e+00  (limit <= 0.000e+00)  [PASS]
+  S4 B: max |E_phys - E_eng| / E_eng                           = 1.899215e-03  (limit <= 5.000e-03)  [PASS]
+
+Clean case status: PASS
+================================================================================
+ok  clean                     expected PASS    got PASS    failed: []
+ok  gaussian_ensemble         expected PASS    got FAIL    failed: ['E2 A: max diffuse vs realization engine oracle (relL2)', 'E2 B: max diffuse vs realization engine oracle (relL2)']
+ok  p_030_A                   expected FAIL    got FAIL    failed: ['E2 A: max diffuse vs realization engine oracle (relL2)', 'S1 A: |mean x - 1|', 'S2 A: |var x - 1|']
+ok  p_030_B                   expected FAIL    got FAIL    failed: ['E2 B: max diffuse vs realization engine oracle (relL2)', 'S1 B: |mean x - 1|', 'S2 B: |var x - 1|']
+ok  correlated_A              expected FAIL    got FAIL    failed: ['E2 A: max diffuse vs realization engine oracle (relL2)', 'S1 A: |mean x - 1|', 'S2 A: |var x - 1|']
+ok  correlated_B              expected FAIL    got FAIL    failed: ['E2 B: max diffuse vs realization engine oracle (relL2)', 'S1 B: |mean x - 1|', 'S2 B: |var x - 1|']
+ok  dw_convention_B           expected FAIL    got FAIL    failed: ['E2 B: max diffuse vs realization engine oracle (relL2)']
+ok  scale_1pct_A              expected FAIL    got FAIL    failed: ['E1 A: max total vs realization engine oracle (relL2)', 'E2 A: max diffuse vs realization engine oracle (relL2)']
+ok  scale_1pct_B              expected FAIL    got FAIL    failed: ['E1 B: max total vs realization engine oracle (relL2)', 'E2 B: max diffuse vs realization engine oracle (relL2)']
+ok  sample_fitted             expected PASS    got PASS    failed: []
+ok  species_swapped_A         expected FAIL    got FAIL    failed: ['E1 A: max total vs realization engine oracle (relL2)']
+ok  species_swapped_B         expected FAIL    got FAIL    failed: ['E1 B: max total vs realization engine oracle (relL2)']
+ok  missing_aver_A            expected FAIL    got FAIL    failed: ['E2 A: max diffuse vs realization engine oracle (relL2)', 'E3 A: max diffuse at integer h / max diffuse']
+ok  missing_aver_B            expected FAIL    got FAIL    failed: ['E2 B: max diffuse vs realization engine oracle (relL2)', 'E3 B: max diffuse at integer h / max diffuse']
+ok  shuffled_seeds_A          expected FAIL    got FAIL    failed: ['E1 A: max total vs realization engine oracle (relL2)', 'E2 A: max diffuse vs realization engine oracle (relL2)']
+ok  shuffled_seeds_B          expected FAIL    got FAIL    failed: ['E1 B: max total vs realization engine oracle (relL2)', 'E2 B: max diffuse vs realization engine oracle (relL2)']
+ok  friedel_noise_A           expected FAIL    got FAIL    failed: ['E1 A: max total vs realization engine oracle (relL2)', 'E2 A: max diffuse vs realization engine oracle (relL2)', 'E3 A: max diffuse at integer h / max diffuse']
+ok  friedel_noise_B           expected FAIL    got FAIL    failed: ['E1 B: max total vs realization engine oracle (relL2)', 'E2 B: max diffuse vs realization engine oracle (relL2)', 'E3 B: max diffuse at integer h / max diffuse']
+ok  duplicated_realization_A  expected FAIL    got FAIL    failed: ['E1 A: max total vs realization engine oracle (relL2)', 'E2 A: max diffuse vs realization engine oracle (relL2)']
+ok  duplicated_realization_B  expected FAIL    got FAIL    failed: ['E1 B: max total vs realization engine oracle (relL2)', 'E2 B: max diffuse vs realization engine oracle (relL2)']

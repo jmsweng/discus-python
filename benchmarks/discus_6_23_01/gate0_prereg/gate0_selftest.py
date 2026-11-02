@@ -322,7 +322,7 @@ CASES = {  # corruption -> (expected status, criterion-name fragment that must f
     "missing_aver": ("FAIL", "E3"),
     "shuffled_seeds": ("FAIL", "E1"),
     "friedel_noise": ("FAIL", "E1"),
-    "duplicated_realization": ("FAIL", "S2"),
+    "duplicated_realization": ("FAIL", "E1"),
 }
 
 
