@@ -31,7 +31,9 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import platform
+import signal
 import re
 import shutil
 import subprocess
@@ -311,10 +313,23 @@ def cmd_run(a):
         d.mkdir()
         shutil.copyfile(INPUTS / f"{cid}.mac", d / "run.mac")
         shutil.copyfile(STRUCTURE, d / "model.cll")
-        p = subprocess.run([exe, "-noautorun", "-macro", "run.mac"], cwd=d, input="exit\n", text=True,
-                           capture_output=True, timeout=600)
-        (d / "run.log").write_text(p.stdout + "\n--- STDERR ---\n" + p.stderr, encoding="utf-8")
-        err = re.search(r"\*\*\*[A-Z]+\*\*\*|[Ss]egmentation fault", p.stdout + p.stderr)
+        # Same environment as PDFRunner (no DISPLAY, PGPLOT=none). The log goes to a file, not a pipe:
+        # v1 hung after base_plain because a process left behind by DISCUS kept the output pipe open.
+        env = {k: v for k, v in os.environ.items() if k != "DISPLAY"}
+        env["PGPLOT"] = "none"
+        with open(d / "run.log", "w", encoding="utf-8") as log:
+            p = subprocess.Popen([exe, "-noautorun", "-macro", "run.mac"], cwd=d, stdin=subprocess.PIPE,
+                                 stdout=log, stderr=subprocess.STDOUT, text=True, env=env,
+                                 start_new_session=True)
+            try:
+                p.communicate("exit\n", timeout=600)
+            finally:
+                try:  # stop anything this run left behind in its own session
+                    os.killpg(p.pid, signal.SIGTERM)
+                except (ProcessLookupError, PermissionError):
+                    pass
+        text = (d / "run.log").read_text(encoding="utf-8", errors="replace")
+        err = re.search(r"\*\*\*[A-Z]+\*\*\*|[Ss]egmentation fault", text)
         outs = [n for n in ("fq.dat", "result.pdf") if (d / n).exists()]
         status.append({"id": cid, "exit": p.returncode, "engine_error": err.group(0) if err else None, "outputs": outs})
         print(cid, "exit", p.returncode, "error" if err else "", outs)

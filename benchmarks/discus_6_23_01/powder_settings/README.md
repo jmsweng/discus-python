@@ -38,3 +38,8 @@ python benchmarks/discus_6_23_01/powder_settings/probe.py run --work ~/discus_po
 ```
 
 `run` copies the macros and `examples/gaas.cll` into a new work folder and runs each macro once. It then copies everything to `evidence/<RUN_ID>/`, together with `ENGINE_ENV.txt` (binary SHA-256), `RUN_STATUS.json` and `MANIFEST.sha256`, and runs the analysis (`results.json`, `RESULT_TABLE.md`). Exit code 0 means PASS. It never edits inputs or deletes anything.
+
+## Registration history
+
+- **v1** (`77cc6af`): first owner run `20261102T215518Z_LAPTOP-NGU3BT0N` hung after `base_plain`. DISCUS had exited (`<defunct>`) and written its output, but the runner waited on an output pipe still held open by a leftover process. It was stopped with Ctrl+C before any evidence was copied or analysed; no output of that run was looked at.
+- **v1.1**: runner only. DISCUS now runs with the same environment as `PDFRunner` (no `DISPLAY`, `PGPLOT=none`) and logs to a file instead of a pipe; anything left in the run's own session is stopped afterwards. Tested with a stand-in engine that leaves a child holding the output open (13 runs in 2.4 s). Macros, criteria, limits and analysis are unchanged; only the `probe.py` hash in `predictions.json` is new.
