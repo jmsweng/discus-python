@@ -44,8 +44,10 @@ def _discus_available() -> bool:
     if shutil.which("discus_suite") is None:
         return False
     try:
+        # stdin=DEVNULL: with ``pytest -s`` the suite would otherwise wait at its prompt on the terminal
+        # until the timeout, and the test would be skipped as "not available".
         proc = subprocess.run(["discus_suite", "-noautorun", "-macro", "-h"],
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
     except (OSError, subprocess.TimeoutExpired):
         return False
     # The suite does not support -h (it treats it as a macro name); a fast,
