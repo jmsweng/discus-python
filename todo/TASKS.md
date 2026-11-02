@@ -26,7 +26,7 @@
 - ✅ Implement the synthetic, uniform-Cartesian-Q FFT prototype returning a complex `FFTResult`, real-space axes and numerical diagnostics, plus a plotting helper. [`src/discuspdf/volume.py`](../src/discuspdf/volume.py).
 - ✅ Add configurable imaginary-component tolerance, diagnostic reporting and `FFTValidationError.result` to retain the computed complex data on failure. [PR #4](https://github.com/jmsweng/discus-python/pull/4).
 - ✅ Add analytical and negative-case Python tests for FFT behavior, basic metadata, HDF5 corruption, missing datasets, and run-status transitions. [`tests/`](../tests/).
-- ✅ Keep the 3D Jupyter notebook explicitly **synthetic only**. [`notebooks/02_3d_delta_pdf.ipynb`](../notebooks/02_3d_delta_pdf.ipynb).
+- ✅ Keep the 3D Jupyter notebook explicitly **synthetic only**. [`notebooks/02_3d_delta_pdf_synthetic_example.ipynb`](../notebooks/02_3d_delta_pdf_synthetic_example.ipynb).
 
 ### Engineering and documentation
 
@@ -98,7 +98,7 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Open items: Zarr (not needed yet); first real schema migration when v2 exists.*
 - ✅ **B20 / Feature 20:** Calibrated Q/3D-ΔPDF visualization, isosurfaces and VTK/ParaView output. [`src/discuspdf/viz.py`](../src/discuspdf/viz.py) · [`tests/test_viz.py`](../tests/test_viz.py) · [`docs/VISUALIZATION.md`](../docs/VISUALIZATION.md); slices in true geometry, `.vti` only for axis-aligned grids, `.vts` otherwise; files read back by VTK 9.7 with matching coordinates.
   - *Open: interactive viewer; DISCUS plane files straight into `SampledVolume` (via `ScatteringVolume`).*
-- ✅ Example notebook for reciprocal-space grids and scattering data (Features 6–9 and 18–20) on committed data. [`notebooks/07_reciprocal_space_data.ipynb`](../notebooks/07_reciprocal_space_data.ipynb).
+- ✅ Example notebook for reciprocal-space grids and scattering data (Features 6–9 and 18–20) on committed data. [`notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb`](../notebooks/07_diffuse_scattering_data_and_3d_delta_pdf.ipynb).
 
 ### Package C — [Disorder and correlations](03_disorder_and_correlations.md)
 
@@ -108,7 +108,7 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Open: ensemble averages over several configurations; `corr` with lots.*
 - ✅ **C14 / Feature 14:** Reference-structure displacement covariances and normalized, directional correlations. Same module and PR; analytic displacement waves (incl. cross terms and a triclinic cell); DISCUS `chem corr disp` (explicit directions, species filters) reproduced to 5e-13.
   - *Open: DISCUS `dir all` mode; molecules.*
-- ✅ Example notebook for neighbors and correlations (Features 12–14). [`notebooks/09_neighbors_and_correlations.ipynb`](../notebooks/09_neighbors_and_correlations.ipynb).
+- ✅ Example notebook for neighbors and correlations (Features 12–14). [`notebooks/09_neighbors_and_short_range_order.ipynb`](../notebooks/09_neighbors_and_short_range_order.ipynb).
 
 ### Package D — [Monte Carlo and advanced physics](04_monte_carlo_and_advanced_physics.md)
 
@@ -124,7 +124,7 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Open: `unid`, `cn`, `group`, `heli`, `bucking`, `repulsive`; site-restricted atom lists (DISCUS bug, refused).*
 - ✅ **D21 / Feature 21:** Notebook-friendly structure, displacement and neighbor-bond pictures with checked viewer export. [`src/discuspdf/structure_viz.py`](../src/discuspdf/structure_viz.py); [PR #35](https://github.com/jmsweng/discus-python/pull/35) · [`tests/test_structure_viz.py`](../tests/test_structure_viz.py) · [`docs/STRUCTURE_VIZ.md`](../docs/STRUCTURE_VIZ.md).
   - *Open: interactive viewer.*
-- ✅ Example notebook for Package D (Features 10, 11, 15–17, 21) on committed data. [`notebooks/10_monte_carlo_and_reference_scattering.ipynb`](../notebooks/10_monte_carlo_and_reference_scattering.ipynb).
+- ✅ Example notebook for Package D (Features 10, 11, 15–17, 21) on committed data. [`notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb`](../notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb).
 
 ## Maintenance rules
 
