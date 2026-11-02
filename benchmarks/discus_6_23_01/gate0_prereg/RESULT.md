@@ -38,3 +38,7 @@
 - E4 B diffuse: log shows B values — value 0.000e+00 (limit >= 1.000e+00)
 
 No interpretation is offered; per the pre-registered stop rules this is a reportable outcome.
+
+## Run notes
+
+- The evidence directory was reused after the first attempt was interrupted: the initial parallel WSL launch was lost to a session teardown, and the sequential rerun continued into the same evidence dir. `gate0_A_total_00` (its `.h5` and `.log`) is from the first attempt; `RUN_STATUS.txt` records `gate0_A_total_00 SKIP (already done)` and the remaining 255 runs with `exit=0`.
