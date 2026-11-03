@@ -26,3 +26,14 @@ python3 analyze.py "$RUN" --json "$RUN/analysis.json"
 
 `exit_codes.txt` must list 12 runs with `exit=0`. Copy the whole `$RUN` directory to `evidence/<RUN name>/`
 (the `.h5` and `result.pdf` files are small: 17³ voxels and 501 points).
+
+## Result and v2
+v1 was run on 2026-11-03: 10 of 11 criteria pass. P3 failed because VOID rows scale the powder G(r) by
+rows / atoms; see [RESULT.md](RESULT.md). The follow-up probe [v2/](v2/PREREG.md) tests a one-cell file
+without VOID rows and the scale law. Run it the same way, with v1's runner:
+
+```bash
+cd <checkout>/benchmarks/discus_6_23_01/e_builder_backend/v2
+bash -l ../run_probe.sh inputs "$RUN"
+python3 analyze.py "$RUN" --json "$RUN/analysis.json" --v1 ../evidence/20261103T113126Z_LAPTOP-NGU3BT0N
+```
