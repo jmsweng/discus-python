@@ -1,6 +1,6 @@
 """Live checks of FourierPlane and RmcFit on the real engine (opt-in: DISCUS_LIVE=1).
 
-Small on purpose: Cu fcc 4x4x4 cells (256 atoms) and one 31 x 21 plane hk0.
+Small on purpose: Cu fcc 4x4x4 cells (256 atoms) and one 21 x 31 plane hk0.
 
 * R1 (engine-ran): the plane DISCUS writes has the size and orientation ``rmc data`` reads
   (superstructure peak of L1_2 Cu3Au at h=1, k=0; fundamental at h=2, k=0).
@@ -40,7 +40,7 @@ WORK = Path(os.environ.get("DISCUS_LIVE_WORK",
 SEED = Seed((11, 22, 33, 44, 55, 66, 77, 88))
 N = 4
 A = 3.615
-GRID = PlaneGrid(ll=(0, -1, 0), lr=(3, -1, 0), ul=(0, 1, 0), nx=31, ny=21)
+GRID = PlaneGrid(ll=(0, -1, 0), lr=(0, 1, 0), ul=(3, -1, 0), nx=21, ny=31)  # k across, h down (nx <= ny)
 SRC = StructureSource.cell("cu_b05.cll", (N, N, N))
 
 
@@ -89,11 +89,12 @@ def fit(tries=3000):
 
 def test_r1_plane_size_and_orientation(target):
     z, _ = read_nipl(target)
-    assert z.shape == (21, 31)
+    assert z.shape == (31, 21)                            # ny rows (h = 0..3) of nx values (k = -1..1)
     med = float(np.median(z))
-    assert z[10, 10] > 100 * med, (z[10, 10], med)      # h=1, k=0: L1_2 superstructure
-    assert z[10, 20] > z[10, 10]                          # h=2, k=0: fundamental
-    assert z[10, 5] < 0.01 * z[10, 10]                    # h=0.5: no peak
+    assert z[10, 10] > 20 * med, (z[10, 10], med)       # h=1, k=0: L1_2 superstructure
+    assert z[20, 10] > z[10, 10]                          # h=2, k=0: fundamental
+    assert z[5, 10] < 0.01 * z[10, 10]                    # h=0.5, k=0: no peak
+    assert z[10, 15] < 0.01 * z[10, 10]                   # h=1, k=0.5: no peak (rows are not k)
 
 
 def test_r2_fit_orders_the_crystal(target):

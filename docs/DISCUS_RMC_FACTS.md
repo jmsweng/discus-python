@@ -47,7 +47,7 @@ parameters needed (`:1303`).
 |---|---|---|
 | `av` | `rmc_ave = value/100`, value in [0, 100] | 0 |
 | `ba`, `on\|off`[, b[, plane]] | fit background; b sets `rmc_back` (all planes or one); no b → 0 | off, 0 |
-| `co`, p1, p2 | `rmc_constrain(p1) = p2`, needs 0 < p2 ≤ p1 | **0** (allocated as 0) |
+| `co`, p1, p2 | `rmc_constrain(p1) = p2`, needs 0 < p2 ≤ p1 | p (each plane its own) |
 | `cy`, n | `rmc_maxcyc` = valid tries | 5000 |
 | `da`, `n\|p` | NIPL or PGM | NIPL |
 | `db`, `on\|off`[, planes] | Debye–Waller in the form factors, per plane read so far | off |
@@ -58,7 +58,7 @@ parameters needed (`:1303`).
 | `mod`, p, mode[, pairing] | `rmc_set_mode` | all probabilities **0** |
 | `mov`, A, sx, sy, sz | Gaussian σ per axis, fractional coordinates | 0.2 |
 | `ran`, `all` / qmin, qmax / hkl min, hkl max | limits stored as **half** of 1/d (`:340-361`) | data range |
-| `sca`, `on\|off`[, s[, plane]] | fit scale; s sets `rmc_skal = 1/s` | off, 1 |
+| `sca`, `on\|off`[, v[, plane]] | fit scale; v sets `rmc_skal = 1/v` (the log prints 1/rmc_skal) | off, 1 |
 | `si`, σ | acceptance width | 0.01 |
 | `sym`, `on\|off` | use equivalent planes | off |
 
@@ -72,10 +72,29 @@ pairing `A`, `L`, `SL`, `SI`, `CO`. The probabilities are normalised into cumula
   generator, and `laccept` stays true with `natoms` unset. The wrapper always writes `set mode`.
 - **Selection:** `reset` deselects all types; `alloc_rmc` allocates `rmc_allowed` as true. The wrapper
   writes `dese all` then `sele …`.
-- **Scale constraint:** `rmc_calcskal` (`:2581-2584`): `IF (rmc_constrain(ip) .ne. ip)` copies scale
-  and background from plane `rmc_constrain(ip)`. The start value is 0 for every plane
-  (`alloc_rmc_planes`), so without `set const` it reads element 0 of a 1-based array. The wrapper
-  writes `set const, p, p` for every plane. *(Effect without it: not run yet.)*
+- **Scale constraint:** `alloc_rmc_planes` sets `rmc_constrain(i) = i`
+  (`discus_allocate_appl_mod.f90:3013-3015`), so `rmc_calcskal`'s copy branch (`:2581-2584`) is
+  inactive unless `set const` links two planes. Not wrapped (one plane per fit, below).
+- **State in a session:** `data` appends a plane (`ip = rmc_nplane + 1`); after a run `rmc_calc_f` is
+  false and `data` does not set it back; `set mode` changes only the named mode. The wrapper starts
+  with `reset` and writes probability 0 for the unused modes.
+
+## Limits found in the code (not wrapped)
+
+- **One plane.** `rmc_csf` is sized from the last plane's nx, ny (`rmc_n_qxy`, `:1592`; `alloc_rmc_q`,
+  `:1848`), and `rmc_stltab` copies `istl(i,j,ip)` (`:2621`, `:2633`) while `four_stltab` fills only
+  the first index, so in the move loop planes 2… use plane 1's sin(θ)/λ table. Same on the fork.
+- **nx ≤ ny.** `:2300` loops `j = 1, nx` over `acsf`/`rmc_csf` with ny rows: with nx > ny it reads
+  and writes outside the plane even with `set aver` 0 (the values subtracted are then 0, but with
+  `set sym on` the next slice is changed). The fork fixes the bound; the wrapper refuses nx > ny.
+- **`set range`** is stored but every q filter in `rmc_run` is commented out (`!RISTL`, `:1891-1893`,
+  `:2013-2015`); only `show` uses it.
+- **`swdisp`:** `rmc_check_input` computes the average structure and checks for a displacement
+  spread only when `rmc_mode` (the mode of the previous move; start value shift) is swdisp
+  (`:2482-2496`), so the first run uses an average that was never computed.
+- **Weights:** `rmc_dowic` gives weight 0 for I ≤ 0 in every scheme; `log` gives negative weights
+  for 0 < I < 1 (not offered).
+- **Anisotropic ADPs** are ignored by RMC (`is_anis = .false.`, `:2263`) but used by `fourier`.
 
 ## `run` (`rmc_run`, `:1765-2176`)
 
@@ -85,7 +104,8 @@ pairing `A`, `L`, `SL`, `SI`, `CO`. The probabilities are normalised into cumula
 - Per plane: `chi²_p = Σ w (I − s·dsi − b)² / Σ w`, `dsi = |F|²` (sum over the lots), summed over
   the planes (`:1925-1941`, `:2009-2033`). Error −14 if the starting chi² < 1e-6 (a perfect start).
 - Scale and background (`rmc_calcskal`): closed-form least squares when fitted; a result ≤ 0 is
-  replaced by the fixed value.
+  replaced by the last accepted value. The per-plane log line shows the start values (chi² 0) until a
+  move has been accepted, because the start loop does not store them.
 - Acceptance (`:2029-2052`): Δχ² < 0 always; else `exp(−Δχ²/sig2) > RANDOM_NUMBER`, `sig2 = σ²/2`;
   σ = 0 rejects every uphill move. (σ = −9999 accepts everything; not offered.)
 - Moves (`rmc_genmove`, `:3263-3416`): `shift` adds `gasdev(σ_axis)` to the fractional position;
@@ -107,9 +127,11 @@ pairing `A`, `L`, `SL`, `SI`, `CO`. The probabilities are normalised into cumula
 
 | Line | Stock | Used when |
 |---|---|---|
-| 2300 | average subtraction loops `j = 1, nx` instead of `ny` | always, but the subtracted array is 0 unless `set aver` > 0 |
+| 2300 | average subtraction loops `j = 1, nx` instead of `ny` | always; out of bounds when nx > ny; wrong values only with `set aver` > 0 |
 | 2371, 2397 | sums lots from `il = 1` after copying lot 1 (lot 1 twice) | more than one lot |
 | 2924, 2934 | updates lot 1 instead of lot `il` | lots |
 | 2965-3010 | lot membership tests `ilots` (Fourier's) instead of `rmc_ilots`; wrong wrap | lots |
 
-`discuspdf.engine.fork_reasons` sends RMC `set lots` (not off) and `set aver` (not 0) to the fork.
+`discuspdf.engine.fork_reasons` sends RMC `set lots` (not off) and `set aver` (not 0) to the fork;
+the wrapper refuses nx > ny instead of routing it. Note also that `fourier` NIPL output keeps 5
+significant digits (E12.5, `discus_s_out_file.f90:255-257`).

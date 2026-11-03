@@ -8,14 +8,14 @@ import pytest
 
 from discuspdf.discus_ops import ReplaceRandom, StructureJob
 from discuspdf.discus_rmc import (FourierPlane, PlaneGrid, RmcFit, RmcLots, RmcPlane, RmcShift, RmcSwap,
-                                  RmcSwapDisplacement, parse_rmc_log, read_nipl, run_rmc, write_nipl)
+                                  parse_rmc_log, read_nipl, run_rmc, write_nipl)
 from discuspdf.engine import Engine, fork_reasons
 from discuspdf.fourier_macro import Seed, StructureSource
 from discuspdf.suite_catalogue import load_catalogue
 from discuspdf.suite_runner import SuiteRunner
 
 SEED = Seed((1, 2, 3, 4, 5, 6, 7, 8))
-GRID = PlaneGrid((0, -1, 0), (3, -1, 0), (0, 1, 0), 31, 21)
+GRID = PlaneGrid((0, -1, 0), (0, 1, 0), (3, -1, 0), 21, 31)
 SRC = StructureSource.cell("cu.cll", (4, 4, 4))
 
 
@@ -34,23 +34,22 @@ def rmc_lines(step):
 
 def test_default_fit_lines():
     assert rmc_lines(fit()) == [
-        "data xray,moa1,t.nipl,one,0,-1,0,3,-1,0,0,1,0", "set const,1,1", "dese all", "sele CU,AU",
-        "set mode,1,swchem,all", "set scal,on,1", "set back,off,0", "set sigm,0.01", "set cycl,2000",
+        "reset", "data xray,moa1,t.nipl,one,0,-1,0,0,1,0,3,-1,0", "dese all", "sele CU,AU",
+        "set mode,0,shift,all", "set mode,1,swchem,all", "set scal,on,1", "set back,off,0", "set sigm,0.01", "set cycl,2000",
         "set disp,500", "run"]
 
 
 def test_all_options_lines():
-    planes = (RmcPlane("a.nipl", GRID, radiation="neutron", wavelength=1.5, weights="sqrt"),
-              RmcPlane("b.nipl", GRID))
-    f = fit(planes=planes, moves=(RmcSwap(0.7, "site"), RmcShift({"cu": (0.01, 0.02, 0.0)}, 0.3)),
+    planes = (RmcPlane("a.nipl", GRID, radiation="neutron", wavelength=1.5, weights="sqrt"),)
+    f = fit(planes=planes, moves=(RmcSwap(0.7, "site"), RmcShift({"cu": (0.01, 0.02, 0.0), "AU": (0.1, 0, 0)}, 0.3)),
             sigma=0.0, display=100, fit_scale=False, scale=2.0, fit_background=True, background=1.5,
-            min_distances={("Cu", "Au"): 2.0}, debye_waller=True, symmetry=True, q_range=(0.1, 1.2))
+            min_distances={("Cu", "Au"): 2.0}, debye_waller=True, symmetry=True)
     lines = rmc_lines(f)
-    assert lines[:4] == ["data neutron,1.5,a.nipl,sqrt,0,-1,0,3,-1,0,0,1,0",
-                         "data xray,moa1,b.nipl,one,0,-1,0,3,-1,0,0,1,0", "set const,1,1", "set const,2,2"]
+    assert lines[:2] == ["reset", "data neutron,1.5,a.nipl,sqrt,0,-1,0,0,1,0,3,-1,0"]
+    assert not any(line.startswith("set mode,0,") for line in lines)
     for line in ("set dbw,on", "set sym,on", "set mode,0.7,swchem,site", "set mode,0.3,shift,all",
-                 "set move,CU,0.01,0.02,0", "set mdis,CU,AU,2", "set scal,off,2", "set back,on,1.5",
-                 "set range,0.1,1.2", "set sigm,0", "set disp,100"):
+                 "set move,CU,0.01,0.02,0", "set move,AU,0.1,0,0", "set mdis,CU,AU,2", "set scal,off,2",
+                 "set back,on,1.5", "set sigm,0", "set disp,100"):
         assert line in lines, line
     assert fork_reasons("\n".join(["discus", "rmc", *lines, "exit", "exit"])) == []
 
@@ -68,18 +67,21 @@ def test_aver_and_lots_go_to_the_fork():
 
 @pytest.mark.parametrize("make", [
     lambda: fit(planes=()),
-    lambda: fit(planes=(RmcPlane("t.nipl", GRID), RmcPlane("t.nipl", GRID))),
+    lambda: fit(planes=(RmcPlane("t.nipl", GRID), RmcPlane("u.nipl", GRID))),  # one plane only
     lambda: fit(moves=()),
     lambda: fit(moves=(RmcSwap(), RmcSwap(0.5))),
     lambda: fit(select=("CU",)),  # swaps need two types
     lambda: fit(select="most"),
     lambda: fit(moves=(RmcShift({"NI": (0.1, 0.1, 0.1)}),)),  # sigma for an unselected type
+    lambda: fit(moves=(RmcShift({"CU": (0.1, 0.1, 0.1)}),)),  # no sigma for AU (DISCUS default 0.2)
+    lambda: fit(select="all", moves=(RmcShift({"CU": (0.1, 0.1, 0.1)}),)),
+    lambda: PlaneGrid((0, 0, 0), (3, 0, 0), (0, 1, 0), 31, 21),  # nx > ny
+    lambda: RmcPlane("t.nipl", GRID, weights="log"),
     lambda: fit(tries=0),
     lambda: fit(sigma=-1.0),
     lambda: fit(scale=0.0),
     lambda: fit(background=-1.0),
     lambda: fit(average_percent=120),
-    lambda: fit(q_range=(1.0, 0.5)),
     lambda: fit(fit_scale=1),
     lambda: RmcPlane("t.nipl", GRID, weights="file.dat"),
     lambda: RmcPlane("t.nipl", GRID, radiation="electron"),
@@ -88,7 +90,6 @@ def test_aver_and_lots_go_to_the_fork():
     lambda: PlaneGrid((0, 0, 0), (1, 0, 0), (2, 0, 0), 5, 5),  # degenerate
     lambda: PlaneGrid((0, 0, 0), (1, 0, 0), (0, 1, 0), 1, 5),
     lambda: RmcSwap(pairing="conn"),
-    lambda: RmcSwapDisplacement(probability=0),
     lambda: RmcShift({"CU": (0, 0, 0)}),
     lambda: RmcShift({}),
     lambda: RmcLots((2, 2), 5),
@@ -107,9 +108,9 @@ def test_fit_needs_a_seed_and_lists_its_files():
 
 def test_plane_hkl_follows_the_rmc_data_convention():
     h = GRID.hkl()
-    assert h.shape == (21, 31, 3)
-    assert np.allclose(h[0, 0], (0, -1, 0)) and np.allclose(h[0, -1], (3, -1, 0))
-    assert np.allclose(h[-1, 0], (0, 1, 0)) and np.allclose(h[10, 20], (2, 0, 0))
+    assert h.shape == (31, 21, 3)
+    assert np.allclose(h[0, 0], (0, -1, 0)) and np.allclose(h[0, -1], (0, 1, 0))
+    assert np.allclose(h[-1, 0], (3, -1, 0)) and np.allclose(h[20, 10], (2, 0, 0))
 
 
 def test_nipl_round_trip_and_discus_header(tmp_path):
@@ -122,8 +123,6 @@ def test_nipl_round_trip_and_discus_header(tmp_path):
     q.write_text("# HEADER  : lines\n# x\n    3    2\n 0. 1. 2. 3.\n  1 2 3\n\n  4 5 6\n\n")
     back, _ = read_nipl(q)
     assert back.tolist() == [[1, 2, 3], [4, 5, 6]]
-    plane = RmcPlane("b.nipl", PlaneGrid((0, 0, 0), (1, 0, 0), (0, 1, 0), 3, 2))
-    plane.check_file(q)
     with pytest.raises(ValueError, match="points"):
         RmcPlane("b.nipl", PlaneGrid((0, 0, 0), (1, 0, 0), (0, 1, 0), 2, 3)).check_file(q)
 
@@ -133,7 +132,7 @@ def test_fourier_plane_lines():
                        seed=SEED, readback="none")
     text = job.macro().render()
     assert load_catalogue().check(text) == []
-    for line in ("ll 0,-1,0", "lr 3,-1,0", "ul 0,1,0", "tl 0,-1,0", "na 31", "no 21", "nt 1",
+    for line in ("ll 0,-1,0", "lr 0,1,0", "ul 3,-1,0", "tl 0,-1,0", "na 21", "no 31", "nt 1",
                  "temp ignore", "value int", "form stan", "outf t.nipl"):
         assert line in text.splitlines(), line
     assert fork_reasons(text) == []
@@ -183,7 +182,7 @@ print('''LOGTEXT''')
 def test_run_rmc_checks_planes_and_parses(tmp_path):
     cell = tmp_path / "cu.cll"
     cell.write_text("title cu\nspcgr P1\ncell 3.615,3.615,3.615,90,90,90\natoms\nCU 0 0 0 0.5\n")
-    nipl = write_nipl(tmp_path / "t.nipl", np.ones((21, 31)))
+    nipl = write_nipl(tmp_path / "t.nipl", np.ones((31, 21)))
     script = tmp_path / "fake.py"
     script.write_text(FAKE.replace("LOGTEXT", LOG))
     runner = SuiteRunner(tmp_path / "runs", Engine((sys.executable, str(script))))
@@ -191,7 +190,7 @@ def test_run_rmc_checks_planes_and_parses(tmp_path):
     job = StructureJob(src, [fit()], seed=SEED, readback="none")
     out = run_rmc(job, runner, {"cu.cll": cell, "t.nipl": nipl})
     assert out.log.final.tries == 2000
-    bad = write_nipl(tmp_path / "bad.nipl", np.ones((31, 21)))
+    bad = write_nipl(tmp_path / "bad.nipl", np.ones((21, 31)))
     with pytest.raises(ValueError, match="points"):
         run_rmc(job, runner, {"cu.cll": cell, "t.nipl": bad})
     with pytest.raises(ValueError, match="inputs"):

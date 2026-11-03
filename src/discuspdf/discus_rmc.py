@@ -8,7 +8,7 @@ computes a plane from a model in the same geometry, which is how a test target i
 
     from discuspdf.discus_rmc import FourierPlane, PlaneGrid, RmcFit, RmcPlane, RmcSwap, run_rmc
 
-    grid = PlaneGrid(ll=(0, -1, 0), lr=(3, -1, 0), ul=(0, 1, 0), nx=31, ny=21)
+    grid = PlaneGrid(ll=(0, -1, 0), lr=(0, 1, 0), ul=(3, -1, 0), nx=21, ny=31)
     fit = RmcFit(planes=(RmcPlane("target.nipl", grid),), moves=(RmcSwap(),), select=("CU", "AU"),
                  tries=2000, sigma=0.0)
     outcome = run_rmc(StructureJob(source, [fit], seed=seed), runner, {..., "target.nipl": path})
@@ -25,7 +25,9 @@ Facts from the 6.23.01 source (``docs/DISCUS_RMC_FACTS.md`` has the details):
   variables that are never set (``:1420``).
 * Cost: per plane chi² = Σ w (I_obs − s·I_calc − b)² / Σ w with I_calc = |F|² (not normalised),
   summed over planes (``:1925-1941``). The scale s and background b are fitted in closed form when
-  switched on, otherwise fixed (``rmc_calcskal``, ``:2544-2591``). DISCUS prints and stores 1/s.
+  switched on, otherwise fixed (``rmc_calcskal``, ``:2544-2591``). DISCUS stores s and prints 1/s;
+  ``set scal, on|off, v`` sets s = 1/v. A fitted s or b that comes out ≤ 0 falls back to the last
+  accepted value.
 * Acceptance (``:2029-2052``): downhill always; uphill with probability exp(−Δχ²/(σ²/2)),
   ``σ = set sigm`` (default 0.01); σ = 0 accepts downhill moves only.
 * ``set cycl`` counts valid tries (moves that passed the type and distance checks), not cycles per
@@ -34,10 +36,17 @@ Facts from the 6.23.01 source (``docs/DISCUS_RMC_FACTS.md`` has the details):
   ``set mode`` the move generator falls through to a mode with no branch (``:3300-3378``); the
   atom selection is cleared by ``reset`` (``rmc.f90:274``). The step therefore always writes
   ``set mode`` for each move and ``dese all`` then ``sele``.
-* **Scale constraint:** ``rmc_constrain`` is allocated as 0 for every plane and only ``set const``
-  changes it, but ``rmc_calcskal`` replaces the scale and background of plane p by those of plane
-  ``rmc_constrain(p)`` when it differs from p (``:2581-2584``) — index 0, outside the array. The
-  step writes ``set const, p, p`` for every plane, which makes that branch inactive.
+* **One plane per fit.** ``rmc_csf`` is sized from the last plane read (``:1592``, ``:1848``) and in the
+  move loop every plane uses plane 1's sin(θ)/λ table (``rmc_stltab`` copies ``istl(i,j,ip)``, which
+  ``four_stltab`` fills only for index 1); the fork does not change this.
+* **nx ≤ ny.** The stock average-subtraction loop (``:2300``) runs ``j = 1, nx`` over an array with
+  ny rows; with nx > ny it reads and writes outside the plane even when ``set aver`` is 0. Give the
+  longer axis as the ordinate (swap ``lr`` and ``ul`` and transpose the data).
+* **State within a session:** ``data`` appends planes and move probabilities persist, so the step
+  starts with ``reset`` and writes ``set mode`` with probability 0 for the modes it does not use.
+* ``set range`` changes nothing in 6.23.01 (the q filters in ``rmc_run`` are commented out,
+  ``:1891-1893``, ``:2013-2015``) and is not offered; nor is ``swdisp``, whose average-structure
+  check only runs when the previous move was already a swdisp (``:2482-2496``).
 * Random numbers come from the Fortran ``RANDOM_NUMBER`` stream that the ``seed`` command sets.
 * Lots and ``set aver`` use code the fork corrects (lot index, lot membership, the row loop of
   the average subtraction); :func:`discuspdf.engine.fork_reasons` routes them to the fork.
@@ -58,7 +67,7 @@ from .fourier_macro import _RADIATION_KEYWORD, RADIATIONS, _check_wavelength
 from .macro import Macro
 
 __all__ = [
-    "PAIRINGS", "WEIGHTS", "PlaneGrid", "RmcPlane", "RmcShift", "RmcSwap", "RmcSwapDisplacement", "RmcLots",
+    "PAIRINGS", "WEIGHTS", "PlaneGrid", "RmcPlane", "RmcShift", "RmcSwap", "RmcLots",
     "RmcFit", "FourierPlane", "RmcProgress", "RmcLog", "RmcOutcome", "parse_rmc_log", "run_rmc",
     "read_nipl", "write_nipl",
 ]
@@ -66,7 +75,8 @@ __all__ = [
 # rmc_set_mode (rmc_sup_mod.f90:606-622): A, L, SL, SI (CO, connectivity, is not offered)
 PAIRINGS = ("all", "local", "slocal", "site")
 # rmc_readdata (rmc_sup_mod.f90:1369-1392): the first four characters, upper case
-WEIGHTS = {"one": "one", "sqrt": "sqrt", "log": "log", "linear": "lin", "square": "squa",
+# 'log' is left out: rmc_dowic gives negative weights for 0 < I < 1. Every scheme gives weight 0 for I <= 0.
+WEIGHTS = {"one": "one", "sqrt": "sqrt", "linear": "lin", "square": "squa",
            "inverse": "inv", "inverse_sqrt": "isq"}
 _NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
 
@@ -120,6 +130,9 @@ class PlaneGrid:
         _int("nx", self.nx, 2), _int("ny", self.ny, 2)
         a = np.subtract(self.lr, self.ll)
         b = np.subtract(self.ul, self.ll)
+        if self.nx > self.ny:
+            raise ValueError(f"nx ({self.nx}) > ny ({self.ny}): DISCUS 6.23.01's RMC loops over nx rows of a "
+                             "plane with ny rows; make the longer axis the ordinate (swap lr and ul)")
         if not np.any(a) or not np.any(b) or np.linalg.norm(np.cross(a, b)) < 1e-12 * (
                 np.linalg.norm(a) * np.linalg.norm(b)):
             raise ValueError("the corners must span a plane (lr - ll and ul - ll not parallel or zero)")
@@ -180,7 +193,8 @@ class RmcPlane:
     """One ``data`` line: a NIPL file with its plane geometry, radiation and weights.
 
     ``weights``: ``one`` (default), ``sqrt``, ``log``, ``linear``, ``square``, ``inverse``,
-    ``inverse_sqrt`` — DISCUS's ``rmc_dowic`` schemes applied to the observed intensity."""
+    ``inverse_sqrt`` — DISCUS's ``rmc_dowic`` schemes applied to the observed intensity. Points with
+    I ≤ 0 get weight 0 in every scheme."""
     file: str
     grid: PlaneGrid
     radiation: str = "xray"
@@ -260,23 +274,8 @@ class RmcSwap:
         m.command("set", "mode", self.probability, "swchem", self.pairing)
 
 
-@dataclass(frozen=True)
-class RmcSwapDisplacement:
-    """``set mode, p, swdisp, pairing``: exchange the displacements (from the site averages) of two
-    atoms. DISCUS refuses it (error -12) when no site has a displacement spread."""
-    probability: float = 1.0
-    pairing: str = "all"
-
-    def __post_init__(self) -> None:
-        _prob(self.probability)
-        if self.pairing not in PAIRINGS:
-            raise ValueError(f"pairing must be one of {PAIRINGS}")
-
-    def apply(self, m: Macro) -> None:
-        m.command("set", "mode", self.probability, "swdisp", self.pairing)
-
-
-_MOVES = (RmcShift, RmcSwap, RmcSwapDisplacement)
+_MOVES = (RmcShift, RmcSwap)
+_MODE_WORDS = {RmcShift: "shift", RmcSwap: "swchem"}
 
 
 @dataclass(frozen=True)
@@ -312,7 +311,7 @@ class RmcFit(Step):
     Parameters
     ----------
     planes: the data planes (files must be given in the job's inputs).
-    moves: :class:`RmcShift`, :class:`RmcSwap`, :class:`RmcSwapDisplacement`, each type once.
+    moves: :class:`RmcShift`, :class:`RmcSwap`, each type once.
     select: atom names that may be moved or swapped (``"all"`` for every type).
     tries: valid tries (``set cycl``).
     sigma: σ of the acceptance rule (``set sigm``); 0 keeps downhill moves only. Δχ² is in the
@@ -320,8 +319,8 @@ class RmcFit(Step):
     display: generated moves between log lines (``set disp``).
     fit_scale / scale: fit the scale in closed form, or keep it fixed at ``scale`` (DISCUS's 1/s,
         the number its log prints).
-    fit_background / background: the same for a constant background (a fitted background that
-        comes out ≤ 0 is replaced by the fixed one).
+    fit_background / background: the same for a constant background (a fitted value ≤ 0 is
+        replaced by the last accepted one).
     min_distances: ``{(A, B): d}`` (Å, ``set mdis``); a move closer than d to another atom is
         refused. DISCUS's default is 0.5 Å for every pair.
     debye_waller: use the atoms' B in the structure factors (``set dbw``, default off). Must match
@@ -329,7 +328,6 @@ class RmcFit(Step):
     symmetry: also fit the symmetry-equivalent planes of the Laue group (``set sym``).
     average_percent: ``set aver`` (subtract the average structure); > 0 runs on the fork.
     lots: :class:`RmcLots` or None.
-    q_range: ``(qmin, qmax)`` in 1/d (Å⁻¹, = 2 sinθ/λ) for ``set range`` (DISCUS stores half).
     """
     planes: tuple
     moves: tuple
@@ -346,26 +344,26 @@ class RmcFit(Step):
     symmetry: bool = False
     average_percent: float = 0.0
     lots: RmcLots | None = None
-    q_range: tuple | None = None
 
     uses_random_numbers = True
 
     def __post_init__(self) -> None:
         planes = tuple(self.planes)
-        if not planes or not all(isinstance(p, RmcPlane) for p in planes):
-            raise ValueError("planes must be a non-empty tuple of RmcPlane")
-        if len({p.file for p in planes}) != len(planes):
-            raise ValueError("two planes read the same file")
+        if len(planes) != 1 or not isinstance(planes[0], RmcPlane):
+            raise ValueError("planes must be a tuple of one RmcPlane: with several planes DISCUS 6.23.01 uses "
+                             "the first plane's sin(theta)/lambda table for all of them (see the module notes)")
         object.__setattr__(self, "planes", planes)
         moves = tuple(self.moves)
         if not moves or not all(isinstance(mv, _MOVES) for mv in moves):
-            raise ValueError("moves must be a non-empty tuple of RmcShift / RmcSwap / RmcSwapDisplacement")
+            raise ValueError("moves must be a non-empty tuple of RmcShift / RmcSwap")
         if len({type(mv) for mv in moves}) != len(moves):
             raise ValueError("give each move type once")
         object.__setattr__(self, "moves", moves)
         if isinstance(self.select, str):
             if self.select != "all":
                 raise ValueError("select must be 'all' or a tuple of atom names")
+            if any(isinstance(mv, RmcShift) for mv in moves):
+                raise ValueError("with RmcShift, name the selected types so each gets its sigma")
         else:
             sel = tuple(_atom("select", s) for s in self.select)
             if not sel:
@@ -374,10 +372,10 @@ class RmcFit(Step):
             if any(isinstance(mv, RmcSwap) for mv in moves) and len(set(sel)) < 2:
                 raise ValueError("swaps need at least two selected types (DISCUS error -11)")
             for mv in moves:
-                if isinstance(mv, RmcShift):
-                    extra = sorted(set(mv.sigma) - set(sel))
-                    if extra:
-                        raise ValueError(f"RmcShift sigma for types not selected: {extra}")
+                if isinstance(mv, RmcShift) and set(mv.sigma) != set(sel):
+                    raise ValueError("RmcShift needs a sigma for exactly the selected types (DISCUS's "
+                                     f"default is 0.2 cell fractions): selected {sorted(set(sel))}, "
+                                     f"sigma for {sorted(mv.sigma)}")
         _int("tries", self.tries)
         if _real("sigma", self.sigma) < 0:
             raise ValueError("sigma must be >= 0 (0 accepts downhill moves only)")
@@ -400,27 +398,25 @@ class RmcFit(Step):
             raise ValueError("average_percent must be in [0, 100]")
         if self.lots is not None and not isinstance(self.lots, RmcLots):
             raise TypeError("lots must be an RmcLots or None")
-        if self.q_range is not None:
-            lo, hi = (_real("q_range", x) for x in self.q_range)
-            if not 0 <= lo < hi:
-                raise ValueError("q_range must be (qmin, qmax) with 0 <= qmin < qmax")
-            object.__setattr__(self, "q_range", (lo, hi))
 
     def input_names(self) -> tuple[str, ...]:
         return tuple(p.file for p in self.planes)
 
     def apply(self, m: Macro) -> None:
         with m.menu("rmc"):
+            m.command("reset")  # rmc_reset: no planes, nothing selected, amplitudes recomputed
             for p in self.planes:
                 m.command("data", *p.params())
-            for i in range(1, len(self.planes) + 1):
-                m.command("set", "const", i, i)  # rmc_constrain starts at 0 (see module docstring)
             if self.debye_waller:
                 m.command("set", "dbw", "on")
             if self.symmetry:
                 m.command("set", "sym", "on")
             m.command("dese", "all")
             m.command("sele", *(("all",) if self.select == "all" else self.select))
+            used = {type(mv) for mv in self.moves}
+            for kind in _MOVES:  # move probabilities persist in a session; clear the unused ones
+                if kind not in used:
+                    m.command("set", "mode", 0, _MODE_WORDS[kind], "all")
             for mv in self.moves:
                 mv.apply(m)
             for (a, b), d in self.min_distances.items():
@@ -431,8 +427,6 @@ class RmcFit(Step):
                 m.command("set", "aver", self.average_percent)
             if self.lots is not None:
                 m.command("set", *self.lots.params())
-            if self.q_range is not None:
-                m.command("set", "range", *self.q_range)
             m.command("set", "sigm", self.sigma)
             m.command("set", "cycl", self.tries)
             m.command("set", "disp", self.display)
@@ -450,7 +444,8 @@ class FourierPlane(Step):
     """Compute the intensity on a :class:`PlaneGrid` with the ``fourier`` menu and write it as a NIPL
     file (``output``: ``value int``, ``form stan``), in the orientation ``rmc data`` reads. Use it
     on a model to make a target plane; give the same radiation, wavelength and Debye–Waller choice
-    to the :class:`RmcPlane` and :class:`RmcFit`."""
+    to the :class:`RmcPlane` and :class:`RmcFit`. The plane is computed without average subtraction,
+    so it matches a fit with ``average_percent=0``. The file holds 5 significant digits (E12.5)."""
     grid: PlaneGrid
     output: str
     radiation: str = "xray"
