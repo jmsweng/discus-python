@@ -175,7 +175,7 @@ def run(model, *, out=None, seed=None, launcher=None, dry_run=False, structure_o
         if is_void.any():
             # DISCUS 6.23.01 counts VOID rows in the powder-PDF normalisation: G(r) comes out scaled by
             # rows / atoms (probe e_builder_backend v1, P3). The 1D run gets the real atoms only, written as
-            # one cell of the whole crystal (probe v2 checks that this layout equals the verified one).
+            # one cell of the whole crystal (probe v2: this layout equals the verified one).
             pdf_stru = out / "supercell_pdf.stru"
             write_stru(pdf_stru, real_atoms_one_cell(structure, ~is_void), title=title, overwrite=True,
                        check_order=False, min_separation=None)

@@ -36,7 +36,11 @@ Options: `--out`, `--seed` (overrides the model's), `--launcher` (e.g.
    `structure_summary.json`, `model.json`.
 4. **3D** (`FourierConfig` → `Diffuse3DRunner`): diffuse scattering with `set aver`, optional LOTS, then the
    3D-ΔPDF. Optionally the total scattering and its 3D-PDF (Patterson).
-5. **1D PDF** (`PDFConfig` with the `.stru` → `PDFRunner`): the Debye sum over the whole supercell.
+5. **1D PDF** (`PDFConfig` with a `.stru` → `PDFRunner`): the Debye sum over the whole supercell. DISCUS
+   6.23.01 counts `VOID` rows in the powder-PDF normalisation (G(r) comes out scaled by rows / atoms), so for a
+   padded model the 1D run reads `supercell_pdf.stru`: the real atoms only, as one cell of the whole crystal.
+   Both facts were measured with DISCUS (`benchmarks/discus_6_23_01/e_builder_backend/RESULT.md`). Engine
+   1.0 used the padded file, so its 1D PDFs of padded models are too large by that factor.
 
 Own neutron scattering lengths (model key `scattering`, e.g. `{"NI62": -8.7}`) reach DISCUS as `scat` lines
 through `FourierConfig(scattering_lengths=…)` and `PDFConfig(scattering_lengths=…)`, only for names that occur
