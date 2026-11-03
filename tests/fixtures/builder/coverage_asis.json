@@ -1,0 +1,268 @@
+{
+ "schema": "discuspdf-disorder-builder",
+ "version": 1,
+ "title": "Coverage model",
+ "seed": 11,
+ "output_dir": "out",
+ "cell": {
+  "a": 6.0,
+  "b": 6.0,
+  "c": 6.0,
+  "alpha": 90,
+  "beta": 90,
+  "gamma": 90
+ },
+ "supercell": [
+  3,
+  3,
+  3
+ ],
+ "molecules": {
+  "m1": {
+   "name": "CBr",
+   "anchor": 0,
+   "atoms": [
+    {
+     "el": "C",
+     "xyz": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "el": "Br",
+     "xyz": [
+      1.9,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  "m2": {
+   "name": "CBr com",
+   "anchor": "com",
+   "atoms": [
+    {
+     "el": "C",
+     "xyz": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "el": "Br",
+     "xyz": [
+      1.9,
+      0,
+      0
+     ]
+    }
+   ]
+  }
+ },
+ "orientations": {
+  "g1": {
+   "molecule": "m1",
+   "name": "x and y",
+   "matrices": [
+    [
+     [
+      0,
+      -1,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ],
+    [
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ]
+   ],
+   "weights": [
+    1,
+    2
+   ]
+  },
+  "g2": {
+   "molecule": "m2",
+   "name": "x and y",
+   "matrices": [
+    [
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ],
+    [
+     [
+      0,
+      -1,
+      0
+     ],
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ]
+   ],
+   "weights": [
+    2,
+    1
+   ]
+  }
+ },
+ "scattering": {},
+ "sites": [
+  {
+   "label": "S1",
+   "frac": [
+    0,
+    0,
+    0
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "molecule",
+     "group": "g1",
+     "p": 0.6,
+     "b": null,
+     "sigma": null,
+     "trans": null,
+     "lib": null
+    },
+    {
+     "type": "atom",
+     "species": "Cl",
+     "p": 0.3,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "vacancy",
+     "p": 0.1
+    }
+   ]
+  },
+  {
+   "label": "S2",
+   "frac": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "b_iso": 1,
+   "draw": "random",
+   "sym": "-y,x,z",
+   "occupants": [
+    {
+     "type": "molecule",
+     "group": "g2",
+     "p": 1.0,
+     "b": null,
+     "sigma": 0.01,
+     "trans": 0.05,
+     "lib": null
+    }
+   ]
+  }
+ ],
+ "disorder": {
+  "atomic_displacements": {
+   "Cl": 0.05,
+   "C": 0.02,
+   "Br": 0.03
+  },
+  "molecule_rigid": {
+   "translation_sigma": 0.03,
+   "libration_sigma_deg": 3
+  },
+  "clash_threshold": 0.8,
+  "contacts": {
+   "enabled": true,
+   "change": "orientation",
+   "anneal": true,
+   "rules": [
+    {
+     "a": "Br",
+     "b": "Br",
+     "dmin": 3.0,
+     "penalty": 10
+    }
+   ]
+  },
+  "correlations": {
+   "enabled": true,
+   "match": "key",
+   "sweeps": 5,
+   "kT": 1.0,
+   "interactions": [
+    {
+     "site_a": 0,
+     "site_b": 0,
+     "t": [
+      1,
+      0,
+      0
+     ],
+     "J": -0.5
+    }
+   ]
+  }
+ },
+ "mmc": {
+  "enabled": false
+ },
+ "calc": {
+  "debye_waller": false,
+  "fourier": {
+   "enabled": false
+  },
+  "pdf": {
+   "enabled": false
+  }
+ }
+}

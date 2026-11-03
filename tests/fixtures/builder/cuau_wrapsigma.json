@@ -1,0 +1,221 @@
+{
+ "schema": "discuspdf-disorder-builder",
+ "version": 1,
+ "title": "Cu3Au short-range order",
+ "seed": 1234,
+ "output_dir": "discus_model_out",
+ "cell": {
+  "a": 3.75,
+  "b": 3.75,
+  "c": 3.75,
+  "alpha": 90,
+  "beta": 90,
+  "gamma": 90
+ },
+ "supercell": [
+  8,
+  8,
+  8
+ ],
+ "molecules": {},
+ "orientations": {},
+ "scattering": {},
+ "sites": [
+  {
+   "label": "M1",
+   "frac": [
+    0,
+    0,
+    0
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  },
+  {
+   "label": "M2",
+   "frac": [
+    0.5,
+    0.5,
+    0
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  },
+  {
+   "label": "M3",
+   "frac": [
+    0.5,
+    0,
+    0.5
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  },
+  {
+   "label": "M4",
+   "frac": [
+    0,
+    0.5,
+    0.5
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  }
+ ],
+ "disorder": {
+  "atomic_displacements": {
+   "Cu": 0.6,
+   "Au": 0.6
+  },
+  "molecule_rigid": {
+   "translation_sigma": 0,
+   "libration_sigma_deg": 0
+  },
+  "clash_threshold": 0.8,
+  "contacts": {
+   "enabled": false,
+   "change": "orientation",
+   "anneal": true,
+   "rules": []
+  },
+  "correlations": {
+   "enabled": false,
+   "sweeps": 50,
+   "kT": 1,
+   "match": "orientation",
+   "interactions": []
+  }
+ },
+ "mmc": {
+  "enabled": false
+ },
+ "calc": {
+  "launcher": "discus_suite -noautorun -macro",
+  "debye_waller": false,
+  "timeout_s": 86400,
+  "fourier": {
+   "enabled": true,
+   "steps": [
+    0.125,
+    0.125,
+    0.125
+   ],
+   "hmax": [
+    3,
+    3,
+    3
+   ],
+   "aver_percent": 100,
+   "delta_pdf": true,
+   "total": false,
+   "symmetry": "",
+   "radiation": "xray",
+   "wavelength": "moa1",
+   "lots": {
+    "enabled": false,
+    "shape": "box",
+    "size": [
+     5,
+     5,
+     5
+    ],
+    "count": "all",
+    "periodic": true
+   }
+  },
+  "pdf": {
+   "enabled": true,
+   "radiation": "xray",
+   "qmin": 0.5,
+   "qmax": 7.5,
+   "dq": 0.01,
+   "qsig": 0,
+   "rmax": 14,
+   "dr": 0.02,
+   "wavelength": ""
+  },
+  "preview": {
+   "u": [
+    1,
+    0,
+    0
+   ],
+   "v": [
+    0,
+    1,
+    0
+   ],
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "range": 4
+  }
+ },
+ "wrap": true
+}

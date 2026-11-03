@@ -29,6 +29,7 @@ The package is a research prototype.
 | **MMC**: occupational/displacement (CORR/ENER), spring and Lennard-Jones targets; swap, swdisp and shift moves; feedback history, acceptance, target vs achieved, independent re-measurement, replica spread | `discuspdf.mc` | [MONTE_CARLO](docs/MONTE_CARLO.md), [MC_FACTS](docs/MC_FACTS.md) |
 | **Reference F(Q)**: direct-sum amplitudes, \|F\|² and \|F − ⟨F⟩\|², stated X-ray (Waasmaier–Kirfel) or neutron factors, DW, occupancy | `discuspdf.reference_scattering` | [REFERENCE_SCATTERING](docs/REFERENCE_SCATTERING.md) |
 | **Structure views**: atoms by species/site, displacement fields, neighbour bonds; export (extxyz, POSCAR, xsf, CIF) with read-back check | `discuspdf.structure_viz` | [STRUCTURE_VIZ](docs/STRUCTURE_VIZ.md) |
+| **Disorder builder back end**: model JSON from the discus-disorder-builder page → configuration with VOID padding, ordering MC for molecules/vacancies, DISCUS 3D/1D/mmc runs, selectable output formats; DISCUS atom-name table and guessing rules; extended XYZ without ASE | `discuspdf.builder`, `discuspdf.atom_names`, `write_extxyz` | [DISORDER_BUILDER](docs/DISORDER_BUILDER.md) |
 | **Magnetic scattering** (experimental): unpolarised dipole-approximation reference; DISCUS 6.23.01 computes none | `discuspdf.magnetic_reference` | [MAGNETIC_SCATTERING](docs/MAGNETIC_SCATTERING.md) |
 
 ## Notebooks

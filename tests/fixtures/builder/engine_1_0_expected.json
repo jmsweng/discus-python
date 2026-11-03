@@ -1,0 +1,578 @@
+{
+ "engine": "discus-disorder-builder engine.py 1.0 @ 92fe94e, --dry-run",
+ "expected": {
+  "test_co2_asis": {
+   "supercell.stru": "13c5208cf138d0a7f70be42940a6ec8c88e134de4d26f3ab4fc444ebc5bbc810",
+   "supercell.xyz": "f34daf4c3f39cab8fdb2af6b015f2c1387aaf38acc98d54254a8b0bcbfc8c5c9",
+   "summary": {
+    "atoms_per_cell": 4,
+    "slots_per_site": [
+     3,
+     1
+    ],
+    "n_rows": 864,
+    "n_void": 48,
+    "n_molecules": 200,
+    "occupant_counts": {
+     "M1": {
+      "mol:g1:1": 108,
+      "mol:g1:0": 92,
+      "vacancy": 16
+     },
+     "Na": {
+      "atom:Na": 151,
+      "atom:K": 65
+     }
+    },
+    "correlations": {
+     "sweeps": 30,
+     "kT": 1.0,
+     "interactions": [
+      {
+       "site_a": 0,
+       "site_b": 0,
+       "t": [
+        1,
+        0,
+        0
+       ],
+       "J": -1
+      }
+     ],
+     "fraction_same_before": [
+      0.41203703703703703
+     ],
+     "fraction_same_after": [
+      0.6435185185185185
+     ]
+    },
+    "seed": 3,
+    "clashes": {
+     "threshold": 0.8,
+     "n_close_pairs": 0,
+     "shortest": Infinity,
+     "examples": []
+    },
+    "formula": "<bound method Structure.formula of Structure(n=816, formula=C200O400Na151K65, model='configuration', supercell=(np.int64(6), np.int64(6), np.int64(6)), a=33.6 \u00c5, b=33.6 \u00c5, c=33.6 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
+   }
+  },
+  "cuau_asis": {
+   "supercell.stru": "9855ef6ced48d1077ea9bea18b6ee52ceb7e0b56d7a01df91d054566741f7fef",
+   "supercell.xyz": "d10e879dde0d63d0ba164234b524a1ac8a797b5daa4527bfeee3d626b02e4c8c",
+   "summary": {
+    "atoms_per_cell": 4,
+    "slots_per_site": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "n_rows": 2048,
+    "n_void": 0,
+    "n_molecules": 0,
+    "occupant_counts": {
+     "M1": {
+      "atom:Au": 128,
+      "atom:Cu": 384
+     },
+     "M2": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     },
+     "M3": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     },
+     "M4": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     }
+    },
+    "correlations": {},
+    "seed": 1234,
+    "clashes": {
+     "threshold": 0.8,
+     "n_close_pairs": 0,
+     "shortest": Infinity,
+     "examples": []
+    },
+    "formula": "<bound method Structure.formula of Structure(n=2048, formula=Au512Cu1536, model='configuration', supercell=(np.int64(8), np.int64(8), np.int64(8)), a=30 \u00c5, b=30 \u00c5, c=30 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
+   }
+  },
+  "paper_ice_asis": {
+   "supercell.stru": "b3cff8ee401c3c12e17a3098101a4b93e657196ada16aa61b23e434c53617f9b",
+   "supercell.xyz": "a7395397cf79c1d6a20e1444fe98aea3f2837d88c73ff55c5e5254b7ab2c3b50",
+   "summary": {
+    "atoms_per_cell": 6,
+    "slots_per_site": [
+     3,
+     3
+    ],
+    "n_rows": 6000,
+    "n_void": 0,
+    "n_molecules": 2000,
+    "occupant_counts": {
+     "W": {
+      "mol:g1:2": 53,
+      "mol:g1:11": 53,
+      "mol:g1:10": 57,
+      "mol:g1:5": 61,
+      "mol:g2:8": 14,
+      "mol:g2:3": 21,
+      "mol:g2:9": 22,
+      "mol:g2:10": 19,
+      "mol:g1:9": 55,
+      "mol:g1:1": 73,
+      "mol:g1:6": 58,
+      "mol:g1:7": 80,
+      "mol:g2:4": 16,
+      "mol:g1:4": 75,
+      "mol:g2:7": 24,
+      "mol:g2:1": 24,
+      "mol:g2:6": 26,
+      "mol:g2:0": 20,
+      "mol:g1:8": 49,
+      "mol:g1:3": 57,
+      "mol:g2:5": 24,
+      "mol:g1:0": 61,
+      "mol:g2:2": 17,
+      "mol:g2:11": 25,
+      "mol:g3:4": 2,
+      "mol:g3:23": 1,
+      "mol:g3:9": 1,
+      "mol:g3:7": 1,
+      "mol:g3:1": 1,
+      "mol:g3:5": 1,
+      "mol:g3:2": 2,
+      "mol:g3:18": 2,
+      "mol:g3:0": 1,
+      "mol:g3:3": 1,
+      "mol:g3:12": 1,
+      "mol:g3:22": 1,
+      "mol:g3:19": 1
+     },
+     "W_2": {
+      "mol:g1:1": 66,
+      "mol:g1:11": 60,
+      "mol:g1:3": 63,
+      "mol:g2:7": 23,
+      "mol:g1:2": 71,
+      "mol:g2:11": 18,
+      "mol:g1:8": 54,
+      "mol:g1:5": 66,
+      "mol:g1:10": 60,
+      "mol:g1:4": 62,
+      "mol:g1:6": 55,
+      "mol:g1:9": 59,
+      "mol:g1:0": 55,
+      "mol:g2:5": 16,
+      "mol:g2:10": 25,
+      "mol:g2:6": 24,
+      "mol:g2:0": 28,
+      "mol:g1:7": 61,
+      "mol:g2:9": 24,
+      "mol:g2:4": 22,
+      "mol:g2:1": 19,
+      "mol:g2:2": 15,
+      "mol:g3:18": 1,
+      "mol:g2:3": 20,
+      "mol:g2:8": 18,
+      "mol:g3:1": 2,
+      "mol:g3:2": 2,
+      "mol:g3:14": 3,
+      "mol:g3:13": 1,
+      "mol:g3:3": 2,
+      "mol:g3:19": 2,
+      "mol:g3:22": 2,
+      "mol:g3:11": 1
+     }
+    },
+    "correlations": {
+     "sweeps": 50,
+     "kT": 1.0,
+     "interactions": [],
+     "fraction_same_before": [],
+     "fraction_same_after": [],
+     "contacts": {
+      "rules": [
+       {
+        "a": "H",
+        "b": "H",
+        "dmin": 1.5,
+        "penalty": 100.0
+       }
+      ],
+      "neighbour_pairs": [
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         -1,
+         -1,
+         -1
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       },
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         -1,
+         -1,
+         0
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       },
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         -1,
+         0,
+         -1
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       },
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         -1,
+         0,
+         0
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       },
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         0,
+         -1,
+         -1
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       },
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         0,
+         -1,
+         0
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       },
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         0,
+         0,
+         -1
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       },
+       {
+        "i": 0,
+        "j": 1,
+        "t": [
+         0,
+         0,
+         0
+        ],
+        "dist": 2.857883832488647,
+        "n_forbidden_pairs": 228,
+        "n_pairs": 2304
+       }
+      ],
+      "before": 503,
+      "after": 0,
+      "change": "orientation",
+      "anneal": true
+     }
+    },
+    "seed": 1234,
+    "clashes": {
+     "threshold": 0.8,
+     "n_close_pairs": 0,
+     "shortest": 1.26619930633172,
+     "examples": []
+    },
+    "formula": "<bound method Structure.formula of Structure(n=6000, formula=O2000H4000, model='configuration', supercell=(np.int64(10), np.int64(10), np.int64(10)), a=33 \u00c5, b=33 \u00c5, c=33 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
+   }
+  },
+  "nh4cl_neutron": {
+   "supercell.stru": "7fba04929b1559f88648037241498d07823093877a3b5f019467fc06c504501a",
+   "supercell.xyz": "74017058e65a70b6a6417b961a6aed12c73fc4972a0af83be6cd2d3ad148aa98",
+   "summary": {
+    "atoms_per_cell": 6,
+    "slots_per_site": [
+     1,
+     5
+    ],
+    "n_rows": 6000,
+    "n_void": 0,
+    "n_molecules": 1000,
+    "occupant_counts": {
+     "Cl": {
+      "atom:Cl": 1000
+     },
+     "NH4": {
+      "mol:g1:0": 500,
+      "mol:g1:1": 500
+     }
+    },
+    "correlations": {
+     "sweeps": 40,
+     "kT": 1.0,
+     "interactions": [
+      {
+       "site_a": 1,
+       "site_b": 1,
+       "t": [
+        1,
+        0,
+        0
+       ],
+       "J": -0.6
+      },
+      {
+       "site_a": 1,
+       "site_b": 1,
+       "t": [
+        0,
+        1,
+        0
+       ],
+       "J": -0.6
+      },
+      {
+       "site_a": 1,
+       "site_b": 1,
+       "t": [
+        0,
+        0,
+        1
+       ],
+       "J": -0.6
+      }
+     ],
+     "fraction_same_before": [
+      0.522,
+      0.472,
+      0.504
+     ],
+     "fraction_same_after": [
+      0.754,
+      0.75,
+      0.764
+     ]
+    },
+    "seed": 1234,
+    "clashes": {
+     "threshold": 0.8,
+     "n_close_pairs": 0,
+     "shortest": 2.191648434310636,
+     "examples": []
+    },
+    "formula": "<bound method Structure.formula of Structure(n=6000, formula=Cl1000N1000H4000, model='configuration', supercell=(np.int64(10), np.int64(10), np.int64(10)), a=38.7 \u00c5, b=38.7 \u00c5, c=38.7 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
+   }
+  },
+  "coverage_asis": {
+   "supercell.stru": "50320e937138bd5cb899be84d71df86e007833cf00321e86612078fbd4d160cb",
+   "supercell.xyz": "f7ed335dc4bdd30c19ade1adf85949f5b6fa11ba73a7b1108927c0e3572c51b6",
+   "summary": {
+    "atoms_per_cell": 4,
+    "slots_per_site": [
+     2,
+     2
+    ],
+    "n_rows": 108,
+    "n_void": 14,
+    "n_molecules": 43,
+    "occupant_counts": {
+     "S1": {
+      "atom:Cl": 8,
+      "mol:g1:0": 5,
+      "mol:g1:1": 11,
+      "vacancy": 3
+     },
+     "S2": {
+      "mol:g2:0": 18,
+      "mol:g2:1": 9
+     }
+    },
+    "correlations": {
+     "sweeps": 5,
+     "kT": 1.0,
+     "interactions": [
+      {
+       "site_a": 0,
+       "site_b": 0,
+       "t": [
+        1,
+        0,
+        0
+       ],
+       "J": -0.5
+      }
+     ],
+     "fraction_same_before": [
+      0.2222222222222222
+     ],
+     "fraction_same_after": [
+      0.4074074074074074
+     ]
+    },
+    "seed": 11,
+    "clashes": {
+     "threshold": 0.8,
+     "n_close_pairs": 0,
+     "shortest": Infinity,
+     "examples": []
+    },
+    "formula": "<bound method Structure.formula of Structure(n=94, formula=Cl8C43Br43, model='configuration', supercell=(np.int64(3), np.int64(3), np.int64(3)), a=18 \u00c5, b=18 \u00c5, c=18 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
+   }
+  },
+  "cuau_wrapsigma": {
+   "supercell.stru": "c6b213a8a8719f25aa21ae79897a5faa3a62f6fd8670e0585f673ca66ba7105d",
+   "supercell.xyz": "eca3855c9aa841a35680aa6dc9ce678c863516cc6102b524c8ba2c1683dbf572",
+   "summary": {
+    "atoms_per_cell": 4,
+    "slots_per_site": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "n_rows": 2048,
+    "n_void": 0,
+    "n_molecules": 0,
+    "occupant_counts": {
+     "M1": {
+      "atom:Au": 128,
+      "atom:Cu": 384
+     },
+     "M2": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     },
+     "M3": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     },
+     "M4": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     }
+    },
+    "correlations": {},
+    "seed": 1234,
+    "clashes": {
+     "threshold": 0.8,
+     "n_close_pairs": 38,
+     "shortest": 0.3061723314946324,
+     "examples": [
+      [
+       103,
+       134
+      ],
+      [
+       129,
+       1927
+      ],
+      [
+       156,
+       1919
+      ],
+      [
+       189,
+       191
+      ],
+      [
+       194,
+       195
+      ],
+      [
+       211,
+       465
+      ],
+      [
+       216,
+       218
+      ],
+      [
+       242,
+       496
+      ],
+      [
+       248,
+       251
+      ],
+      [
+       266,
+       491
+      ],
+      [
+       277,
+       279
+      ],
+      [
+       284,
+       285
+      ],
+      [
+       414,
+       415
+      ],
+      [
+       478,
+       732
+      ],
+      [
+       501,
+       502
+      ],
+      [
+       532,
+       757
+      ],
+      [
+       593,
+       624
+      ],
+      [
+       661,
+       692
+      ],
+      [
+       768,
+       797
+      ],
+      [
+       807,
+       838
+      ]
+     ]
+    },
+    "formula": "<bound method Structure.formula of Structure(n=2048, formula=Au512Cu1536, model='configuration', supercell=(np.int64(8), np.int64(8), np.int64(8)), a=30 \u00c5, b=30 \u00c5, c=30 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
+   }
+  }
+ },
+ "note": "cuau_wrapsigma: engine 1.0 wrote this through its format_stru fallback (read-back order check refused it)"
+}

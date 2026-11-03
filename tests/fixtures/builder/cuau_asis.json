@@ -1,0 +1,687 @@
+{
+ "schema": "discuspdf-disorder-builder",
+ "version": 1,
+ "title": "Cu3Au short-range order",
+ "seed": 1234,
+ "output_dir": "discus_model_out",
+ "cell": {
+  "a": 3.75,
+  "b": 3.75,
+  "c": 3.75,
+  "alpha": 90,
+  "beta": 90,
+  "gamma": 90
+ },
+ "supercell": [
+  8,
+  8,
+  8
+ ],
+ "molecules": {},
+ "orientations": {},
+ "scattering": {},
+ "sites": [
+  {
+   "label": "M1",
+   "frac": [
+    0,
+    0,
+    0
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  },
+  {
+   "label": "M2",
+   "frac": [
+    0.5,
+    0.5,
+    0
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  },
+  {
+   "label": "M3",
+   "frac": [
+    0.5,
+    0,
+    0.5
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  },
+  {
+   "label": "M4",
+   "frac": [
+    0,
+    0.5,
+    0.5
+   ],
+   "b_iso": 1,
+   "draw": "exact",
+   "occupants": [
+    {
+     "type": "atom",
+     "species": "Cu",
+     "p": 0.75,
+     "b": null,
+     "sigma": null
+    },
+    {
+     "type": "atom",
+     "species": "Au",
+     "p": 0.25,
+     "b": null,
+     "sigma": null
+    }
+   ]
+  }
+ ],
+ "disorder": {
+  "atomic_displacements": {
+   "Cu": 0.03,
+   "Au": 0.03
+  },
+  "molecule_rigid": {
+   "translation_sigma": 0,
+   "libration_sigma_deg": 0
+  },
+  "clash_threshold": 0.8,
+  "contacts": {
+   "enabled": false,
+   "change": "orientation",
+   "anneal": true,
+   "rules": []
+  },
+  "correlations": {
+   "enabled": false,
+   "sweeps": 50,
+   "kT": 1,
+   "match": "orientation",
+   "interactions": []
+  }
+ },
+ "mmc": {
+  "enabled": true,
+  "neighborhoods": [
+   {
+    "vectors": [
+     {
+      "origin": 1,
+      "target": 2,
+      "t": [
+       -1,
+       -1,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 2,
+      "t": [
+       -1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 2,
+      "t": [
+       0,
+       -1,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 2,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 3,
+      "t": [
+       -1,
+       0,
+       -1
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 3,
+      "t": [
+       -1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 3,
+      "t": [
+       0,
+       0,
+       -1
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 3,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 4,
+      "t": [
+       0,
+       -1,
+       -1
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 4,
+      "t": [
+       0,
+       -1,
+       0
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 4,
+      "t": [
+       0,
+       0,
+       -1
+      ]
+     },
+     {
+      "origin": 1,
+      "target": 4,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 1,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 1,
+      "t": [
+       0,
+       1,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 1,
+      "t": [
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 1,
+      "t": [
+       1,
+       1,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 3,
+      "t": [
+       0,
+       0,
+       -1
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 3,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 3,
+      "t": [
+       0,
+       1,
+       -1
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 3,
+      "t": [
+       0,
+       1,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 4,
+      "t": [
+       0,
+       0,
+       -1
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 4,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 4,
+      "t": [
+       1,
+       0,
+       -1
+      ]
+     },
+     {
+      "origin": 2,
+      "target": 4,
+      "t": [
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 1,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 1,
+      "t": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 1,
+      "t": [
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 1,
+      "t": [
+       1,
+       0,
+       1
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 2,
+      "t": [
+       0,
+       -1,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 2,
+      "t": [
+       0,
+       -1,
+       1
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 2,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 2,
+      "t": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 4,
+      "t": [
+       0,
+       -1,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 4,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 4,
+      "t": [
+       1,
+       -1,
+       0
+      ]
+     },
+     {
+      "origin": 3,
+      "target": 4,
+      "t": [
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 1,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 1,
+      "t": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 1,
+      "t": [
+       0,
+       1,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 1,
+      "t": [
+       0,
+       1,
+       1
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 2,
+      "t": [
+       -1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 2,
+      "t": [
+       -1,
+       0,
+       1
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 2,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 2,
+      "t": [
+       0,
+       0,
+       1
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 3,
+      "t": [
+       -1,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 3,
+      "t": [
+       -1,
+       1,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 3,
+      "t": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "origin": 4,
+      "target": 3,
+      "t": [
+       0,
+       1,
+       0
+      ]
+     }
+    ],
+    "symmetric": true
+   }
+  ],
+  "targets": [
+   {
+    "type": "occupational",
+    "neighborhood": 0,
+    "a": "Cu",
+    "b": "Au",
+    "mode": "correlation",
+    "value": -0.15,
+    "direction": [
+     1,
+     0,
+     0
+    ],
+    "distance": 2.65,
+    "k": 1,
+    "depth": 1
+   }
+  ],
+  "moves": {
+   "swap": 1,
+   "shift": 0,
+   "swap_displacement": 0,
+   "pairing": "all",
+   "shift_sigma": {}
+  },
+  "moves_per_atom": 20,
+  "feedback_per_atom": 1,
+  "temperature": 1
+ },
+ "calc": {
+  "launcher": "discus_suite -noautorun -macro",
+  "debye_waller": false,
+  "timeout_s": 86400,
+  "fourier": {
+   "enabled": true,
+   "steps": [
+    0.125,
+    0.125,
+    0.125
+   ],
+   "hmax": [
+    3,
+    3,
+    3
+   ],
+   "aver_percent": 100,
+   "delta_pdf": true,
+   "total": false,
+   "symmetry": "",
+   "radiation": "xray",
+   "wavelength": "moa1",
+   "lots": {
+    "enabled": false,
+    "shape": "box",
+    "size": [
+     5,
+     5,
+     5
+    ],
+    "count": "all",
+    "periodic": true
+   }
+  },
+  "pdf": {
+   "enabled": true,
+   "radiation": "xray",
+   "qmin": 0.5,
+   "qmax": 7.5,
+   "dq": 0.01,
+   "qsig": 0,
+   "rmax": 14,
+   "dr": 0.02,
+   "wavelength": ""
+  },
+  "preview": {
+   "u": [
+    1,
+    0,
+    0
+   ],
+   "v": [
+    0,
+    1,
+    0
+   ],
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "range": 4
+  }
+ }
+}
