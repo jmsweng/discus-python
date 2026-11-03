@@ -79,7 +79,7 @@ prepared = runner.prepare(cfg)                       # stage only
 print((prepared.directory / "run.mac").read_text())  # inspect the macro
 
 result = runner.execute(prepared)                    # run exactly that macro
-r, gr = result.load()
+r, gr = result.load()   # reads <run>/result.csv (r (Angstrom),G(r)); DISCUS's raw text is <run>/result.pdf
 result.plot()
 ```
 

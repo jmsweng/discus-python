@@ -27,6 +27,10 @@ See `docs/VERIFIED_DISCUS_MACRO.md` for the verified macro syntax.
 
 **Note (2026-10-31):** although the macro says `set qmax,30`, DISCUS 6.23.01 cannot use Q above about 8.0 Å⁻¹ at λ = 1.5406 Å, so this G(r) is the same as for Qmax ≈ 8 Å⁻¹. Current `discuspdf` produces the same macro and result but issues a `QmaxLimitWarning`; see `docs/VERIFIED_DISCUS_MACRO.md`, "Qmax limit and wavelength".
 
+**Output name:** this run predates the switch to CSV output, so it has only DISCUS's raw
+`result.pdf`. Runs made with current `discuspdf` also write `result.csv`, which is the run's
+output (`PDFRun.output`). The archive is kept unchanged on purpose.
+
 ## Provenance (re-checked 2026-11-02)
 
 - **One coherent run.** `run.mac`, `run.log` and `result.pdf` belong to the same DISCUS_SUITE 6.23.01 run of 2026-10-22, made with `qmax=30`. `run.log` echoes every command of `run.mac`, including `outf result.pdf`.

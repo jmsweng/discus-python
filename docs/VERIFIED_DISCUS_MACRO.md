@@ -104,7 +104,18 @@ exit
 
 ## Output file format
 
-`result.pdf` is a **plain-text, two-column** ASCII file (not an Adobe PDF):
+A `PDFRunner` run leaves two files:
+
+- **`result.csv`: the run's output** (`PDFRun.output`, read by `PDFRun.load()` /
+  `discuspdf.read_pdf_csv()`). Header `r (Angstrom),G(r)`, then comma-separated values,
+  bit-identical to the numbers DISCUS wrote. Readable with
+  `numpy.loadtxt(path, delimiter=",", skiprows=1)`. **Owner's decision (2026-11-02): keep this
+  name; do not change it back to `.pdf`.**
+- `result.pdf`: the raw file DISCUS writes (`PDFRun.raw_output`). The macro still says
+  `outf result.pdf` so it stays byte-identical to the archived runs and probe evidence; DISCUS
+  would write any name given there.
+
+The raw `result.pdf` is a **plain-text, two-column** ASCII file (not an Adobe PDF):
 
 ```
    0.0000000000000000       -5.7961407286989876E-008
@@ -115,7 +126,7 @@ exit
 - Column 1: `r` in Å (strictly increasing)
 - Column 2: `G(r)`, the 1D powder PDF (DISCUS handles scaling/normalization)
 
-`discuspdf.read_pdf()` parses this format (skips comment/blank lines, reads the first two
+`discuspdf.read_pdf()` parses this raw format (skips comment/blank lines, reads the first two
 finite columns, and requires a strictly increasing `r`).
 
 ## PGPLOT / X11 note
