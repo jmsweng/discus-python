@@ -51,7 +51,7 @@ def test_defaults_are_the_stock_engine():
 
 def test_launcher_is_normalised_to_a_tuple_of_strings():
     e = Engine(launcher=["python3", Path("/x/y.py")])
-    assert e.launcher == ("python3", "/x/y.py")
+    assert e.launcher == ("python3", str(Path("/x/y.py")))
 
 
 def test_command_appends_the_macro_name():

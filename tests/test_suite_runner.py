@@ -40,7 +40,7 @@ def fake_engine(tmp_path: Path, *, outputs=None, stdout="", exit_code=0, label="
     body = ("import sys\n"
             "from pathlib import Path\n"
             f"for name, text in {dict(outputs or {})!r}.items():\n"
-            "    Path(name).write_text(text)\n"
+            "    Path(name).write_bytes(text.encode())  # no newline translation (Windows)\n"
             f"sys.stdout.write({stdout!r})\n"
             + (f"Path({str(marker)!r}).write_text('ran')\n" if marker else "")
             + f"sys.exit({exit_code})\n")
