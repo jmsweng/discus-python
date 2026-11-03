@@ -141,10 +141,14 @@ def test_sigmas_random_offset_sigma_and_atoms_are_written_only_when_set():
     assert not any(x.startswith(("sigma", "random", "set atoms")) for x in plain)
 
 
-def test_fixture_layers_are_discus_structure_files():
-    from discuspdf.discus_io import read_stru
+def test_fixture_layers_are_free_format_structure_files():
+    """No 'format numbers' line: with it DISCUS reads fixed Fortran columns (atom_line.f90 44444),
+    and hand-written lines then fail with error -49 (seen live, collab_s 009)."""
     for name in ("cu_layer", "ag_layer", "fcc_a", "fcc_b", "fcc_c"):
-        assert read_stru(FIX / f"{name}.stru", supercell=(1, 1, 1)).structure.n_atoms == 1
+        text = (FIX / f"{name}.stru").read_text()
+        assert "format numbers" not in text
+        atoms = text.split("atoms", 1)[1].split()
+        assert len(atoms) == 5  # name x y z B
 
 
 VALID = dict(layers=("cu_layer.stru", "ag_layer.stru"), correlation=((0, 1), (1, 0)),

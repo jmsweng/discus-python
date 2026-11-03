@@ -116,12 +116,13 @@ def test_s3_same_seed_same_stack():
 
 # --- domains -------------------------------------------------------------------------------
 
+# Free-format atom lines on purpose: 'format numbers' makes DISCUS read fixed Fortran columns
+# (atom_line.f90 44444/44445), which a hand-written file rarely matches (error -49 live).
 PSEUDO = """title pseudo atoms
 spcgr F m -3 m
 cell    3.615000,  3.615000,  3.615000, 90.000000, 90.000000, 90.000000
-format numbers,XYZBPMMOS
-atoms      x,              y,              z,             Biso,    Property,  MoleNo,  MoleAt,   Occ,     St,  Sh,  Sk,  Sl
-DOM1      0.000000,       0.000000,       0.000000,       0.000000,       1,       0,       0,   1.000000, _,   0,   0,   0
+atoms
+DOM1 0.000000 0.000000 0.000000 0.000000
 """
 
 SPHERE = ((1.5, 0, 0, 0), (0, 1.5, 0, 0), (0, 0, 1.5, 0))

@@ -114,3 +114,11 @@ Implemented in `src/discuspdf/discus_stack.py` (`Stacking`).
 
 - Rotational disorder (`rotate`, `stack.f90:521-711`), the Fourier shortcut (`four`,
   `stack.f90:347-359`), `dist file|list` (`stack.f90:273-319`), `storage`.
+
+## Hand-written layer files (found live, 2026-11-03)
+
+A `.stru` that contains `format numbers,…` is read with fixed Fortran columns
+(`atom_line.f90` formats 44444/44445). DISCUS writes its own files that way, but a hand-written
+file with other spacing fails with error -49 ("File format specified as numbers only"). Write
+hand-made layer, pseudo-atom and content files without the `format` line, with free-format atom
+lines (`NAME x y z B`), or save them with DISCUS or `discuspdf.discus_io.write_stru`.

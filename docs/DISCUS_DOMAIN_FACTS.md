@@ -196,3 +196,7 @@ is therefore True, and `StructureJob` requires a seed.
   with `fuzzy = 0` no host atom is removed and domain and host atoms overlap.
 - `gasdev` is drawn three times per pseudo-atom line (`domain.f90:2916`); with no size spread
   the result does not depend on them, but they advance the random state for later steps.
+
+- Hand-written pseudo-atom or content files must not contain a `format numbers,…` line unless
+  their columns match DISCUS's fixed Fortran format exactly (`atom_line.f90` 44444); otherwise
+  `run` fails with error -49. Free-format lines (`DOM1 x y z B`) work.
