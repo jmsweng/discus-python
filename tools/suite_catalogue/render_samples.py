@@ -13,8 +13,8 @@ from pathlib import Path
 
 from discuspdf import Lattice, PDFConfig, ReciprocalGrid, read_stru, render_pdf_macro
 from discuspdf.fourier_macro import SYMMETRY, FourierConfig, Lots, Seed, StructureSource
-from discuspdf.mc import (DisplacementTarget, LennardJonesTarget, MCConfig, Neighborhood, OccupationalTarget,
-                          Shift, SpringTarget, Swap, SwapDisplacement, Vector)
+from discuspdf.mc import (BuckinghamTarget, Convergence, DisplacementTarget, LennardJonesTarget, MCConfig, Neighborhood,
+                          OccupationalTarget, RepulsiveTarget, Shift, SpringTarget, Swap, SwapDisplacement, Vector)
 
 REPO = Path(__file__).resolve().parents[2]
 FIXTURES = REPO / "tests" / "fixtures" / "discus_6_23_01"
@@ -168,6 +168,15 @@ def _mc_samples() -> list[tuple[str, str]]:
             LennardJonesTarget(2, "GA", "GA", 2.8, 0.5)),
            (Swap(0.5, "all"), Shift({"GA": (0.01, 0.01, 0.01)}, 0.3), SwapDisplacement(0.2, "site"))),
         GAAS_222_STRU, gaas)
+    # phase 2b extensions
+    add("mc_repulsive_buckingham_directional_shift",
+        mc((nn,), (RepulsiveTarget(0, "Cu", "Cu", 1.0, b_scale=2.5, m=12.0),
+                   BuckinghamTarget(0, "Cu", "Cu", 1000.0, 0.3, 10.0)),
+           (Shift({"Cu": 0.01}, directions={"Cu": (1, 0, 0)}),)),
+        CU_DISP_STRU, cu_disp)
+    add("mc_occ_correlation_convergence", mc((nn,), (occ_corr,), (Swap(),),
+                                             finish=Convergence(diff=0.02, rdiff=0.1, change=0.05, aver=0.01)),
+        CUAU_STRU, cuau)
     return out
 
 
@@ -211,6 +220,19 @@ def _ops_samples() -> list[tuple[str, str]]:
         neighbourhoods=(Neighbourhood(VectorNeighbourhood(1), direction=((1, 0, 0), (1, 0, 0))),
                         Neighbourhood(DistanceNeighbourhood((0.25, 0.25, 0.25), 0.1))),
         calculations=(ChemOccupational("GA", "AS"), ChemDisplacement("GA", "all")))], readback="none")
+    from discuspdf.discus_rmc import FourierPlane, PlaneGrid, RmcFit, RmcLots, RmcPlane, RmcShift, RmcSwap
+
+    grid = PlaneGrid((0, -1, 0), (0, 1, 0), (3, -1, 0), 21, 31)
+    jobs["ops_fourier_plane"] = StructureJob(cell, [FourierPlane(grid, "plane.nipl")], readback="none")
+    jobs["ops_rmc_swap_shift"] = StructureJob(cell, [RmcFit(
+        planes=(RmcPlane("plane.nipl", grid, weights="sqrt"),),
+        moves=(RmcSwap(0.5, "site"), RmcShift({"GA": (0.01, 0.01, 0.01), "AS": (0.01, 0.01, 0.01)}, 0.5)),
+        select=("GA", "AS"), tries=1000, sigma=0.1, fit_background=True, min_distances={("GA", "AS"): 2.0},
+        debye_waller=True, symmetry=True)], seed=SEED_A)
+    jobs["ops_rmc_lots_aver_fork"] = StructureJob(cell, [RmcFit(
+        planes=(RmcPlane("plane.nipl", grid, radiation="neutron", wavelength=1.5),), moves=(RmcSwap(),),
+        select="all", tries=1000, fit_scale=False, scale=2.0, average_percent=10.0,
+        lots=RmcLots((2, 2, 2), 10, "ellipsoid", False))], seed=SEED_A)
     return [(label, job.macro().render()) for label, job in jobs.items()]
 
 

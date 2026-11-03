@@ -7,13 +7,13 @@ Catalogue: DISCUS_SUITE 6.23.01 (`19a214a`), 44 menus.
 - **Generated**: emitted by a discuspdf macro generator (reachable through a typed API).
 - **In evidence**: used in at least one committed macro that ran on DISCUS (probes, gates, fixtures).
 
-Totals: 659 commands, 86 generated, 46 in evidence (commands of one routine shown under several menus are counted once).
+Totals: 659 commands, 92 generated, 46 in evidence (commands of one routine shown under several menus are counted once).
 
 | Menu | Commands | Generated | In evidence | Generated commands |
 |---|---:|---:|---:|---|
 | `common` | 29 | 2 | 2 | `seed`, `set` |
 | `diffev` | 29 | 0 | 0 | — |
-| `discus` | 64 | 15 | 7 | `chemistry`, `domain`, `fourier`, `output`, `powder`, `purge`, `read`, `remove`, `replace`, `mmc`, `save`, `stack`, `switch`, `thermal`, `waves` |
+| `discus` | 64 | 16 | 7 | `chemistry`, `domain`, `fourier`, `output`, `powder`, `purge`, `read`, `remove`, `replace`, `rmc`, `mmc`, `save`, `stack`, `switch`, `thermal`, `waves` |
 | `discus/3dpdf` | 2 | 0 | 0 | — |
 | `discus/chem` | 19 | 3 | 3 | `corr`, `set`, `show` |
 | `discus/common` | 3 | 0 | 0 | — |
@@ -35,7 +35,7 @@ Totals: 659 commands, 86 generated, 46 in evidence (commands of one routine show
 | `discus/powd` | 8 | 4 | 4 | `neutron`, `run`, `set`, `xray` |
 | `discus/prop` | 4 | 0 | 0 | — |
 | `discus/read` | 4 | 2 | 2 | `cell`, `structure` |
-| `discus/rmc` | 9 | 0 | 0 | — |
+| `discus/rmc` | 9 | 5 | 0 | `select`, `deselect`, `data`, `run`, `set` |
 | `discus/save` | 12 | 0 | 0 | — |
 | `discus/shear` | 23 | 0 | 0 | — |
 | `discus/stack` | 18 | 12 | 0 | `average`, `create`, `crow`, `first`, `layer`, `modulus`, `number`, `random`, `run`, `set`, `sigma`, `translation` |

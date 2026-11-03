@@ -114,3 +114,25 @@ Live checks: `tests/test_discus_stack_domain_chem_live.py` (opt-in, `DISCUS_LIVE
 - no removal with `fuzzy = 0`;
 - seed independence of a domain with no size spread;
 - `chem corr occ` on a random alloy.
+
+## Phase 2b part 2: RMC fits to diffuse planes
+
+| API | DISCUS | Notes ([`DISCUS_RMC_FACTS.md`](DISCUS_RMC_FACTS.md)) |
+|---|---|---|
+| `discus_rmc.PlaneGrid(ll, lr, ul, nx, ny)` | `fourier` `ll/lr/ul/na/no`, `rmc data` corners | Point (i, j) = ll + i·(lr−ll)/(nx−1) + j·(ul−ll)/(ny−1); `hkl()` gives every point. nx ≤ ny (stock RMC loops over nx rows). |
+| `discus_rmc.FourierPlane(grid, output, radiation, wavelength, debye_waller)` | `fourier` … `run`; `output` `value int`, `form stan` | Writes a NIPL plane in the orientation `rmc data` reads. Use with `StructureJob(..., readback="none")`. |
+| `discus_rmc.RmcFit(planes, moves, select, tries, sigma, …)` | `rmc` … `run` | One plane (DISCUS 6.23.01 mixes up the tables of several). Moves `RmcSwap`, `RmcShift` (a sigma for every selected type). Starts with `reset` and always writes `set mode`, `dese all`/`sele`. `set aver` > 0 and lots run on the fork. |
+| `discus_rmc.run_rmc(job, runner, inputs)` | — | Checks each plane file against its grid, runs the job, parses every log block (`RmcLog.progress`, `.final`). |
+| `discus_rmc.read_nipl`, `write_nipl` | NIPL files | z has shape (ny, nx). |
+
+Acceptance is exp(−Δχ²/(σ²/2)) for uphill moves; Δχ² is in intensity² units, so σ has to be set
+relative to the data (σ = 0: downhill only). `set cycl` counts valid tries in total, not per atom.
+
+Live checks: `tests/test_discus_rmc_live.py` (opt-in, `DISCUS_LIVE=1`), Cu fcc 4×4×4 (256 atoms),
+one 21 × 31 plane hk0:
+
+- R1: the plane file's size and orientation (L1_2 superstructure peak at h = 1, fundamental at h = 2);
+- R2, pre-registered: a swap-only fit with σ = 0 from a random Cu0.75Au0.25 start to the L1_2 plane
+  accepts no uphill move, never raises χ², keeps the Au count and ends with a first-neighbour
+  Warren–Cowley α < −0.15 (perfect L1_2: −1/3);
+- R3: the same seed gives the same fitted file.
