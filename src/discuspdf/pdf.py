@@ -177,6 +177,10 @@ def render_pdf_macro(config: PDFConfig) -> str:
     * ``qsig`` maps to the powder Gaussian convolution width (``set delta``);
       a value of 0.0 disables the convolution.
     * qmax=0 is rejected because the omission semantics are not verified.
+    * ``result.pdf`` is DISCUS's raw space-delimited text (not an Adobe PDF).
+      It stays in the macro because the archived runs and probe evidence use
+      exactly this macro. ``PDFRunner`` converts it to ``result.csv``, the
+      run's output (see ``PDF_CSV_NAME``); do not change that back to .pdf.
     """
     nx, ny, nz = config.supercell
     # Defaults are explicit in PDFConfig and can be overridden per run.
@@ -237,16 +241,59 @@ def read_pdf(path: Path | str) -> tuple[np.ndarray, np.ndarray]:
     return arr[:, 0], arr[:, 1]
 
 
+# The 1D PDF output of a run is a comma-separated file. This is the owner's decision
+# (2026-11-02): do not rename it back to result.pdf. DISCUS itself still writes its raw
+# space-delimited text to RAW_PDF_NAME, which is kept next to it for provenance.
+PDF_CSV_NAME = "result.csv"
+RAW_PDF_NAME = "result.pdf"
+PDF_CSV_HEADER = "r (Angstrom),G(r)"
+
+
+def write_pdf_csv(path: Path | str, r: np.ndarray, gr: np.ndarray) -> Path:
+    """Write (r, G(r)) as CSV: header ``r (Angstrom),G(r)``, then one row per point.
+
+    Values are written with ``repr`` so they read back as exactly the same floats.
+    """
+    r = np.asarray(r, dtype=float)
+    gr = np.asarray(gr, dtype=float)
+    if r.shape != gr.shape or r.ndim != 1:
+        raise ValueError("r and G(r) must be 1D arrays of the same length")
+    lines = [PDF_CSV_HEADER] + [f"{a!r},{b!r}" for a, b in zip(r.tolist(), gr.tolist())]
+    path = Path(path)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    return path
+
+
+def read_pdf_csv(path: Path | str) -> tuple[np.ndarray, np.ndarray]:
+    """Read a CSV written by ``write_pdf_csv`` (or any ``r,G(r)`` CSV with one header line)."""
+    with Path(path).open(encoding="utf-8") as stream:
+        header = stream.readline().strip()
+        if header != PDF_CSV_HEADER:
+            raise ValueError(f"{path}: expected the header {PDF_CSV_HEADER!r}, found {header!r}")
+        arr = np.loadtxt(stream, delimiter=",", ndmin=2)
+    if arr.shape[0] < 2 or arr.shape[1] != 2:
+        raise ValueError(f"No usable (r, G(r)) series found in {path}")
+    if not np.all(np.diff(arr[:, 0]) > 0):
+        raise ValueError("PDF r coordinates must be strictly increasing")
+    return arr[:, 0], arr[:, 1]
+
+
 @dataclass(frozen=True)
 class PDFRun:
     directory: Path
 
     @property
     def output(self) -> Path:
-        return self.directory / "result.pdf"
+        """The run's PDF output, ``<directory>/result.csv`` (comma-separated, with a header)."""
+        return self.directory / PDF_CSV_NAME
+
+    @property
+    def raw_output(self) -> Path:
+        """The file DISCUS wrote, ``<directory>/result.pdf`` (space-delimited text, not Adobe PDF)."""
+        return self.directory / RAW_PDF_NAME
 
     def load(self) -> tuple[np.ndarray, np.ndarray]:
-        return read_pdf(self.output)
+        return read_pdf_csv(self.output)
 
     def plot(self, *, ax=None, label=None):
         import matplotlib.pyplot as plt
@@ -333,9 +380,10 @@ class PDFRunner:
             preflight_fail(FileNotFoundError("Missing prepared macro"))
         if "macro_sha256" in params and hashlib.sha256(macro.read_bytes()).hexdigest() != params["macro_sha256"]:
             preflight_fail(ValueError("Staged macro differs from the recorded hash; the inspected macro is not the executed macro"))
-        if prepared.output.exists():
-            preflight_fail(FileExistsError(f"Refusing to overwrite existing output: {prepared.output}; "
-                                          "delete it or use a new run directory to rerun"))
+        for existing in (prepared.raw_output, prepared.output):
+            if existing.exists():
+                preflight_fail(FileExistsError(f"Refusing to overwrite existing output: {existing}; "
+                                              "delete it or use a new run directory to rerun"))
 
         command = [*self.launcher, "run.mac"]
         env = os.environ.copy()
@@ -356,14 +404,14 @@ class PDFRunner:
         (prepared.directory / "run.log").write_text(log, encoding="utf-8")
         import re
         engine_error = re.search(r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)", log)
-        if completed.returncode != 0 or engine_error or not prepared.output.is_file():
+        if completed.returncode != 0 or engine_error or not prepared.raw_output.is_file():
             status("failed", returncode=completed.returncode,
                    reason="Engine error, nonzero exit, or missing output",
                    engine_error=engine_error.group(0) if engine_error else None)
             raise RuntimeError(f"DISCUS run failed; inspect {prepared.directory / 'run.log'}")
 
         try:
-            r, gr = prepared.load()
+            r, gr = read_pdf(prepared.raw_output)
             n = round(config.rmax / config.dr) + 1
             expected = np.arange(n) * config.dr
             if len(r) != n or not np.allclose(r, expected, rtol=0,
@@ -373,10 +421,11 @@ class PDFRunner:
                 raise ValueError("Non-finite G(r) values")
         except (ValueError, OSError) as exc:
             status("failed", returncode=completed.returncode, reason=f"Invalid PDF data: {exc}")
-            raise RuntimeError(f"Invalid PDF output; inspect {prepared.output}") from exc
+            raise RuntimeError(f"Invalid PDF output; inspect {prepared.raw_output}") from exc
 
+        write_pdf_csv(prepared.output, r, gr)
         status("complete", returncode=completed.returncode, output_exists=True,
-               samples=len(r))
+               samples=len(r), output=PDF_CSV_NAME, raw_output=RAW_PDF_NAME)
         return prepared
 
     def run(self, config: PDFConfig) -> PDFRun:
