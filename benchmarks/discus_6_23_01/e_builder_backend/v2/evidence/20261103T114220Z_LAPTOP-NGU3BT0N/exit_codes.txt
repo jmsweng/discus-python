@@ -1,0 +1,9 @@
+p_mix_big_n exit=0
+p_mix_big_x exit=0
+p_mix_n exit=0
+p_mix_x exit=0
+p_vac_big_n exit=0
+p_vac_big_x exit=0
+p_vac_void_n exit=0
+p_vac_void_x exit=0
+p_void_x exit=0

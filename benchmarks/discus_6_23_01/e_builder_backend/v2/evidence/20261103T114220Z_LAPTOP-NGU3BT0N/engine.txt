@@ -1,0 +1,5 @@
+/usr/local/bin/discus_suite
+d4274f13f938e8fda040a2a3636f1accfc18ec3c10ca8a1b37069ac4d45706f3  /usr/local/bin/discus_suite
+Linux LAPTOP-NGU3BT0N 6.18.54.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue Oct  6 19:13:07 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+2026-11-03T11:42:23Z
+OMP_NUM_THREADS=unset
