@@ -228,6 +228,12 @@ Per feedback, `mmc_h_diff(i) = target_i − achieved_i`, `i = 1..mmc_h_number`:
 
 ### 3.5 Parsing collision on `feed:`
 
+> **Correction (review, 2026-11-03):** `get_optional` in `mmc_set` scans from the last parameter
+> backwards and stops with error −12 at the first unknown `name:` (`take_param_mod.f90:131-136`);
+> `mmc_set` does not check it, and `get_finish`'s `ber_params` resets it (`berechne_mod.f90:50`). So
+> `feed:` is stripped only when it comes after every other `name:` option; written first, it reaches
+> `get_finish`. The wrapper writes no `feed:`. The text below describes the simpler (wrong) picture.
+
 - `mmc_set` runs `get_optional` for `type`, `feed`, `final`, `site` (`mmc.f90:1054-1058`, `:1073-1074`) on every `set`
   line, removing matches before dispatch.
 - `set finish, feed:N` alone leaves `ianz=1`, so `IF (ianz >= 2 …)` (`mmc.f90:1076`) skips it silently. With another
