@@ -413,6 +413,30 @@ class ResultNotAStructure(ValueError):
         self.run = run
 
 
+class CrystalBuilder:
+    """A source that *builds* the crystal inside DISCUS instead of reading one file (for example
+    the stacking-fault generator). Subclasses implement:
+
+    * ``build(m)``: write the DISCUS lines that create the crystal (called in the DISCUS main
+      menu, before the seed is written, so a builder that draws random numbers writes its own
+      seed via ``seed``);
+    * ``input_names()``: the file names it reads, which the job's ``inputs`` must contain;
+    * ``read_result(path, check_order)``: read the saved crystal back as ``(Structure, DiscusStru)``,
+      raising :class:`~discuspdf.discus_io.DiscusFormatError` when it cannot.
+    """
+
+    uses_random_numbers = False
+
+    def build(self, m: Macro, seed: Seed | None) -> None:  # pragma: no cover - interface
+        raise NotImplementedError
+
+    def input_names(self) -> tuple[str, ...]:  # pragma: no cover - interface
+        raise NotImplementedError
+
+    def read_result(self, path: Path, check_order: bool):  # pragma: no cover - interface
+        raise NotImplementedError
+
+
 @dataclass
 class JobResult:
     structure: object  # discuspdf Structure
@@ -438,8 +462,8 @@ class StructureJob:
     def __post_init__(self):
         from .structure import Structure
 
-        if not isinstance(self.source, (StructureSource, Structure)):
-            raise TypeError("source must be a StructureSource or a Structure")
+        if not isinstance(self.source, (StructureSource, Structure, CrystalBuilder)):
+            raise TypeError("source must be a StructureSource, a Structure or a CrystalBuilder")
         if isinstance(self.source, Structure) and self.source.model != "configuration":
             raise ValueError("a Structure source must be a configuration (a realised crystal)")
         steps = tuple(self.steps)
@@ -450,6 +474,8 @@ class StructureJob:
         if self.seed is not None and not isinstance(self.seed, Seed):
             raise TypeError("seed must be a Seed (8 values)")
         random_steps = [s for s in steps if s.uses_random_numbers]
+        if isinstance(self.source, CrystalBuilder) and self.source.uses_random_numbers:
+            random_steps.insert(0, self.source)
         if random_steps and self.seed is None and not self.allow_unseeded:
             raise ValueError(f"{type(random_steps[0]).__name__} draws random numbers; give seed=Seed(...) "
                              "(without one DISCUS seeds from the clock), or allow_unseeded=True")
@@ -464,6 +490,14 @@ class StructureJob:
 
     def macro(self) -> Macro:
         m = Macro(self.title or "discuspdf StructureJob")
+        if isinstance(self.source, CrystalBuilder):
+            with m.program("discus"):
+                # the builder writes the seed itself where it needs it (before drawing)
+                self.source.build(m, self.seed)
+                for step in self.steps:
+                    step.apply(m)
+                m.command("save", RESULT_NAME)
+            return m
         src = self._source
         with m.program("discus"):
             with m.menu("read"):
@@ -505,15 +539,29 @@ class StructureJob:
 
         inputs = dict(inputs or {})
         with tempfile.TemporaryDirectory() as tmp:
-            if isinstance(self.source, Structure):
+            if isinstance(self.source, CrystalBuilder):
+                missing = [n for n in self.source.input_names() if n not in inputs]
+                if missing:
+                    raise ValueError(f"inputs must contain {missing}")
+                cells = None
+            elif isinstance(self.source, Structure):
                 path = Path(tmp) / INPUT_NAME
                 write_stru(path, self.source, check_order=False, min_separation=None)
                 inputs[INPUT_NAME] = path
+                cells = self.crystal_cells(inputs)
             elif self.source.file not in inputs:
                 raise ValueError(f"inputs must contain {self.source.file!r}")
-            cells = self.crystal_cells(inputs)
+            else:
+                cells = self.crystal_cells(inputs)
             run = runner.run(self.macro(), inputs, [RESULT_NAME], engine=engine)
         from .discus_io import DiscusFormatError
+
+        if isinstance(self.source, CrystalBuilder):
+            try:
+                structure, stru = self.source.read_result(run.output(RESULT_NAME), check_order)
+            except DiscusFormatError as exc:
+                raise ResultNotAStructure(f"DISCUS ran, but {RESULT_NAME} could not be read back: {exc}", run) from exc
+            return JobResult(structure, run, stru)
 
         try:
             # read cell / read stru keep DISCUS's cell-major order, so the order check holds unless a
@@ -529,5 +577,5 @@ class StructureJob:
         return JobResult(stru.structure, run, stru)
 
 
-__all__ = ["ResultNotAStructure", "Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
+__all__ = ["CrystalBuilder", "ResultNotAStructure", "Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
            "Wave", "StructureJob", "JobResult", "MacroError", "format_value"]
