@@ -195,3 +195,18 @@ def test_run_rmc_checks_planes_and_parses(tmp_path):
         run_rmc(job, runner, {"cu.cll": cell, "t.nipl": bad})
     with pytest.raises(ValueError, match="inputs"):
         run_rmc(job, runner, {"cu.cll": cell})
+
+
+def test_fourier_plane_file_is_a_declared_output(tmp_path):
+    cell = tmp_path / "cu.cll"
+    cell.write_text("title cu\nspcgr P1\ncell 3.615,3.615,3.615,90,90,90\natoms\nCU 0 0 0 0.5\n")
+    script = tmp_path / "fake.py"
+    script.write_text("from pathlib import Path\nPath('result.stru').write_text(Path('cu.cll').read_text())\n"
+                      "Path('t.nipl').write_text('2 2\\n0 1 0 1\\n1 2\\n3 4\\n')\n")
+    runner = SuiteRunner(tmp_path / "runs", Engine((sys.executable, str(script))))
+    job = StructureJob(StructureSource.cell("cu.cll", (1, 1, 1)), [FourierPlane(GRID, "t.nipl")], readback="none")
+    r = job.run(runner, {"cu.cll": cell})
+    assert read_nipl(r.run.output("t.nipl"))[0].tolist() == [[1, 2], [3, 4]]
+    with pytest.raises(ValueError, match="twice"):
+        StructureJob(SRC, [FourierPlane(GRID, "t.nipl"), FourierPlane(GRID, "t.nipl")], readback="none").run(
+            runner, {"cu.cll": cell})

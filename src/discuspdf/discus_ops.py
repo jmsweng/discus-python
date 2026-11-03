@@ -46,6 +46,10 @@ class Step:
         """Files the step reads; the job's ``inputs`` must contain them."""
         return ()
 
+    def output_names(self) -> tuple[str, ...]:
+        """Files the step writes; the run records and hashes them (``run.output(name)``)."""
+        return ()
+
     def apply(self, m: Macro) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
@@ -610,7 +614,13 @@ class StructureJob:
                 raise ValueError(f"inputs must contain {self.source.file!r}")
             else:
                 cells = self.crystal_cells(inputs)
-            run = runner.run(self.macro(), inputs, [RESULT_NAME], engine=engine)
+            outputs = [RESULT_NAME]
+            for step in self.steps:
+                for name in step.output_names():
+                    if name in outputs or name in inputs:
+                        raise ValueError(f"{name!r} is written twice or is also an input")
+                    outputs.append(name)
+            run = runner.run(self.macro(), inputs, outputs, engine=engine)
         from .discus_io import DiscusFormatError
 
         if self.readback == "none":

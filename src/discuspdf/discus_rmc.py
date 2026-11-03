@@ -462,6 +462,9 @@ class FourierPlane(Step):
         if not isinstance(self.debye_waller, bool):
             raise TypeError("debye_waller must be True or False")
 
+    def output_names(self) -> tuple[str, ...]:
+        return (self.output,)
+
     def apply(self, m: Macro) -> None:
         g = self.grid
         with m.menu("fourier"):
