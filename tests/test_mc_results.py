@@ -283,3 +283,22 @@ def test_parser_tolerates_overflowed_pair_count():
     line = "   1   Occupancy AU      CU           -0.300    -0.306               0.006     0.021   ********"
     L = parse_mmc_log(" Gen:  10 try:  10 acc: (g/n/b):  1 /  2 /  3  MC moves 1.0000\n" + line + "\n")
     assert L["feedback"][0]["rows"][0]["pairs"] is None and L["feedback"][0]["rows"][0]["achieved"] == -0.306
+
+
+def test_load_accepts_an_early_stop_only_with_finish_and_the_convergence_line(tmp_path):
+    from dataclasses import replace
+
+    from discuspdf.mc import Convergence
+    inp = read_stru(EV / "work" / "cuau.stru").structure
+    runner = MCRunner(runs_directory=tmp_path, launcher=(sys.executable, "-c", "pass"))
+    run = runner.prepare(replace(R1, finish=Convergence(diff=0.02)), inp)
+    shutil.copy(EV / "work" / "r1_occ_corr_out.stru", run.directory / "mc_out.stru")
+    text = (EV / "r1_occ_corr.log").read_text(errors="replace")
+    early = text.replace("Gen:      40960 try:      40961", "Gen:      20480 try:      20481")
+    (run.directory / "run.log").write_text(early)
+    with pytest.raises(RuntimeError, match="20480 moves done"):      # no convergence line: still a failure
+        runner.load(run, returncode=0)
+    (run.directory / "run.log").write_text(early + "\n Convergence reached after    50. % of user cycles  3 Feedbacks averaged\n")
+    assert runner.load(run, returncode=0).status == "complete"
+    status = json.loads((run.directory / "status.json").read_text())
+    assert status["moves"] == 20480 and status["moves_requested"] == 40960 and status["converged"] is True

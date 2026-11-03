@@ -315,9 +315,8 @@ def _buck_row(ic, a, b, ach, sig, n):
 def test_parse_repulsive_and_buckingham_rows():
     nums = (100.0, 2.812, 0.095, -97.188, -0.972)    # the target column is DISCUS's gate 100, not a target
     text = "\n".join([
-        " --- Initial multiple energy configuration ---",
-        _dist_row("Repuls.", 1, "CU", "AU", nums, 40),
-        _buck_row(1, "CU", "AU", 3.002, 0.072, 20736),
+        " --- Initial multiple energy configuration ---",          # mmc_correlation_write: no Buckingham row
+        _dist_row("Repulsive", 1, "CU", "AU", nums, 40),
         " ---------------------------------------------",
         " Gen:       1728 try:       1728 acc: (g/n/b):      610 /        5 /      521  MC moves 0.1000",
         _dist_row("Repuls.", 1, "CU", "AU", nums, 40),
@@ -325,14 +324,19 @@ def test_parse_repulsive_and_buckingham_rows():
         " --- Final multiple energy configuration ---",
         "",
         " Gen:       3456 try:       3456 acc: (g/n/b):     1226 /       11 /     1056  MC moves 0.2000",
-        _dist_row("Repulsive", 1, "CU", "AU", nums, 40),
+        _dist_row("Repuls.", 1, "CU", "AU", nums, 40),
         _buck_row(1, "CU", "AU", 3.011, 0.069, 20736),
         "",
     ])
     L = parse_mmc_log(text)
-    assert [r["kind"] for r in L["initial"]] == ["repulsive", "buckingham"]
+    assert [r["kind"] for r in L["initial"]] == ["repulsive"]
     assert [r["kind"] for r in L["feedback"][0]["rows"]] == ["repulsive", "buckingham"]
     rep = match_row(L["final"]["rows"], RepulsiveTarget(0, "Cu", "Au", depth=1.0))
     assert rep["target"] is None and rep["achieved"] == 2.812 and rep["pairs"] == 40
     buck = match_row(L["final"]["rows"], BuckinghamTarget(0, "Cu", "Au", A=1000.0, rho=0.3, B=10.0))
     assert buck["achieved"] == 3.011 and buck["sigma"] == 0.069 and buck["pairs"] == 20736
+
+
+def test_shift_refuses_case_duplicate_species():
+    with pytest.raises(ValueError, match="twice"):
+        Shift({"Cu": 0.05, "CU": (0.01, 0.01, 0.01)}, directions={"Cu": (1, 0, 0)})

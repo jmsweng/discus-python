@@ -326,10 +326,12 @@ class BuckinghamTarget:
     """``set target, ic, bucking, A, B, 0.0, A_, rho, B_`` — Buckingham pair potential V(d) = A·exp(−d/rho) − B/d⁶
     (DISCUS ``mmc_energy_buck``, mmc.f90:8453-8552). The first number after the species is unused: DISCUS reads
     A, rho, B from the 2nd to 4th (mmc.f90:2158-2163). DISCUS takes no distance: it finds the minimum of V by a
-    search from 10 Å downward (:func:`buckingham_minimum`, mmc.f90:9013-9070) and uses its position as the target
+    search that starts at 10 Å with halving, reversing steps (:func:`buckingham_minimum`, mmc.f90:9013-9070) and uses its position as the target
     distance, |E_min| as the depth and the local maximum below it as rmin. Per neighbour the energy is
     |E_min|·V(d) for d > rmin and V(rmin) otherwise (not multiplied by |E_min|, mmc.f90:8533-8538), averaged over
-    the centre's neighbours. Refused unless the minimum lies inside (0.5, 10) Å with E_min < 0."""
+    the centre's neighbours. Refused unless the minimum lies inside (0.5, 10) Å with E_min < 0 (our policy, not
+    a DISCUS limit). Mind the scales: for a shallow well, |E_min|·V(d) is tiny near the minimum while V(rmin) below
+    rmin is applied unscaled (A=1000, rho=0.3, B=10: about 1e-6 kT near the well, about 32 kT below rmin)."""
     neighborhood: int
     a: str
     b: str
@@ -424,6 +426,10 @@ class Shift:
         if not self.sigma:
             raise ValueError("Shift needs sigma per species, e.g. {'Cu': (0.01, 0.01, 0.01)}")
         dirs = dict(self.directions or {})
+        for name, keys in (("sigma", list(dict(self.sigma))), ("directions", list(dirs))):
+            upper = [str(k).upper() for k in keys]
+            if len(set(upper)) != len(upper):
+                raise ValueError(f"{name} names one species twice (DISCUS compares names upper case): {keys}")
         clean = {}
         for sp, s in dict(self.sigma).items():
             _species(sp, "species")
@@ -478,11 +484,16 @@ _MOVES = (Swap, SwapDisplacement, Shift)
 class Convergence:
     """``set finish, stop:converge, diff:, rdiff:, change:, aver:`` — stop when, at a feedback, all four quantities
     are below their thresholds (strict <; DISCUS ``mmc_correlations``, mmc_basic.f90:1395-1464): the largest
-    |target − achieved|; the largest |target − achieved|/|target| (targets ≠ 0); |mean relative change over the
-    history|; the largest relative change between two feedbacks. An omitted threshold is written as 99999 (DISCUS's
-    own default when the command is given, mmc.f90:2594-2596), so it never blocks. ``feed:`` is never written:
-    ``mmc_set`` consumes it before ``get_finish`` sees it (mmc.f90:1054-1074), so DISCUS always waits for at least
-    3 feedbacks. Convergence is tested only at feedbacks."""
+    |target − achieved|; the largest |target − achieved|/|target| (targets ≠ 0); |mean relative change| and the
+    largest relative change, both over a ring of the last 3 feedbacks (mmc_basic.f90:1403-1405, so only roughly
+    "between consecutive feedbacks"). An omitted threshold is written as 99999 (DISCUS's own default when the
+    command is given, mmc.f90:2594-2596), so it never blocks. ``feed:`` is never written, so DISCUS averages its
+    default 3 feedbacks and stops at the earliest at the 3rd. Convergence is tested only at feedbacks.
+
+    How the line gets through (6.23.01): ``mmc_set`` first runs its own ``get_optional`` for type/feed/final/site
+    (mmc.f90:1073); it stops at the first unknown ``name:`` with error -12 (take_param_mod.f90:131-136), which
+    ``mmc_set`` does not check; ``get_finish`` then parses all options, and its ``ber_params`` resets the error
+    (berechne_mod.f90:50). It works, but only because of that reset."""
     diff: float | None = None
     rdiff: float | None = None
     change: float | None = None
@@ -571,9 +582,6 @@ class MCConfig:
                                  "given as correlation=: every other target type, and energy= targets, also enter "
                                  "DISCUS's convergence history (mmc_basic.f90:1014, 1121-1316, 2429) with targets "
                                  "the test cannot reach")
-            if self.finish.aver is not None and len(tg) != 1:
-                raise ValueError("finish aver= needs exactly one target: DISCUS divides the whole history once per "
-                                 "target (mmc_basic.f90:1410)")
         object.__setattr__(self, "neighborhoods", nbs)
         object.__setattr__(self, "targets", tg)
         object.__setattr__(self, "moves", mv)
@@ -743,8 +751,8 @@ _GEN = re.compile(r"Gen:\s*(\d+)\s+try:\s*(\d+)\s+acc:\s*\(g/n/b\):\s*(\d+)\s*/\
 _NUM = r"([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|\*+)"
 _ROW_CORR = re.compile(r"^\s*(\d+)\s+(Occupancy|Disp\.Cor\.)\s*(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 4) + r"\s+(\d+|\*+)\s*$")
 # Labelled distance rows: Hooke/Lennard (mmc_basic.f90:3300, 3700, write_pote 3100); repulsive: 'Repuls.' in the
-# feedback table (mmc_basic.f90:1278, format 3900) and 'Repulsive' in the final table (write_pote). Five numbers
-# and a count in all of them.
+# feedback and final tables (mmc_basic.f90:1278, 1607, format 3900) and 'Repulsive' only in the 'Initial' table
+# and its reprint (mmc_correlation_write, :1994, which has no Buckingham row). Five numbers and a count.
 _ROW_DIST = re.compile(r"^\s*(\d+)\s+(Hooke|Lennard|Repuls\.|Repulsive)\s+(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 5)
                        + r"\s+(\d+|\*+)\s*$")
 # Buckingham rows have NO label and no target column: DISCUS prints atoms, mean distance, sigma and the count
@@ -860,7 +868,8 @@ def parse_mmc_log(text: str) -> dict:
 @dataclass
 class MCResult:
     """Parsed outcome of one run: ``structure`` (final configuration, sites labelled by slot), the log
-    tables and the configuration. ``status`` is ``complete`` when DISCUS finished all moves without an
+    tables and the configuration. ``status`` is ``complete`` when DISCUS finished all moves (or, with
+    ``finish``, stopped early after printing "Convergence reached") without an
     error; it says nothing about whether the targets were reached (see :meth:`target_report`)."""
     directory: Path
     config: MCConfig
@@ -1144,8 +1153,11 @@ class MCRunner:
         cyc = staged["counts"][0] if staged else None
         if log["final"] is None:
             problems.append("no final table in the log")
-        elif cyc is not None and log["final"]["gen"] != cyc:
-            problems.append(f"{log['final']['gen']} moves done, {cyc} requested")
+        converged = run.config.finish is not None and "Convergence reached after" in text  # mmc_basic.f90:1486
+        moves_done = log["final"]["gen"] if log["final"] is not None else None
+        if log["final"] is not None and cyc is not None and moves_done != cyc \
+                and not (converged and moves_done < cyc):
+            problems.append(f"{moves_done} moves done, {cyc} requested")
         out = run.directory / run.config.output_file
         if not out.is_file():
             problems.append(f"{run.config.output_file} was not written")
@@ -1170,6 +1182,7 @@ class MCRunner:
         if problems:
             self._status(run, "failed", returncode=returncode, reasons=problems)
             raise RuntimeError("DISCUS MC run failed: " + "; ".join(problems) + f" (see {run.directory})")
-        self._status(run, "complete", returncode=returncode, moves=cyc,
+        self._status(run, "complete", returncode=returncode, moves=moves_done, moves_requested=cyc,
+                     converged=converged,
                      output_sha256=hashlib.sha256(out.read_bytes()).hexdigest())
         return MCResult(run.directory, run.config, structure, log, "complete", run.n_atoms)

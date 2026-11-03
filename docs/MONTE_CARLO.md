@@ -82,11 +82,11 @@ Four additions, each read from the DISCUS 6.23.01 source (line references in the
 | Feature | Renders | Pitfall |
 |---|---|---|
 | `RepulsiveTarget(nb, a, b, depth, b_scale=1, c=0, m=1)` | `set target, ic, repulsive, A, B, \|depth\|, b_scale, c, m` | Pairs without a repulsive target are averaged in as −\|depth_min\| (smallest \|depth\| over the run); the printed "target" is DISCUS's internal 100 and is not returned. |
-| `BuckinghamTarget(nb, a, b, A, rho, B)` | `set target, ic, bucking, A, B, 0.0, A, rho, B` | DISCUS finds the distance itself by a search from 10 Å: refused unless the minimum is inside (0.5, 10) Å with E < 0 (`buckingham_minimum` reproduces the search). |
+| `BuckinghamTarget(nb, a, b, A, rho, B)` | `set target, ic, bucking, A, B, 0.0, A, rho, B` | DISCUS finds the distance itself (search starting at 10 Å, `buckingham_minimum` reproduces it); refused unless the minimum is inside (0.5, 10) Å with E < 0. The energy is \|E_min\|·V(d) above rmin but V(rmin) unscaled below it. |
 | `Shift(sigma, p, directions={sp: (u, v, w)})` | `set move, sp, u, v, w, s` for the listed species | The species needs one positive σ (not a 3-tuple); the vector is not normalised, so its length scales the step. |
 | `MCConfig(finish=Convergence(diff=, rdiff=, change=, aver=))` | `set finish, stop:converge, …` right after `set feed` | Tested only at feedbacks, from the 3rd. Offered only for a run with one occupational target given as `correlation=`: every other target, and `energy=` targets, also enter DISCUS's convergence history with targets the test cannot reach (`mmc_basic.f90:1014`, `:1121-1316`, `:2429`). |
 
-The log parser reads repulsive rows (`Repuls.` in the feedback table, `Repulsive` in the final table) and
+The log parser reads repulsive rows (`Repuls.` in the feedback and final tables, `Repulsive` in the "Initial" table and its reprint, which has no Buckingham row) and
 Buckingham rows. DISCUS prints Buckingham rows without a label and without a target column (format 2100,
 `mmc_basic.f90:1325`), so they carry the mean distance only. The convergence history also contains the Hooke,
 Lennard-Jones, repulsive, Buckingham and angle targets (`mmc_basic.f90:1121-1316`); `finish` refuses them.
