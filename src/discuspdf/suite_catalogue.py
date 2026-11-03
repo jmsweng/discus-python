@@ -25,13 +25,47 @@ CATALOGUE_FILES = {"6.23.01": "discus_suite_6.23.01.json"}
 SCHEMA = "discuspdf.suite_catalogue"
 
 # Lines handled by the macro machinery of lib_f90 before any menu sees them.
-CONTROL_WORDS = {"do", "enddo", "if", "elseif", "else", "endif", "break"}
-# Menus that process exactly one command and return to their parent (verified in the source).
+# Menus that process exactly one line and return to their parent (structur.f90:135-145).
 ONE_SHOT_MENUS = {"discus/read"}
+# Where do/if blocks are recognised (discus_loop.f90, kuplot_loop.f90, ... test line(1:3)=='do ').
+PROGRAM_LEVELS = {"suite", "discus", "kuplot", "diffev", "refine", "mixscat"}
+
+
+def _logical_lines(text: str):
+    """(first line number, text) with ``&`` continuations joined (lib_f90/macro.f90)."""
+    pending, start = "", 0
+    for number, raw in enumerate(text.splitlines(), start=1):
+        line = raw.strip()
+        if not pending and not line:
+            continue
+        if not pending:
+            start = number
+        if line.endswith("&"):
+            pending += line[:-1]
+            continue
+        pending += line
+        if pending.strip():
+            yield start, pending.strip()
+        pending = ""
+    if pending.strip():
+        yield start, pending.strip()
+
+
+def _remove_comment(line: str) -> str:
+    """``remove_comment`` (lib_f90/sup.f90): cut at ``#`` or ``!`` outside quotes."""
+    search = True
+    for i, ch in enumerate(line):
+        if ch in "'\"":
+            search = not search
+        elif search and ch in "#!":
+            return line[:i].rstrip()
+    return line
 
 
 def str_comp(typed: str, name: str, minimum: int, compare_len: int | None = None) -> bool:
-    """DISCUS's ``str_comp(a, b, j, la, lb)`` (``lib_f90/str_comp_mod.f90``).
+    """DISCUS's ``str_comp(a, b, j, la, lb)`` (``lib_f90/str_comp_mod.f90``) for a command
+    word, which never contains a blank (for blank-containing strings the Fortran also cuts at
+    the first blank; that case is not ported).
 
     It compares the first ``i = min(la, lb)`` characters, and only if ``i >= j``. ``la`` is
     the length of the typed word, ``lb`` the length argument of the call (``compare_len``,
@@ -74,6 +108,8 @@ class Menu:
     help_only: tuple = ()
     inherits_first: tuple = ()
     word_length: int | None = None
+    assignments: bool = True
+    assign_exclusions: tuple = ()
 
     def command(self, name: str) -> Command | None:
         return next((c for c in self.commands if c.name == name), None)
@@ -86,7 +122,7 @@ class Step:
     line: int
     text: str
     menu: str  # menu the line is read in
-    kind: str  # "command", "comment", "control", "assignment", "macro", "unknown"
+    kind: str  # "command", "comment", "control", "assignment", "macro", "unknown", "after_end"
     command: str | None = None  # resolved full command name
     found_in: str | None = None  # menu that supplied the command (may be an inherited one)
 
@@ -109,7 +145,8 @@ class Catalogue:
             )
             self.menus[path] = Menu(path, m["program"], m["routine"], cmds, tuple(m.get("inherits", ())),
                                     tuple(m.get("help_only", ())), tuple(m.get("inherits_first", ())),
-                                    m.get("word_length"))
+                                    m.get("word_length"), bool(m.get("assignments", True)),
+                                    tuple(tuple(e) for e in m.get("assign_exclusions", ())))
 
     def __repr__(self):
         return (f"Catalogue(DISCUS_SUITE {self.engine['version']} @ {self.engine['commit'][:7]}: "
@@ -175,45 +212,81 @@ class Catalogue:
                 return cmd.name[:k]
         return None
 
+    def _is_assignment(self, menu: Menu, line: str, word: str) -> bool:
+        """``x = y`` lines go to ``do_math`` unless the command is one the menu exempts
+        (``echo``, ``system``, ``help``, KUPLOT's ``tit1``...) or the line contains ``==``."""
+        if not menu.assignments or "=" not in line or "==" in line:
+            return False
+        if menu.word_length:
+            word = word[: menu.word_length]
+        return not any(str_comp(word, n, m, lb) for n, m, lb in menu.assign_exclusions)
+
     def walk(self, text: str, start: str = "suite"):
         """Follow a macro line by line, tracking the menu the engine is in.
 
-        Yields one :class:`Step` per non-blank line. Unknown commands are reported as
-        ``kind="unknown"`` and do not change the menu. Control flow (``do``/``if``) is not
-        executed; every line is read once, in order."""
+        Yields one :class:`Step` per logical line, as ``lib_f90`` reads it: lines ending in
+        ``&`` are joined, leading blanks dropped, ``#``/``!`` comments removed outside quotes,
+        and the command word ends at the first blank or tab. ``do``/``if`` blocks are
+        recognised only at a program's top level, as in the engine. Blocks and ``@macro``
+        calls are not executed: every line is read once, in order. Unknown commands are
+        ``kind="unknown"`` and do not change the menu; lines after the final ``exit`` at the
+        suite level are ``kind="after_end"``."""
         stack = [start]
-        for number, raw in enumerate(text.splitlines(), start=1):
-            line = raw.strip()
-            if not line:
-                continue
+        depth = 0  # open do/if blocks
+        ended = False
+        for number, line in _logical_lines(text):
             menu = stack[-1]
+            if ended:
+                yield Step(number, line, menu, "after_end")
+                continue
             if line[0] in "#!":
                 yield Step(number, line, menu, "comment")
                 continue
-            if line.startswith("@"):
-                yield Step(number, line, menu, "macro")
+            line = _remove_comment(line)
+            if not line:
+                yield Step(number, line, menu, "comment")
                 continue
-            word = line.split()[0].split(",")[0]
-            lowered = word.lower()
-            if lowered in CONTROL_WORDS:
-                yield Step(number, line, menu, "control", lowered)
-                continue
-            if "=" in line and lowered not in ("echo", "system", "help", "?"):
+            m = self.menus[menu]
+            if menu in PROGRAM_LEVELS or depth:
+                if line[:3] == "do " or line[:2] == "if":
+                    depth += 1
+                    yield Step(number, line, menu, "control", line.split("(")[0].split()[0])
+                    continue
+                if depth:
+                    compact = line.replace(" ", "")
+                    if compact.startswith(("enddo", "endif")):
+                        depth -= 1
+                        yield Step(number, line, menu, "control", compact[:5])
+                        continue
+                    if compact.startswith(("else", "break")):
+                        yield Step(number, line, menu, "control", "elseif" if compact.startswith("elseif")
+                                   else compact[:4] if compact.startswith("else") else "break")
+                        continue
+            word = line.split()[0]
+            one_shot = menu in ONE_SHOT_MENUS
+            if self._is_assignment(m, line, word):
                 yield Step(number, line, menu, "assignment")
-                continue
-            cmd = self.resolve(menu, word)
-            if cmd is None:
-                yield Step(number, line, menu, "unknown")
-                continue
-            yield Step(number, line, menu, "command", cmd.name, cmd.menu)
-            if cmd.name == "exit":
-                if len(stack) > 1:
-                    stack.pop()
-                continue
-            if menu in ONE_SHOT_MENUS:
+            elif line.startswith("@"):
+                yield Step(number, line, menu, "macro")
+            else:
+                cmd = self.resolve(menu, word)
+                if cmd is None:
+                    yield Step(number, line, menu, "unknown")
+                else:
+                    yield Step(number, line, menu, "command", cmd.name, cmd.menu)
+                    if cmd.name == "exit":
+                        if len(stack) > 1:
+                            stack.pop()
+                        else:
+                            ended = True
+                        continue
+                    if one_shot:
+                        stack.pop()
+                        one_shot = False
+                    if cmd.enters and cmd.enters in self.menus and self._opens(cmd, line):
+                        stack.append(cmd.enters)
+            if one_shot:  # read leaves after any non-comment line, whatever happened to it
                 stack.pop()
-            if cmd.enters and cmd.enters in self.menus and self._opens(cmd, line):
-                stack.append(cmd.enters)
 
     @staticmethod
     def _opens(cmd: Command, line: str) -> bool:

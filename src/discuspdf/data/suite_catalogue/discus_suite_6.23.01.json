@@ -20,6 +20,8 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": null,
+   "assign_exclusions": [],
+   "assignments": false,
    "commands": [
     {
      "name": "cd",
@@ -649,6 +651,34 @@
    ],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "fput",
+     2,
+     4
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "exit",
@@ -1223,6 +1253,34 @@
    ],
    "inherits_first": [],
    "word_length": 14,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "fput",
+     2,
+     4
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "allocate",
@@ -5110,6 +5168,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 6,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "exit",
@@ -5191,6 +5272,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 13,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "apply_symmetry",
@@ -5662,6 +5766,8 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": null,
+   "assign_exclusions": [],
+   "assignments": false,
    "commands": [
     {
      "name": "asym",
@@ -6039,6 +6145,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -6305,6 +6434,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -6545,6 +6697,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -6773,6 +6948,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 10,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "abscissa",
@@ -7374,6 +7572,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 11,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "asym",
@@ -7648,6 +7869,29 @@
     "discus/common"
    ],
    "word_length": 11,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "back",
@@ -7966,6 +8210,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 10,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "reset",
@@ -8539,6 +8806,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "adp",
@@ -8911,6 +9201,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 10,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "abscissa",
@@ -9512,6 +9825,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 10,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -9889,6 +10225,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -10264,6 +10623,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 10,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "abscissa",
@@ -10865,6 +11247,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 10,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -11293,6 +11698,29 @@
     "discus/common"
    ],
    "word_length": 6,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "reset",
@@ -11409,6 +11837,29 @@
    ],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -12004,6 +12455,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "asym",
@@ -12506,6 +12980,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -12659,6 +13156,8 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [],
+   "assignments": false,
    "commands": [
     {
      "name": "echo",
@@ -12894,6 +13393,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -13283,6 +13805,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "asym",
@@ -13600,6 +14145,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     4
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "asym",
@@ -14058,6 +14626,29 @@
    ],
    "inherits_first": [],
    "word_length": 12,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "average",
@@ -14480,6 +15071,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -14630,6 +15244,29 @@
     "discus/common"
    ],
    "word_length": 11,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "exit",
@@ -14816,6 +15453,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -15004,6 +15664,29 @@
     "discus/common"
    ],
    "word_length": 11,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "reset",
@@ -15406,6 +16089,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "asym",
@@ -16035,6 +16741,29 @@
    ],
    "inherits_first": [],
    "word_length": 6,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "reset",
@@ -16138,6 +16867,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 10,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "asym",
@@ -16657,6 +17409,64 @@
    ],
    "inherits_first": [],
    "word_length": 4,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "achx",
+     2,
+     4
+    ],
+    [
+     "achy",
+     2,
+     4
+    ],
+    [
+     "tit1",
+     2,
+     4
+    ],
+    [
+     "tit2",
+     2,
+     4
+    ],
+    [
+     "sleg",
+     2,
+     4
+    ],
+    [
+     "sann",
+     2,
+     4
+    ],
+    [
+     "fput",
+     2,
+     4
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "exit",
@@ -18644,6 +19454,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 8,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -18912,6 +19745,29 @@
     "kuplot/common"
    ],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "reset",
@@ -19035,6 +19891,8 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": null,
+   "assign_exclusions": [],
+   "assignments": false,
    "commands": [
     {
      "name": "continue",
@@ -19216,6 +20074,29 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 11,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "continue",
@@ -19671,6 +20552,8 @@
    "inherits": [],
    "inherits_first": [],
    "word_length": 11,
+   "assign_exclusions": [],
+   "assignments": false,
    "commands": [
     {
      "name": "run",
@@ -19830,6 +20713,34 @@
    ],
    "inherits_first": [],
    "word_length": 4,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "syst",
+     2,
+     4
+    ],
+    [
+     "par",
+     2,
+     3
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     1,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "exit",
@@ -20030,6 +20941,34 @@
    ],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "fput",
+     2,
+     4
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "exit",
@@ -20357,6 +21296,34 @@
    ],
    "inherits_first": [],
    "word_length": 9,
+   "assign_exclusions": [
+    [
+     "echo",
+     2,
+     4
+    ],
+    [
+     "system",
+     2,
+     6
+    ],
+    [
+     "fput",
+     2,
+     4
+    ],
+    [
+     "help",
+     2,
+     4
+    ],
+    [
+     "?",
+     2,
+     4
+    ]
+   ],
+   "assignments": true,
    "commands": [
     {
      "name": "exit",

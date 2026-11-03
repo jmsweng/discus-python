@@ -33,7 +33,7 @@ _CMD_DECL = re.compile(r"^\s*character\s*\(\s*(?:len\s*=\s*)?(\d+)\s*\)(?:\s*,[^
 _LBEF_CAP = re.compile(r"\blbef\s*=\s*min\s*\(\s*indxb\s*-\s*1\s*,\s*(\d+)\s*\)", re.I)
 _ROUTINE_START = re.compile(
     r"^\s*(?:(?:recursive|pure|elemental|module|impure)\s+)*"
-    r"(?:(?:integer|logical|real|character(?:\s*\([^)]*\))?|double\s+precision)\s+)?"
+    r"(?:(?:integer|logical|real|complex|character|double\s+precision|type)(?:\s*\([^)]*\))?\s+)?"
     r"(subroutine|function)\s+(\w+)", re.I
 )
 _ROUTINE_END = re.compile(r"^\s*end\s*(subroutine|function)\b", re.I)
@@ -87,6 +87,7 @@ class Routine:
     keywords: dict = field(default_factory=dict)  # keyword tests outside any command branch
     help_paths: list = field(default_factory=list)  # literal prefixes passed to do_hel
     word_length: int | None = None  # longest command word the dispatcher sees
+    assign_exclusions: list = field(default_factory=list)  # (name, min, len) not treated as "x = y"
     fallback_calls: dict = field(default_factory=dict)  # callee -> first line it is called
     early_return: bool = False  # a RETURN before the prompt is changed (menu may not open)
     if_depth: int = 0
@@ -117,8 +118,9 @@ def logical_lines(path: Path) -> list[Logical]:
         stripped = text.lstrip()
         if pending is not None:
             if stripped.startswith("&"):
-                stripped = stripped[1:]
-            pending.text += " " + stripped
+                pending.text += stripped[1:]  # a leading '&' resumes without a blank
+            else:
+                pending.text += " " + stripped
         else:
             pending = Logical(number, text)
         if pending.text.rstrip().endswith("&"):
@@ -193,6 +195,12 @@ def scan_file(path: Path, root: Path) -> list[Routine]:
             and re.search(r"\.not\.\s*\(?\s*$", text[: m.start()], re.I)
             for m in matches
         )
+        if guard_line and "indxg" in text.lower():
+            for m in matches:
+                if re.sub(r"\s+", "", m.group(1)).lower() in COMMAND_VARIABLES:
+                    entry = (m.group(2).strip(), int(m.group(3)), int(m.group(4)) if m.group(4) else None)
+                    if entry not in routine.assign_exclusions:
+                        routine.assign_exclusions.append(entry)
         for m in ([] if guard_line else matches):
             var = re.sub(r"\s+", "", m.group(1)).lower()
             word, minimum = m.group(2).strip(), int(m.group(3))

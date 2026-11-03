@@ -61,9 +61,21 @@ These rules are implemented in `str_comp` and `Catalogue.resolve`, and checked b
 - **Fall-through**: an unknown word goes to the routines in `inherits`. A few menus (`exp2pdf`,
   `period`, `super`, `symm`, KUPLOT `adt`) ask `discus_kdo_common` / `kuplot_kdo_common`
   first (`inherits_first`), so that routine's `exit` and `show` take precedence there.
-- **Menus**: `exit` returns to the parent menu. `read` handles one command and returns,
-  which is why `read` / `cell x.cll` needs no `exit`. In a macro, every other menu reads until
-  `exit`.
+- **Lines** (`lib_f90`): lines ending in `&` are joined to the next one, leading blanks are
+  dropped, and `#`/`!` start a comment outside quotes. The command word ends at the first
+  blank or tab, so `run,` is not `run`.
+- **Assignments**: a line with `=` (but not `==`) goes to `do_math` rather than to a command.
+  Each menu exempts a few commands (`echo`, `system`, `help`, `?`; DISCUS and REFINE add
+  `fput`, KUPLOT `tit1`/`tit2`/`achx`/`achy`/`sleg`/`sann`). These are matched with `str_comp`,
+  so `ech a=b` is still `echo`. The `read` and `ksave` menus do no assignments.
+- **Blocks**: `do`/`if` blocks are recognised only at a program's top level (`suite`,
+  `discus`, `kuplot`, `refine`, `diffev`, `mixscat`). Inside a sub-menu, a `do ...=...` line
+  is an assignment and fails.
+- **Menus**: `exit` returns to the parent menu, and at the suite level it ends the run.
+  `read` handles one line, whatever it is, and returns, which is why `read` / `cell x.cll`
+  needs no `exit`. In a macro, every other menu reads until `exit`; after an error inside a
+  macro the sub-menu returns to its caller (e.g. `ier_num = -10`, `fourier.f90:1027`) and the
+  macro stops.
 - **Conditional entry** (`enters_when`, verified in the source):
   - `save <file>` writes at once, and only a bare `save` opens the save menu.
   - `insert` opens its menu only for `domain`, `molecule` or `object`.

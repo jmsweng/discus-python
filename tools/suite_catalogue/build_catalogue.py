@@ -180,6 +180,9 @@ def build(root: Path, version: str, commit: str, label: str) -> dict:
                 "inherits_first": sorted(FALLBACKS[c] for c, ln in routine.fallback_calls.items()
                                          if c in FALLBACKS and routine.branches and ln < routine.branches[0].line),
                 "word_length": routine.word_length,
+                # commands whose lines may contain '=' without being an assignment (the indxg guard)
+                "assign_exclusions": [list(e) for e in routine.assign_exclusions],
+                "assignments": "do_math" in routine.calls,
                 "commands": []}
         menus[path] = menu
         names = set()

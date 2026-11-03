@@ -145,3 +145,55 @@ def test_bundled_catalogue_matches_a_fresh_build(cat, tmp_path):
                     os.environ["DIFFUSECODE_SRC"], str(out), "--version", cat.engine["version"],
                     "--commit", cat.engine["commit"], "--label", cat.engine["label"]], check=True)
     assert json.loads(out.read_text()) == cat.data
+
+
+def _kinds(cat, macro, start="suite"):
+    return [(s.menu, s.kind, s.command) for s in cat.walk(macro, start)]
+
+
+def test_assignment_rules_follow_the_engine(cat):
+    # trailing comment is removed first, so 'fourier # a=b' is the fourier command
+    assert _kinds(cat, "fourier # a=b\nrun\n", "discus")[1] == ("discus/fourier", "command", "run")
+    # '==' lines are never assignments
+    assert _kinds(cat, "show a==b\n", "discus")[0][1] == "command"
+    # exemptions use str_comp: 'ech a=b' is echo
+    assert _kinds(cat, "ech a=b\n", "discus")[0][2] == "echo"
+    # per-menu exemptions: KUPLOT titles may contain '='
+    assert _kinds(cat, "tit1 a=b\n", "kuplot")[0][1] == "command"
+    assert _kinds(cat, "tit1 a=b\n", "discus")[0][1] == "assignment"
+    # the read menu has no do_math: 'x=1' there is just an unknown line (and read is left)
+    assert _kinds(cat, "read\nx=1\nfourier\n", "discus")[1:] == [
+        ("discus/read", "unknown", None), ("discus", "command", "fourier")]
+
+
+def test_command_word_ends_at_blank_only(cat):
+    # get_cmd splits at a blank or tab, so 'run,' is not 'run'
+    assert _kinds(cat, "run,\n", "discus/fourier")[0][1] == "unknown"
+    assert _kinds(cat, "run\tx\n", "discus/fourier")[0][2] == "run"
+
+
+def test_blocks_only_at_program_level(cat):
+    assert _kinds(cat, "do i[1]=1,3\nfourier\nrun\nexit\nenddo\n", "discus") == [
+        ("discus", "control", "do"), ("discus", "command", "fourier"), ("discus/fourier", "command", "run"),
+        ("discus/fourier", "command", "exit"), ("discus", "control", "enddo")]
+    assert _kinds(cat, "if(a>b) then\nend if\n", "discus")[1][1] == "control"
+    # inside a sub-menu a 'do' line is an assignment (do_math), not a loop
+    assert _kinds(cat, "do i[1]=1,3\n", "discus/fourier")[0][1] == "assignment"
+
+
+def test_continuation_lines_are_joined(cat):
+    steps = list(cat.walk("discus\nfour&\nier\nrun\n"))
+    assert [(s.line, s.command) for s in steps] == [(1, "discus"), (2, "fourier"), (4, "run")]
+
+
+def test_read_is_left_after_any_line(cat):
+    assert _kinds(cat, "read\nfoo\ninsert mol\n", "discus")[-1] == ("discus", "command", "insert")
+
+
+def test_lines_after_final_exit(cat):
+    assert _kinds(cat, "exit\ndiscus\n")[-1] == ("suite", "after_end", None)
+
+
+def test_compare_len_and_longer_words(cat):
+    assert cat.resolve("discus/fourier", "run").name == "run"
+    assert cat.resolve("discus/fourier", "runx") is None  # branch 'run ' with length 4
