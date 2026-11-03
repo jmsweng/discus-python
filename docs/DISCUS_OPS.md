@@ -90,3 +90,27 @@ These wrappers are at the *engine-ran* level of [the catalogue's verification le
 
 No pre-registered physics check is planned for these steps: they generate models, they don't
 compute scattering.
+
+## Phase 2b: stacking faults, domains and the engine's correlation analysis
+
+| API | DISCUS menu | Notes (source facts in the linked pages) |
+|---|---|---|
+| `discus_stack.Stacking(layers, correlation, translations, modulus, number, first, average, …)` | `stack` … `create`, `run` | A `CrystalBuilder`: the job builds the crystal instead of reading one. Layer types are `.stru` files. Row i of `correlation` is P(next layer type \| previous i). `create` makes the layer origins and `run` the atoms, so the result is read back as one box. For close packing, give the straight average `(0, 0, 1/3)`. [`DISCUS_STACK_FACTS.md`](DISCUS_STACK_FACTS.md) |
+| `discus_domain.Domains(content, inputfile, name, character, shape, orient, fuzzy=2.55)` | `domain` (pseudo-atom mode) | Inserts content atoms inside a shape around each pseudo atom. Host atoms within `fuzzy` Å of an inserted atom become vacancies. The result is not whole unit cells, so use `StructureJob(..., readback="box")`. [`DISCUS_DOMAIN_FACTS.md`](DISCUS_DOMAIN_FACTS.md) |
+| `discus_chem.ChemAnalysis(vectors, neighbourhoods, calculations)`, `run_chem(job, runner, inputs)` | `chem` … `corr occ` / `corr disp` | Returns DISCUS's own correlation values, parsed from the log. The parser is checked on the committed Package C probe logs. DISCUS 6.23.01 aborts at exit (code 134) after `corr occ`; `run_chem` keeps the printed results and sets `engine_crashed_at_exit`. |
+
+`StructureJob(readback=…)`:
+
+- `"cells"` (default): a `Structure` of whole unit cells.
+- `"box"`: one periodic box, through `discus_ops.read_box`. For a `CrystalBuilder` the box size is DISCUS's own estimate from the atom extents.
+- `"none"`: only the run.
+
+Live checks: `tests/test_discus_stack_domain_chem_live.py` (opt-in, `DISCUS_LIVE=1`). It covers:
+
+- an ABAB stack;
+- fcc ABC without faults;
+- a Markov fcc sequence with reversed steps, and that the same seed gives the same file;
+- a sphere domain: inserted Ag count equal to the vacancy count;
+- no removal with `fuzzy = 0`;
+- seed independence of a domain with no size spread;
+- `chem corr occ` on a random alloy.
