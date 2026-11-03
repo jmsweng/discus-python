@@ -121,8 +121,12 @@ def preview_factors(cfg: dict, species, radiation: str):
     from ..atom_names import atomic_number, discus_atom_name, element_of
     from ..reference_scattering import ScatteringFactors
     from .runs import scattering_lengths_for
+    from .model import ModelError
     names = sorted({str(s) for s in species})
     real = [s for s in names if s.upper() != "VOID"]
+    unreadable = [s for s in real if element_of(s) is None]
+    if unreadable:
+        raise ModelError(f"atom name(s) {unreadable} are not elements DISCUS can read; no scattering factor")
     if radiation == "neutron":
         own = scattering_lengths_for(cfg, real, "neutron")
         table = {s: own.get(s.upper(), discus_atom_name(s).b) for s in real}

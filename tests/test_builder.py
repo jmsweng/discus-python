@@ -166,3 +166,54 @@ def test_site_rotation_cartesian():
     assert np.allclose(R6 @ R6.T, np.eye(3)) and np.isclose(np.trace(R6), 2.0)
     with pytest.raises(ModelError, match="does not fit"):
         site_rotation({"label": "S", "sym": "x-y,x,z"}, A)                   # not a symmetry of a cube
+
+
+def test_volume_outputs_all_formats(tmp_path):
+    """write_volume_outputs with every format on: diffuse volume and its 3D-ΔPDF on a small commensurate grid."""
+    pytest.importorskip("h5py")
+    from discuspdf import Lattice, ReciprocalGrid, ScatteringVolume
+    from discuspdf.builder.outputs import write_volume_outputs
+    grid = ReciprocalGrid.centered(Lattice.from_parameters(4, 4, 4, 90, 90, 90), (9, 9, 9), (0.25, 0.25, 0.25))
+    h, k, l = np.meshgrid(*grid.hkl_axes(), indexing="ij")
+    I = 1.0 + np.cos(2 * np.pi * h) * np.cos(2 * np.pi * k) * np.cos(2 * np.pi * l)
+    vol = ScatteringVolume(grid, I, units="test", bragg="bragg_subtracted")
+    fmts = {k: True for k in EXPORT_DEFAULTS}
+    write_volume_outputs(vol, tmp_path, "diffuse", fmts, lambda m: None, delta_pdf=True, real_name="3D-ΔPDF",
+                         real_quantity="delta_pdf")
+    names = {p.name for p in tmp_path.iterdir()}
+    assert {"diffuse.h5", "diffuse.npz", "diffuse_slices.png", "delta_pdf.h5", "delta_pdf.npz", "delta_pdf.vts",
+            "delta_pdf_slices.png"} <= names
+    back = ScatteringVolume.load_hdf5(tmp_path / "diffuse.h5")
+    assert np.array_equal(back.intensity, I)
+    import h5py
+    with h5py.File(tmp_path / "delta_pdf.h5") as f:
+        assert f["values"].shape == (9, 9, 9) and f.attrs["quantity"] == "delta_pdf"
+        assert np.allclose(np.load(tmp_path / "delta_pdf.npz")["values"], f["values"][()])
+    none = {k: False for k in EXPORT_DEFAULTS}
+    out2 = tmp_path / "none"
+    out2.mkdir()
+    write_volume_outputs(vol, out2, "diffuse", none, lambda m: None, delta_pdf=True, real_name="x",
+                         real_quantity="delta_pdf")
+    assert not list(out2.iterdir())
+
+
+def test_contact_rules_read_names_like_discus():
+    """Intended change from engine 1.0: rules follow DISCUS's reading of the name, so an "H" rule covers D-labels
+    such as "D1" (engine 1.0 read "D1" as nothing), and VOID is never an element."""
+    from discuspdf.builder.ordering import _rule_hits
+    assert _rule_hits("H", "D") and _rule_hits("H", "D1") and _rule_hits("Ni", "Ni62")
+    assert not _rule_hits("V", "VOID") and _rule_hits("any", "VOID")
+    assert _rule_hits("F", "FMX") and not _rule_hits("Fm", "FMX")      # DISCUS reads FMX as F (no Fm entry)
+
+
+def test_preview_refuses_unreadable_names():
+    from discuspdf.builder.outputs import preview_factors
+    with pytest.raises(ModelError, match="not elements"):
+        preview_factors({}, ["Ni", "XX"], "neutron")
+
+
+def test_main_reports_model_errors_without_traceback(tmp_path):
+    cfg = load_model(FIX / "cuau_asis.json")
+    cfg["sites"][0]["occupants"][0]["p"] = 0.1          # probabilities no longer sum to 1
+    with pytest.raises(SystemExit, match="ModelError: site .* sum to"):
+        main(["--dry-run", "--out", str(tmp_path / "x")], model=cfg)

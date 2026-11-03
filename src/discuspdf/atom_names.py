@@ -2,8 +2,9 @@
 
 DISCUS identifies an atom by its name (up to 4 characters, case ignored). It has a table of names it knows
 (:data:`DISCUS_NAMES`: elements, ions such as ``FE3+`` or ``O2-``, ``D`` for deuterium, ``H.``/``C.``/``SI.``).
-Any other name is guessed (``lib_f90`` ``guess_element``): the name up to a ``+``/``-`` sign, then its first two
-letters, then its first letter. So ``Ni62`` and ``C1`` are labels that scatter as Ni and C unless they are
+Any other name is guessed (``lib_f90`` ``guess_element``): the name up to a ``+``/``-`` sign at its 3rd or 4th
+character, then its first two characters, then its first character. Names are compared upper case and
+truncated to 4 characters, as DISCUS stores them. So ``Ni62`` and ``C1`` are labels that scatter as Ni and C unless they are
 given a scattering length of their own (:class:`~discuspdf.FourierConfig` and :class:`~discuspdf.PDFConfig`
 ``scattering_lengths``).
 
@@ -44,8 +45,9 @@ def _title(s: str) -> str:
 def discus_atom_name(name) -> AtomName | None:
     """The table entry DISCUS uses for ``name``, or ``None`` if it cannot read the name at all."""
     up = str(name if name is not None else "").strip().upper()
-    if not up:
+    if not up or any(c.isspace() for c in up):
         return None
+    up = up[:4]                      # DISCUS keeps atom names to 4 characters
     if up in DISCUS_NAMES:
         el, b = DISCUS_NAMES[up]
         return AtomName(up, True, up, _title(el), b)

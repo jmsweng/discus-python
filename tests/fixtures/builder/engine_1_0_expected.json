@@ -448,6 +448,131 @@
     },
     "formula": "<bound method Structure.formula of Structure(n=94, formula=Cl8C43Br43, model='configuration', supercell=(np.int64(3), np.int64(3), np.int64(3)), a=18 \u00c5, b=18 \u00c5, c=18 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
    }
+  },
+  "cuau_wrapsigma": {
+   "supercell.stru": "c6b213a8a8719f25aa21ae79897a5faa3a62f6fd8670e0585f673ca66ba7105d",
+   "supercell.xyz": "eca3855c9aa841a35680aa6dc9ce678c863516cc6102b524c8ba2c1683dbf572",
+   "summary": {
+    "atoms_per_cell": 4,
+    "slots_per_site": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "n_rows": 2048,
+    "n_void": 0,
+    "n_molecules": 0,
+    "occupant_counts": {
+     "M1": {
+      "atom:Au": 128,
+      "atom:Cu": 384
+     },
+     "M2": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     },
+     "M3": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     },
+     "M4": {
+      "atom:Cu": 384,
+      "atom:Au": 128
+     }
+    },
+    "correlations": {},
+    "seed": 1234,
+    "clashes": {
+     "threshold": 0.8,
+     "n_close_pairs": 38,
+     "shortest": 0.3061723314946324,
+     "examples": [
+      [
+       103,
+       134
+      ],
+      [
+       129,
+       1927
+      ],
+      [
+       156,
+       1919
+      ],
+      [
+       189,
+       191
+      ],
+      [
+       194,
+       195
+      ],
+      [
+       211,
+       465
+      ],
+      [
+       216,
+       218
+      ],
+      [
+       242,
+       496
+      ],
+      [
+       248,
+       251
+      ],
+      [
+       266,
+       491
+      ],
+      [
+       277,
+       279
+      ],
+      [
+       284,
+       285
+      ],
+      [
+       414,
+       415
+      ],
+      [
+       478,
+       732
+      ],
+      [
+       501,
+       502
+      ],
+      [
+       532,
+       757
+      ],
+      [
+       593,
+       624
+      ],
+      [
+       661,
+       692
+      ],
+      [
+       768,
+       797
+      ],
+      [
+       807,
+       838
+      ]
+     ]
+    },
+    "formula": "<bound method Structure.formula of Structure(n=2048, formula=Au512Cu1536, model='configuration', supercell=(np.int64(8), np.int64(8), np.int64(8)), a=30 \u00c5, b=30 \u00c5, c=30 \u00c5, alpha=90\u00b0, beta=90\u00b0, gamma=90\u00b0)>"
+   }
   }
- }
+ },
+ "note": "cuau_wrapsigma: engine 1.0 wrote this through its format_stru fallback (read-back order check refused it)"
 }

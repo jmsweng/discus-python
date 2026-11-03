@@ -75,11 +75,24 @@ letters, then the first letter. The table is generated from DiffuseCode `lib_f90
 
 The code was moved from the builder's self-contained `engine.py` (builder @ 92fe94e) without changing what it
 computes. For the same model and seed, `supercell.stru`, `supercell.xyz`, the summary, every staged 3D and mmc
-macro and every staged structure file are byte-identical to engine 1.0. This was checked for all 19 parity
-models: every builder example in three calculation variants, and a coverage model with VOID padding,
-displacements, site symmetry and a centre-of-mass anchor. `tests/test_builder.py` pins five of them. The 1D PDF
+macro and every staged structure file are byte-identical to engine 1.0. This was checked for all 20 parity
+models: every builder example in three calculation variants, a coverage model with VOID padding,
+displacements, site symmetry and a centre-of-mass anchor, and an atom-only model with `wrap` and σ = 0.6 Å.
+`tests/test_builder.py` pins six of them. The 1D PDF
 macro differs only in the staged file name (`stru model.stru` instead of `stru supercell.stru`).
 
-Changes: the default result files (above); the `--numpy-preview` uses `reference_scattering` with real
-scattering factors (neutron b from DISCUS's table, X-ray f₀ from `xraydb` when installed, else f = Z) instead
-of f = Z; and the run log now ends with its "Done" line.
+Changes from engine 1.0, all intended:
+
+* **Default result files** are the ones in the table above. Engine 1.0 always wrote `.npz` and `.vts` files.
+* **`--numpy-preview`** uses `reference_scattering` with real scattering factors: neutron b from DISCUS's table,
+  X-ray f₀ from `xraydb` when it is installed, else f = Z. It computes |F − ⟨F⟩|², which agrees with engine
+  1.0's |F|² − |⟨F⟩|² to 4e-12 on commensurate planes and stays correct, non-negative, on others.
+* **Atom names are read as DISCUS reads them** (`atom_names`), in contact rules and in the centre-of-mass anchor.
+  For example, an `H` rule now also covers labels such as `D1`, which DISCUS reads as deuterium. `VOID` and
+  DISCUS's special names are never elements, and `FM` is read as F (DISCUS has no Fm entry). Engine 1.0 used
+  its own element list there. This changes the structure only for models that use such labels.
+* **The structure is always written with `write_stru(check_order=False, min_separation=None)`.** Engine 1.0
+  used the same text through a `format_stru` fallback whenever the read-back refused wrapped coordinates or
+  large displacements; the files are byte-identical (fixture `cuau_wrapsigma`).
+* **Errors in an exported script** end with a one-line message instead of a traceback.
+* **The run log** now ends with its "Done" line.

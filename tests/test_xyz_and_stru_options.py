@@ -84,3 +84,13 @@ def test_parse_stru_options_only_relax_what_they_name(tmp_path):
         parse_stru(text, check_order=False)
     with pytest.raises(DiscusFormatError):           # overlap relaxed, order check still on
         parse_stru(text, min_separation=None)
+
+
+def test_failed_write_keeps_existing_file(tmp_path):
+    good = _crystal()
+    p = write_stru(tmp_path / "s.stru", good)
+    before = p.read_bytes()
+    with pytest.raises((DiscusFormatError, ValueError)):
+        write_stru(p, _molecule_like(), overwrite=True)
+    assert p.read_bytes() == before
+    assert sorted(x.name for x in tmp_path.iterdir()) == ["s.stru"]   # no temp file left

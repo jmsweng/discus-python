@@ -73,3 +73,8 @@ def test_mass_number(name, a):
 def test_isotope_label():
     assert is_isotope_label("Ni62") and is_isotope_label("C13")
     assert not is_isotope_label("D") and not is_isotope_label("Ni") and not is_isotope_label("C1")
+
+
+def test_long_names_truncated_and_spaces_refused():
+    assert discus_atom_name("Ni62x").name == "NI62"      # DISCUS keeps 4 characters
+    assert discus_atom_name("N i") is None

@@ -1000,20 +1000,16 @@ def write_stru(
     read-back still compares species, coordinates, B and cell assignment row by row.
     """
     target = Path(path)
+    if target.exists() and not overwrite:
+        raise FileExistsError(f"refusing to overwrite existing file: {target}")
     text = format_stru(obj, title=title, spacegroup=spacegroup)
-    # Write atomically (refuses existing unless overwrite; temp file + os.replace).
-    tmp = atomic_write_text(target, text, overwrite=overwrite)
-    # Read back and verify agreement with the input.
-    try:
-        written = parse_stru(tmp.read_text(encoding="ascii"), source=str(tmp),
-                             check_order=check_order, min_separation=min_separation)
-    except Exception:
-        tmp.unlink()
-        raise
+    # Parse the exact text back and verify it before anything is written, so a failed check never
+    # touches an existing file; then write atomically (temp file + os.replace).
+    written = parse_stru(text, source=str(target), check_order=check_order, min_separation=min_separation)
     ref = obj if isinstance(obj, DiscusStru) else obj
     if not _stru_roundtrip_agrees(ref, written):
-        tmp.unlink()
         raise ValueError("written .stru does not round-trip to the input")
+    atomic_write_text(target, text, overwrite=overwrite)
     return target
 
 

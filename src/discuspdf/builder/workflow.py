@@ -22,7 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .model import VOID, export_formats, load_model
+from .model import VOID, ModelError, export_formats, load_model
 
 ENGINE_VERSION = "2.0"   # 1.0 was the builder's self-contained engine.py
 
@@ -66,7 +66,7 @@ def run(model, *, out=None, seed=None, launcher=None, dry_run=False, structure_o
     mc = cfg.get("mmc") or {}
     if mc.get("enabled"):
         if info["n_molecules"]:
-            raise ValueError("DISCUS mmc is only offered for atom-only models (molecules would be torn apart)")
+            raise ModelError("DISCUS mmc is only offered for atom-only models (molecules would be torn apart)")
         from ..mc import MCRunner
         mcc = runs.build_mc_config(mc, runs.seed8_from(rng_discus))
         for c in mcc.cautions():
@@ -84,10 +84,10 @@ def run(model, *, out=None, seed=None, launcher=None, dry_run=False, structure_o
 
     stru_path = out / "supercell.stru"
     title = " ".join(str(cfg.get("title", "model")).split())[:60] or "model"
-    # molecules in several orientations and VOID padding on top of real atoms: rows stay cell-major, but
-    # the read-back can neither infer cells from positions nor require a minimum separation
-    write_stru(stru_path, structure, title=title, overwrite=True,
-               check_order=not info["n_molecules"], min_separation=None)
+    # Rows are cell-major by construction (cell_index); the read-back cannot infer cells from positions for
+    # molecules in several orientations, wrapped coordinates or large displacements, nor require a minimum
+    # separation with VOID padding on top of real atoms (engine 1.0 fell back to format_stru for these)
+    write_stru(stru_path, structure, title=title, overwrite=True, check_order=False, min_separation=None)
     write_extxyz(out / "supercell.xyz", structure, mask=~info["is_void"], overwrite=True)
     summary = {k: v for k, v in info.items() if k not in ("molecule_id", "is_void", "unit_lattice")}
     summary.update(seed=seed, clashes=clashes, engine=ENGINE_VERSION, n_rows=int(structure.n_atoms),
@@ -178,8 +178,10 @@ def main(argv=None, *, model=None, description=None) -> int:
     try:
         run(source, out=args.out, seed=args.seed, launcher=args.launcher, dry_run=args.dry_run,
             structure_only=args.structure_only, numpy_preview=args.numpy_preview, overwrite=args.overwrite)
-    except FileExistsError as e:
-        sys.exit(str(e))
+    except (FileExistsError, ValueError) as e:      # ModelError, DiscusFormatError and config errors are ValueErrors
+        sys.exit(f"{type(e).__name__}: {e}")
+    except ModuleNotFoundError as e:
+        sys.exit(f"{e}. Install discus-python with its data extra: pip install \"discuspdf-starter[data] @ git+...\"")
     return 0
 
 
