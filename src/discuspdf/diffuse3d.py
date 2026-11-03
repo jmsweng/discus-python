@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from pathlib import Path
 import hashlib
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -28,17 +27,10 @@ import uuid
 
 import numpy as np
 
-# Definitive engine-failure markers in stdout/stderr.  PGPLOT/X11 noise such as
-# "xdpyinfo: unable to open display" or "pgxwin_server: cannot connect" is
-# harmless for headless macro runs and must NOT be treated as fatal.
-_ENGINE_ERROR_PATTERN = re.compile(
-    r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)"
-    # DISCUS error lines carry a tag such as ***APPL***, ***FOUR***, ***MAC *** (the start-up banner
-    # is a row of bare asterisks and does not match).
-    r"|\*\*\*(?:[A-Z]{3,4} ?)\*\*\*"
-    # DISCUS 6.23.01 nufft: FINUFFT reports 'setpts error (ier=4)', exits 0 and writes zeros.
-    r"|\bFINUFFT\b[^\n]*\berror\b",
-)
+from .engine import current_engine, ENGINE_ERROR_PATTERN, Engine, as_engine
+
+# Definitive engine-failure markers (shared with the other runners; see engine.py).
+_ENGINE_ERROR_PATTERN = ENGINE_ERROR_PATTERN
 
 
 @dataclass(frozen=True)
@@ -160,12 +152,15 @@ class Diffuse3DRunner:
     """
     def __init__(self, runs_directory="runs_3d",
                  launcher=("discus_suite", "-noautorun", "-macro"),
-                 timeout_seconds=3600, output_filename="diffuse.h5"):
+                 timeout_seconds=3600, output_filename="diffuse.h5", *, engine: Engine | None = None):
+        """``engine`` (a :class:`discuspdf.engine.Engine`) replaces ``launcher`` and
+        ``timeout_seconds``."""
         self.runs_directory = Path(runs_directory)
-        self.launcher = tuple(launcher)
-        self.timeout_seconds = timeout_seconds
-        if not self.launcher or timeout_seconds <= 0:
+        if engine is None and (not tuple(launcher) or timeout_seconds <= 0):
             raise ValueError("Invalid launcher or timeout")
+        self.engine = as_engine(engine, launcher, timeout_seconds)
+        self.launcher = self.engine.launcher
+        self.timeout_seconds = self.engine.timeout_seconds
         if (not isinstance(output_filename, str)
                 or output_filename in ("", ".", "..")
                 or Path(output_filename).name != output_filename
@@ -251,27 +246,20 @@ class Diffuse3DRunner:
         if native_nexus and output_spec is not None:
             raise ValueError("Use native_nexus=True OR output_spec, not both")
         self._preflight(run)
-        env = os.environ.copy()
-        env.pop("DISPLAY", None)
-        env["PGPLOT"] = "none"
         self._status(run, "running")
         try:
-            proc = subprocess.run([*self.launcher, "run.mac"], cwd=run.directory,
-                                  input="exit\n", text=True, capture_output=True,
-                                  timeout=self.timeout_seconds, env=env, check=False)
+            proc = current_engine(self).run(run.directory, "run.mac", error_pattern=_ENGINE_ERROR_PATTERN)
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
             self._status(run, "failed", reason=str(exc), engine_started=False)
             raise RuntimeError(f"DISCUS could not complete; see {run.directory}") from exc
 
-        log = proc.stdout + "\n--- STDERR ---\n" + proc.stderr
-        (run.directory / "run.log").write_text(log, encoding="utf-8")
         output = run.output
-        engine_error = _ENGINE_ERROR_PATTERN.search(log)
+        engine_error = proc.engine_error
 
         if proc.returncode != 0 or engine_error:
             self._status(run, "failed", returncode=proc.returncode,
                         reason="Engine error in log, nonzero exit, or missing output",
-                        engine_error=engine_error.group(0) if engine_error else None)
+                        engine_error=engine_error)
             raise RuntimeError(f"DISCUS run failed; inspect {run.directory / 'run.log'}")
 
         if not output.is_file() or output.stat().st_size == 0:

@@ -131,3 +131,10 @@ __all__ += ["reference_scattering", "ScatteringFactors"]
 from . import atom_names
 from .xyz_io import format_extxyz, write_extxyz
 __all__ += ["atom_names", "format_extxyz", "write_extxyz"]
+
+# The whole suite: one engine layer, a checked macro builder, a general runner (suite phase 1).
+from .engine import Engine, EngineChoiceError, choose_engine, fork_reasons
+from .macro import Macro, MacroError
+from .suite_runner import SuiteRun, SuiteRunner
+__all__ += ["Engine", "EngineChoiceError", "choose_engine", "fork_reasons", "Macro", "MacroError",
+            "SuiteRun", "SuiteRunner"]

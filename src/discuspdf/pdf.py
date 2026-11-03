@@ -12,7 +12,7 @@ from typing import Any, Sequence
 import hashlib
 import json
 import math
-import os
+import re
 import shutil
 import subprocess
 import uuid
@@ -20,6 +20,7 @@ import warnings
 
 import numpy as np
 
+from .engine import current_engine, Engine, as_engine
 from .fourier_macro import normalize_scattering_lengths, scat_commands
 
 
@@ -339,21 +340,30 @@ class PDFRun:
         return ax
 
 
+# The 1D runner's engine-error markers (narrower than engine.ENGINE_ERROR_PATTERN; unchanged).
+_PDF_ENGINE_ERROR = re.compile(r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)")
+
+
 class PDFRunner:
     def __init__(
         self,
         runs_directory: Path | str = "runs",
         launcher: Sequence[str] = ("discus_suite", "-noautorun", "-macro"),
         timeout_seconds: int = 3600,
+        *,
+        engine: "Engine | None" = None,
     ) -> None:
-        """launcher is the executable and args preceding 'run.mac'."""
+        """launcher is the executable and args preceding 'run.mac'; ``engine`` (a
+        :class:`discuspdf.engine.Engine`) replaces ``launcher`` and ``timeout_seconds``."""
         self.runs_directory = Path(runs_directory)
-        self.launcher = tuple(str(x) for x in launcher)
-        if not self.launcher:
-            raise ValueError("launcher must not be empty")
-        if timeout_seconds <= 0:
-            raise ValueError("timeout_seconds must be positive")
-        self.timeout_seconds = timeout_seconds
+        if engine is None:
+            if not tuple(launcher):
+                raise ValueError("launcher must not be empty")
+            if timeout_seconds <= 0:
+                raise ValueError("timeout_seconds must be positive")
+        self.engine = as_engine(engine, launcher, timeout_seconds)
+        self.launcher = self.engine.launcher
+        self.timeout_seconds = self.engine.timeout_seconds
 
     def prepare(self, config: PDFConfig) -> PDFRun:
         """Create inspectable files without executing DISCUS."""
@@ -427,29 +437,18 @@ class PDFRunner:
                 preflight_fail(FileExistsError(f"Refusing to overwrite existing output: {existing}; "
                                               "delete it or use a new run directory to rerun"))
 
-        command = [*self.launcher, "run.mac"]
-        env = os.environ.copy()
-        env.pop("DISPLAY", None)
-        env["PGPLOT"] = "none"
-
         status("running")
         try:
-            completed = subprocess.run(
-                command, cwd=prepared.directory, input="exit\n", text=True,
-                capture_output=True, timeout=self.timeout_seconds, check=False, env=env,
-            )
+            completed = current_engine(self).run(prepared.directory, "run.mac", error_pattern=_PDF_ENGINE_ERROR)
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
             status("failed", reason=str(exc), engine_started=False)
             raise RuntimeError(f"DISCUS could not complete; see {prepared.directory}") from exc
 
-        log = completed.stdout + "\n--- STDERR ---\n" + completed.stderr
-        (prepared.directory / "run.log").write_text(log, encoding="utf-8")
-        import re
-        engine_error = re.search(r"(?im)\b(?:unknown command|fatal error|segmentation fault|error\s*:)", log)
+        engine_error = completed.engine_error
         if completed.returncode != 0 or engine_error or not prepared.raw_output.is_file():
             status("failed", returncode=completed.returncode,
                    reason="Engine error, nonzero exit, or missing output",
-                   engine_error=engine_error.group(0) if engine_error else None)
+                   engine_error=engine_error)
             raise RuntimeError(f"DISCUS run failed; inspect {prepared.directory / 'run.log'}")
 
         try:
