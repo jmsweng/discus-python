@@ -23,6 +23,9 @@ reference = ["xraydb>=4.5", "periodictable>=1.7"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+discuspdf = ["data/suite_catalogue/*.json"]
+
 [tool.pytest.ini_options]
 markers = [
     "discus_live: tests that run the real DISCUS 6.23.01 engine (opt-in via DISCUS_LIVE=1)",
