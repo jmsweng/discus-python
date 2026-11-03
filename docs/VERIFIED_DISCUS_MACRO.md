@@ -111,7 +111,7 @@ A `PDFRunner` run leaves two files:
   bit-identical to the numbers DISCUS wrote. Readable with
   `numpy.loadtxt(path, delimiter=",", skiprows=1)`. **Owner's decision (2026-11-02): keep this
   name; do not change it back to `.pdf`.**
-- `result.pdf`: the raw file DISCUS writes (`PDFRun.raw_output`). The macro still says
+- `result.pdf`: the raw file DISCUS writes (`PDFRun.raw_output`). (The archived `examples/run_sample/` keeps only the CSV.) The macro still says
   `outf result.pdf` so it stays byte-identical to the archived runs and probe evidence; DISCUS
   would write any name given there.
 
