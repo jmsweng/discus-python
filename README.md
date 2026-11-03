@@ -48,6 +48,8 @@ Worked examples; except where noted they run on DISCUS output committed to this 
 | [`08_disordered_supercells`](notebooks/08_disordered_supercells.ipynb) | Sampling a configuration from site occupancies, substitution, seeded displacements, composition checks | no |
 | [`09_neighbors_and_short_range_order`](notebooks/09_neighbors_and_short_range_order.ipynb) | Neighbour shells, occupational and displacement SRO, comparison with `chem corr` | no |
 | [`10_monte_carlo_scattering_checks_and_magnetism`](notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb) | Reference F(Q) vs DISCUS, structure views, analysis of an MMC run, magnetic reference | no |
+| [`11_suite_catalogue_macros_and_runner`](notebooks/11_suite_catalogue_macros_and_runner.ipynb) | DISCUS_SUITE command catalogue, macro checker and builder, stock/fork routing, the general `SuiteRunner` (DISCUS and KUPLOT runs), coverage | yes (section 5) |
+| [`12_discus_structure_operations`](notebooks/12_discus_structure_operations.ipynb) | `StructureJob` steps: random substitution, atom edits, vacancies, thermal displacements, displacement and density waves; diffuse hk0 planes of a combined model | yes |
 
 Started from `notebooks/`, they switch to the repository root; elsewhere, adjust the path in the first cell.
 
