@@ -235,6 +235,13 @@ def fork_reasons(macro: str, catalogue=None) -> list[str]:
             off = len(params) == 2 and params[1].upper()[:1] == "O"
             if not off:
                 reasons.append(f"line {step.line}: RMC with lots (fork fixes lot moves and updates)")
+        elif step.menu == "discus/rmc" and name == "set" and params and params[0].upper()[:2] == "AV":
+            # rmc_sup_mod.f90:62-67 ('AV', one value in percent); rmc_calc_scat subtracts the average
+            # with a row loop bounded by nx instead of ny (:2300), fixed on the fork
+            value = _number(params[1]) if len(params) == 2 else None
+            if value is None or value != 0:
+                reasons.append(f"line {step.line}: RMC 'set aver' (fork fixes the average subtraction "
+                               "on planes with nx != ny)")
         elif step.menu == "discus/fourier" and name == "set":
             if _options(params, cmd.optional).get("technique") == "nufft":
                 reasons.append(f"line {step.line}: NUFFT (fork fixes the scaling on non-integer grids)")
