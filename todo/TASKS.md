@@ -15,7 +15,7 @@
 - ✅ Implement `PDFConfig`, inspected macro generation and an isolated `PDFRunner` with per-run inputs, hashes, macro, logs and status. [`src/discuspdf/pdf.py`](../src/discuspdf/pdf.py); [PR #1](https://github.com/jmsweng/discus-python/pull/1).
 - ✅ Expose and validate `qmin`, `qmax`, `dq`, `qsig`, wavelength and real-space grid settings. Ambiguous `qmax=0` is rejected. [`pdf.py`](../src/discuspdf/pdf.py).
 - ✅ Run the exact prepared 1D macro via `execute(prepared)`; validate hashes, engine failure, expected radial sample count and grid before success. [`pdf.py`](../src/discuspdf/pdf.py).
-- ✅ Commit a real GaAs 1D sample consisting of a structure, macro, log and numeric `result.pdf`. [`examples/run_sample/`](../examples/run_sample/).
+- ✅ Commit a real GaAs 1D sample consisting of a structure, macro, log and numeric output (`result.csv` since 2026-11-02, converted from the raw `result.pdf`). [`examples/run_sample/`](../examples/run_sample/).
 - ✅ Add a **locally opt-in** DISCUS-vs-reference 1D regression test. It is skipped in default CI unless `DISCUS_INTEGRATION=1` and the binary is available; the fixture itself is checked in standard CI and was re-run on the engine on 2026-11-02 (P0 item below). [`tests/test_integration_discus.py`](../tests/test_integration_discus.py).
 
 ### 3D infrastructure and FFT prototype

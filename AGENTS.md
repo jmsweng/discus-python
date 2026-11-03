@@ -42,5 +42,6 @@ This is the repository owner's decision (2026-11-02). It has been reverted once 
   raw file. The name is `discuspdf.pdf.PDF_CSV_NAME`, guarded by `tests/test_pdf_csv_output.py`.
 - Do not rename the output, the constant or the test expectations to `.pdf`. If a change seems to
   need that, ask the owner first.
-- `examples/run_sample/` is an archived run from before this change and correctly has only
-  `result.pdf`; leave it as it is.
+- `examples/run_sample/` holds `result.csv` only (converted from that run's raw `result.pdf`, values
+  bit-identical; owner's request 2026-11-02). Do not add `result.pdf` back; `run.mac` and `run.log`
+  still say `outf result.pdf` because that is what DISCUS wrote.

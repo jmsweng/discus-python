@@ -7,7 +7,7 @@ Run locally in the WSL2 environment, e.g.:
 
 It runs the verified 1D PDF macro (docs/VERIFIED_DISCUS_MACRO.md) on the
 committed ``examples/gaas.cll`` sample and compares the produced G(r) to the
-committed reference ``examples/run_sample/result.pdf``, with the parameters recorded in
+committed reference ``examples/run_sample/result.csv``, with the parameters recorded in
 ``examples/run_sample/config.json``, using tolerant metrics:
 same grid, finite values, and a small relative L2 deviation. Tolerances are
 deliberately empirical, not bitwise identity.
@@ -25,12 +25,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from discuspdf import PDFRunner, read_pdf
+from discuspdf import PDFRunner, read_pdf_csv
 
 from tests.test_run_sample_fixture import recorded_config
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-REFERENCE = REPO_ROOT / "examples" / "run_sample" / "result.pdf"
+REFERENCE = REPO_ROOT / "examples" / "run_sample" / "result.csv"
 STRUCTURE = REPO_ROOT / "examples" / "gaas.cll"
 
 # Empirical tolerances for the same engine version and identical settings.
@@ -72,7 +72,7 @@ def test_real_discus_1d_pdf_matches_reference(tmp_path):
     assert (result.directory / "run.log").is_file()
 
     r, gr = result.load()
-    ref_r, ref_gr = read_pdf(REFERENCE)
+    ref_r, ref_gr = read_pdf_csv(REFERENCE)
 
     assert len(r) == len(ref_r) == 601
     assert np.allclose(r, ref_r, rtol=0, atol=GRID_ATOL)
