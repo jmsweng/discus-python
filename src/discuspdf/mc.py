@@ -32,7 +32,8 @@ from .structure import Structure
 
 __all__ = [
     "Vector", "Neighborhood", "OccupationalTarget", "DisplacementTarget", "SpringTarget",
-    "LennardJonesTarget", "Swap", "Shift", "SwapDisplacement", "MCConfig", "MCRunner", "MCRun", "MCResult",
+    "LennardJonesTarget", "RepulsiveTarget", "BuckinghamTarget", "buckingham_minimum",
+    "Swap", "Shift", "SwapDisplacement", "Convergence", "MCConfig", "MCRunner", "MCRun", "MCResult",
     "parse_mmc_log", "match_row", "replica_summary",
 ]
 
@@ -239,7 +240,130 @@ class LennardJonesTarget:
                 f"{_fmt(self.n_rep)}, {_fmt(self.n_att)}")
 
 
-_TARGETS = (OccupationalTarget, DisplacementTarget, SpringTarget, LennardJonesTarget)
+@dataclass(frozen=True)
+class RepulsiveTarget:
+    """``set target, ic, repulsive, A, B, |depth|, b_scale, c, m`` — repulsive pair energy between species ``a``
+    and ``b`` (DISCUS ``mmc_energy_rep``, mmc.f90:8338-8448). A neighbour at distance d (Å) contributes
+    ``-|depth| + (b_scale/(d - c))**m`` for d > c and ``-|depth| + 1e6**m`` otherwise; DISCUS averages over the
+    centre's neighbours. Neighbours whose pair (centre type, neighbour type) has **no** repulsive target still
+    count and contribute ``-|depth_min|``, where depth_min is the smallest |depth| of all repulsive targets of the
+    run (``mmc_rep_low``, mmc.f90:3163: one value for the whole run). Energy only (``ENER``); no feedback."""
+    neighborhood: int
+    a: str
+    b: str
+    depth: float
+    b_scale: float = 1.0
+    c: float = 0.0
+    m: float = 1.0
+
+    def __post_init__(self) -> None:
+        _species(self.a, "a"), _species(self.b, "b")
+        if _finite(self.depth, "depth") == 0:
+            raise ValueError("depth must be finite and non-zero")
+        if _finite(self.b_scale, "b_scale") <= 0:
+            raise ValueError("b_scale must be positive")
+        if _finite(self.c, "c") < 0:
+            raise ValueError("c must be finite and not negative")
+        if _finite(self.m, "m") <= 0:
+            raise ValueError("m must be positive")
+        for name in ("depth", "b_scale", "c", "m"):
+            object.__setattr__(self, name, float(getattr(self, name)))
+
+    mode = "ENER"
+
+    def line(self, ic: int) -> str:
+        return (f"set target, {ic}, repulsive, {self.a}, {self.b}, {_fmt(abs(self.depth))}, {_fmt(self.b_scale)}, "
+                f"{_fmt(self.c)}, {_fmt(self.m)}")
+
+
+def buckingham_minimum(A: float, rho: float, B: float) -> tuple[float, float, float, float]:
+    """DISCUS ``find_bucking`` (mmc.f90:9013-9070) for V(d) = A·exp(−d/rho) − B/d⁶ (d in Å). Returns
+    ``(distance, E_min, rmin, V(rmin))``, i.e. werte(5..8). The search starts at 10 Å with a step of −0.5 Å,
+    descends while V falls, then reverses and halves the step until it is at most 1e-4 Å; the minimum is at
+    last + 2·step. rmin: walk down from the minimum in steps of distance/100 while V rises (mmc.f90:9050-9066).
+    The arithmetic is IEEE float64 as in Fortran (V(0) = -inf for B > 0), so a walk through 0 stops as in DISCUS.
+    Only the walks are guarded (a guard against non-termination, which DISCUS does not have to contend with)."""
+    def value(x: float) -> float:
+        with np.errstate(all="ignore"):
+            return float(np.float64(A) * np.exp(-np.float64(x) / rho) - np.float64(B) / np.float64(x) ** 6)
+
+    budget = [0]
+
+    def tick() -> None:
+        budget[0] += 1
+        if budget[0] > 10_000_000:
+            raise ValueError("buckingham_minimum: the search did not terminate")
+
+    minstep = 1e-4
+    last, step = 10.0, -0.5
+    old = value(last)
+    nxt = last + step
+    while minstep < abs(step):
+        new = value(nxt)
+        while new - old < 0:
+            tick()
+            old, last = new, nxt
+            nxt = last + step
+            new = value(nxt)
+        old, last = new, nxt
+        step = -0.5 * step
+        nxt = last + step
+    dist = last + 2.0 * step
+    e_min = value(dist)
+    last, old, step = dist, e_min, dist / 100.0
+    nxt = last - step
+    new = value(nxt)
+    while new - old > 0:
+        tick()
+        old, last = new, nxt
+        nxt = last - step
+        new = value(nxt)
+    return dist, e_min, last, old
+
+
+@dataclass(frozen=True)
+class BuckinghamTarget:
+    """``set target, ic, bucking, A, B, 0.0, A_, rho, B_`` — Buckingham pair potential V(d) = A·exp(−d/rho) − B/d⁶
+    (DISCUS ``mmc_energy_buck``, mmc.f90:8453-8552). The first number after the species is unused: DISCUS reads
+    A, rho, B from the 2nd to 4th (mmc.f90:2158-2163). DISCUS takes no distance: it finds the minimum of V by a
+    search from 10 Å downward (:func:`buckingham_minimum`, mmc.f90:9013-9070) and uses its position as the target
+    distance, |E_min| as the depth and the local maximum below it as rmin. Per neighbour the energy is
+    |E_min|·V(d) for d > rmin and V(rmin) otherwise (not multiplied by |E_min|, mmc.f90:8533-8538), averaged over
+    the centre's neighbours. Refused unless the minimum lies inside (0.5, 10) Å with E_min < 0."""
+    neighborhood: int
+    a: str
+    b: str
+    A: float
+    rho: float
+    B: float
+
+    def __post_init__(self) -> None:
+        _species(self.a, "a"), _species(self.b, "b")
+        A, rho, B = (_finite(v, n) for v, n in ((self.A, "A"), (self.rho, "rho"), (self.B, "B")))
+        if A <= 0 or rho <= 0 or B < 0:
+            raise ValueError("Buckingham needs A > 0, rho > 0 and B >= 0")
+        object.__setattr__(self, "A", A)
+        object.__setattr__(self, "rho", rho)
+        object.__setattr__(self, "B", B)
+        dist, e_min, _, _ = buckingham_minimum(A, rho, B)
+        if not 0.5 < dist < 10.0 or e_min >= 0:
+            raise ValueError(f"no attractive Buckingham minimum inside (0.5, 10) Å (the search gives {dist:.4g} Å, "
+                             f"E = {e_min:.4g}); DISCUS would use a meaningless target distance and depth")
+
+    mode = "ENER"
+
+    @property
+    def minimum(self) -> tuple[float, float, float, float]:
+        """(target distance, E_min, rmin, V(rmin)) exactly as DISCUS computes them."""
+        return buckingham_minimum(self.A, self.rho, self.B)
+
+    def line(self, ic: int) -> str:
+        return (f"set target, {ic}, bucking, {self.a}, {self.b}, 0.0, {_fmt(self.A)}, {_fmt(self.rho)}, "
+                f"{_fmt(self.B)}")
+
+
+_TARGETS = (OccupationalTarget, DisplacementTarget, SpringTarget, LennardJonesTarget, RepulsiveTarget,
+            BuckinghamTarget)
 
 
 # ------------------------------------------------------------------------------------------- moves
@@ -287,26 +411,62 @@ class SwapDisplacement:
 class Shift:
     """``set mode, p, shift, all`` + ``set move, A, sx, sy, sz``: Gaussian displacement of one atom with
     standard deviation ``sigma[A]`` per axis in **unit-cell fractions**. Every species to be moved needs a
-    sigma: DISCUS 6.23.01's default is 0 (the help's 0.2 is not in the code)."""
+    sigma: DISCUS 6.23.01's default is 0 (the help's 0.2 is not in the code).
+    ``directions`` (optional, species -> [u, v, w]): for a listed species the move is ``gasdev(s)·(u, v, w)`` along
+    that vector with one positive sigma s (``set move, A, u, v, w, s``, rmc_sup_mod.f90:483-508). The vector is
+    **not normalised** (mmc.f90:6140-6153)."""
     sigma: dict
     probability: float = 1.0
+    directions: dict | None = None
 
     def __post_init__(self) -> None:
         _prob(self.probability)
         if not self.sigma:
             raise ValueError("Shift needs sigma per species, e.g. {'Cu': (0.01, 0.01, 0.01)}")
+        dirs = dict(self.directions or {})
         clean = {}
         for sp, s in dict(self.sigma).items():
             _species(sp, "species")
-            s = tuple(_finite(x, "sigma") for x in s)
+            if sp in dirs:
+                # one positive number s: displacement = gasdev(s) * (u, v, w) (mmc.f90:6140-6153)
+                if isinstance(s, (tuple, list, np.ndarray)) or isinstance(s, bool):
+                    raise ValueError(f"sigma for {sp!r} with a direction must be one positive number, not a 3-tuple")
+                s = _finite(s, "sigma")
+                if s <= 0:
+                    raise ValueError(f"sigma for {sp!r} with a direction must be positive")
+                clean[sp] = s
+                continue
+            if isinstance(s, (int, float, np.number)) and not isinstance(s, bool):
+                raise ValueError(f"sigma for {sp!r} must be three numbers (or one positive number with a direction)")
+            try:
+                s = tuple(_finite(x, "sigma") for x in s)
+            except TypeError:
+                raise ValueError(f"sigma for {sp!r} must be three numbers") from None
             if len(s) != 3 or any(x < 0 for x in s) or not any(s):
                 raise ValueError(f"sigma for {sp!r} must be three non-negative numbers, not all zero")
             clean[sp] = s
+        d_clean = {}
+        for sp, v in dirs.items():
+            if sp not in clean:
+                raise ValueError(f"direction given for {sp!r}, which has no sigma entry")
+            try:
+                v = tuple(_finite(x, "direction") for x in v)
+            except TypeError:
+                raise ValueError(f"direction for {sp!r} must be [u, v, w]") from None
+            if len(v) != 3 or not any(v):
+                raise ValueError(f"direction for {sp!r} must be a nonzero [u, v, w]")
+            d_clean[sp] = v
         object.__setattr__(self, "sigma", clean)
+        object.__setattr__(self, "directions", d_clean or None)
 
     def lines(self) -> list[str]:
         out = [f"set mode, {_fmt(self.probability)}, shift, all"]
-        out += [f"set move, {sp}, " + ", ".join(_fmt(x) for x in s) for sp, s in self.sigma.items()]
+        for sp, s in self.sigma.items():
+            if self.directions and sp in self.directions:
+                u, v, w = self.directions[sp]
+                out.append(f"set move, {sp}, {_fmt(u)}, {_fmt(v)}, {_fmt(w)}, {_fmt(s)}")
+            else:
+                out.append(f"set move, {sp}, " + ", ".join(_fmt(x) for x in s))
         return out
 
 
@@ -314,6 +474,39 @@ _MOVES = (Swap, SwapDisplacement, Shift)
 
 
 # ------------------------------------------------------------------------------------------- configuration
+@dataclass(frozen=True)
+class Convergence:
+    """``set finish, stop:converge, diff:, rdiff:, change:, aver:`` — stop when, at a feedback, all four quantities
+    are below their thresholds (strict <; DISCUS ``mmc_correlations``, mmc_basic.f90:1395-1464): the largest
+    |target − achieved|; the largest |target − achieved|/|target| (targets ≠ 0); |mean relative change over the
+    history|; the largest relative change between two feedbacks. An omitted threshold is written as 99999 (DISCUS's
+    own default when the command is given, mmc.f90:2594-2596), so it never blocks. ``feed:`` is never written:
+    ``mmc_set`` consumes it before ``get_finish`` sees it (mmc.f90:1054-1074), so DISCUS always waits for at least
+    3 feedbacks. Convergence is tested only at feedbacks."""
+    diff: float | None = None
+    rdiff: float | None = None
+    change: float | None = None
+    aver: float | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("diff", "rdiff", "change", "aver"):
+            v = getattr(self, name)
+            if v is not None:
+                v = _finite(v, name)
+                if v <= 0:
+                    raise ValueError(f"{name} must be positive")
+                object.__setattr__(self, name, v)
+        if all(getattr(self, n) is None for n in ("diff", "rdiff", "change", "aver")):
+            raise ValueError("Convergence needs at least one of diff, rdiff, change, aver")
+
+    def line(self) -> str:
+        parts = []
+        for n in ("diff", "rdiff", "change", "aver"):
+            v = getattr(self, n)
+            parts.append(f"{n}:{_fmt(v) if v is not None else '99999'}")
+        return "set finish, stop:converge, " + ", ".join(parts)
+
+
 @dataclass(frozen=True)
 class MCConfig:
     """One DISCUS ``mmc`` run.
@@ -331,6 +524,7 @@ class MCConfig:
     feedback_per_atom: float = 1.0
     temperature: float = 1.0
     output_file: str = "mc_out.stru"
+    finish: Convergence | None = None
 
     def __post_init__(self) -> None:
         nbs = tuple(self.neighborhoods)
@@ -369,6 +563,15 @@ class MCConfig:
         if not (isinstance(self.output_file, str) and Path(self.output_file).name == self.output_file
                 and self.output_file.endswith(".stru") and " " not in self.output_file):
             raise ValueError("output_file must be a plain '.stru' file name without spaces")
+        if self.finish is not None:
+            if not isinstance(self.finish, Convergence):
+                raise ValueError("finish must be a Convergence (or None)")
+            if not all(isinstance(t, (OccupationalTarget, DisplacementTarget)) for t in tg):
+                raise ValueError("finish (convergence stop) is offered only with occupational and displacement "
+                                 "targets: other target types also enter DISCUS's convergence history")
+            if self.finish.aver is not None and len(tg) != 1:
+                raise ValueError("finish aver= needs exactly one target: DISCUS divides the whole history once per "
+                                 "target (mmc_basic.f90:1410)")
         object.__setattr__(self, "neighborhoods", nbs)
         object.__setattr__(self, "targets", tg)
         object.__setattr__(self, "moves", mv)
@@ -392,8 +595,16 @@ class MCConfig:
                 out.append("cd energy counts a pair only when the moved atom is the vector origin")
             if isinstance(t, (SpringTarget, LennardJonesTarget)):
                 out.append(f"{type(t).__name__}: energy is averaged over each centre's neighbours")
+            if isinstance(t, RepulsiveTarget):
+                out.append("RepulsiveTarget: neighbours without a repulsive target are averaged in with "
+                           "-|depth_min| (smallest |depth| of the run)")
+            if isinstance(t, BuckinghamTarget):
+                out.append("BuckinghamTarget: DISCUS searches the potential minimum from 10 Å; the given numbers "
+                           "are not a distance")
         if self.temperature != 1.0 and any(t.mode == "CORR" for t in self.targets):
             out.append("feedback targets work in units of kT; temperature != 1 rescales them")
+        if self.finish is not None:
+            out.append("set finish stops at the earliest after 3 feedbacks; convergence is tested only at feedbacks")
         return out
 
     def counts(self, n_atoms: int) -> tuple[int, int]:
@@ -421,8 +632,10 @@ class MCConfig:
             lines += m.lines()
         for t in self.targets:
             lines.append(t.line(t.neighborhood + 1))
-        lines += [f"set temp, {_fmt(self.temperature)}", f"set cyc, {cyc}", f"set feed, {feed}",
-                  "set output, feed:on, final:on"]
+        lines += [f"set temp, {_fmt(self.temperature)}", f"set cyc, {cyc}", f"set feed, {feed}"]
+        if self.finish is not None:
+            lines.append(self.finish.line())
+        lines.append("set output, feed:on, final:on")
         return lines
 
     def render(self, structure_file: str, n_atoms: int, *, title: str | None = None) -> str:
@@ -460,6 +673,9 @@ class MCConfig:
                 for sp in mv.sigma:
                     if sp.upper() not in present:
                         raise ValueError(f"Shift sigma given for {sp!r}, which is not in the structure")
+                for sp in mv.directions or {}:
+                    if sp.upper() not in present:
+                        raise ValueError(f"Shift direction given for {sp!r}, which is not in the structure")
         if any(n == 1 for n in structure.supercell):
             raise ValueError("DISCUS switches off periodic boundaries along an axis with one cell; "
                              "use at least 2 cells per axis")
@@ -475,9 +691,14 @@ class MCConfig:
         def move(m):
             d = {"type": type(m).__name__, **{k: getattr(m, k) for k in m.__dataclass_fields__}}
             if "sigma" in d:
-                d["sigma"] = {k: list(v) for k, v in d["sigma"].items()}
+                d["sigma"] = {k: list(v) if isinstance(v, tuple) else v for k, v in d["sigma"].items()}
+            if d.get("directions"):
+                d["directions"] = {k: list(v) for k, v in d["directions"].items()}
             return d
 
+        finish = None
+        if self.finish is not None:
+            finish = {n: getattr(self.finish, n) for n in ("diff", "rdiff", "change", "aver")}
         return {
             "schema": "discuspdf.MCConfig", "version": 1,
             "neighborhoods": [{"vectors": [[v.origin_site, v.target_site, list(v.translation)] for v in nb.vectors],
@@ -486,7 +707,7 @@ class MCConfig:
             "moves": [move(m) for m in self.moves],
             "seed": list(self.seed.values), "moves_per_atom": self.moves_per_atom,
             "feedback_per_atom": self.feedback_per_atom, "temperature": self.temperature,
-            "output_file": self.output_file,
+            "output_file": self.output_file, "finish": finish,
         }
 
     @classmethod
@@ -503,19 +724,30 @@ class MCConfig:
             if "direction" in item:
                 item["direction"] = tuple(item["direction"])
             if "sigma" in item:
-                item["sigma"] = {k: tuple(v) for k, v in item["sigma"].items()}
+                item["sigma"] = {k: tuple(v) if isinstance(v, list) else v for k, v in item["sigma"].items()}
+            if item.get("directions"):
+                item["directions"] = {k: tuple(v) for k, v in item["directions"].items()}
             return c(**item)
 
+        fin = d.get("finish")                       # absent in configurations written before phase 2b
+        finish = Convergence(**fin) if fin else None
         return cls(nbs, tuple(build(t) for t in d["targets"]), tuple(build(m) for m in d["moves"]),
                    Seed(tuple(d["seed"])), d["moves_per_atom"], d["feedback_per_atom"], d["temperature"],
-                   d["output_file"])
+                   d["output_file"], finish=finish)
 
 
 # ------------------------------------------------------------------------------------------- log parsing
 _GEN = re.compile(r"Gen:\s*(\d+)\s+try:\s*(\d+)\s+acc:\s*\(g/n/b\):\s*(\d+)\s*/\s*(\d+)\s*/\s*(\d+)\s+MC moves\s*([0-9.]*)")
 _NUM = r"([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?|\*+)"
 _ROW_CORR = re.compile(r"^\s*(\d+)\s+(Occupancy|Disp\.Cor\.)\s*(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 4) + r"\s+(\d+|\*+)\s*$")
-_ROW_DIST = re.compile(r"^\s*(\d+)\s+(Hooke|Lennard)\s+(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 5) + r"\s+(\d+|\*+)\s*$")
+# Labelled distance rows: Hooke/Lennard (mmc_basic.f90:3300, 3700, write_pote 3100); repulsive: 'Repuls.' in the
+# feedback table (mmc_basic.f90:1278, format 3900) and 'Repulsive' in the final table (write_pote). Five numbers
+# and a count in all of them.
+_ROW_DIST = re.compile(r"^\s*(\d+)\s+(Hooke|Lennard|Repuls\.|Repulsive)\s+(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 5)
+                       + r"\s+(\d+|\*+)\s*$")
+# Buckingham rows have NO label and no target column: DISCUS prints atoms, mean distance, sigma and the count
+# (format 2100, mmc_basic.f90:1325, 1590). Tried after the labelled patterns.
+_ROW_BUCK = re.compile(r"^\s*(\d+)\s+(\S+)\s+(\S+)\s+" + r"\s+".join([_NUM] * 2) + r"\s+(\d+|\*+)\s*$")
 
 
 def _val(s: str) -> float:
@@ -527,7 +759,7 @@ def _count(s: str) -> int | None:
 
 
 _KIND = {OccupationalTarget: "occupational", DisplacementTarget: "displacement", SpringTarget: "spring",
-         LennardJonesTarget: "lennard_jones"}
+         LennardJonesTarget: "lennard_jones", RepulsiveTarget: "repulsive", BuckinghamTarget: "buckingham"}
 
 
 def match_row(rows: list[dict], target, *, required: bool = True) -> dict | None:
@@ -557,9 +789,20 @@ def _row(line: str) -> dict | None:
     m = _ROW_DIST.match(line)
     if m:
         ic, kind, a, b, tgt, ach, sig, diff, rel, n = m.groups()
+        if kind.startswith("Repuls"):
+            # DISCUS prints the internal gate 100 as 'target' and the mean neighbour distance as 'achieved'
+            # (mmc_set_disp call, mmc.f90:2106; bl_sum accumulates distances, mmc_basic.f90:736): the target and
+            # the difference are not returned.
+            return {"neighborhood": int(ic), "kind": "repulsive", "a": a, "b": b, "target": None,
+                    "achieved": _val(ach), "sigma": _val(sig), "diff": None, "rel_diff": None, "pairs": _count(n)}
         return {"neighborhood": int(ic), "kind": "spring" if kind == "Hooke" else "lennard_jones",
                 "a": a, "b": b, "target": _val(tgt), "achieved": _val(ach), "sigma": _val(sig),
                 "diff": _val(diff), "rel_diff": _val(rel), "pairs": _count(n)}
+    m = _ROW_BUCK.match(line)
+    if m:
+        ic, a, b, ach, sig, n = m.groups()
+        return {"neighborhood": int(ic), "kind": "buckingham", "a": a, "b": b, "target": None,
+                "achieved": _val(ach), "sigma": _val(sig), "diff": None, "rel_diff": None, "pairs": _count(n)}
     return None
 
 
