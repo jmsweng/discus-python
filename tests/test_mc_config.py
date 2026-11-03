@@ -260,12 +260,11 @@ def test_convergence_refusals_and_restrictions():
             Convergence(diff=bad)
     cfg = dict(neighborhoods=(NN,), targets=(OccupationalTarget(0, "Cu", "Au", correlation=-0.3),),
                moves=(Swap(),), seed=SEED, finish=Convergence(diff=0.01))
-    with pytest.raises(ValueError, match="occupational and displacement"):
-        MCConfig(**{**cfg, "targets": (RepulsiveTarget(0, "Cu", "Au", 1.0),)})
-    with pytest.raises(ValueError, match="exactly one target"):
-        MCConfig(**{**cfg, "neighborhoods": (NN, NN), "finish": Convergence(aver=0.01),
-                    "targets": (OccupationalTarget(0, "Cu", "Au", correlation=-0.3),
-                                OccupationalTarget(1, "Cu", "Ni", energy=0.5))})
+    for targets in ((RepulsiveTarget(0, "Cu", "Au", 1.0),),
+                    (OccupationalTarget(0, "Cu", "Au", energy=0.5),),
+                    (OccupationalTarget(0, "Cu", "Au", correlation=-0.3), SpringTarget(0, "Cu", "Au", 2.5, 1.0))):
+        with pytest.raises(ValueError, match="one occupational target"):
+            MCConfig(**{**cfg, "targets": targets})
     MCConfig(**{**cfg, "finish": Convergence(aver=0.01)})          # one target: allowed
     with pytest.raises(ValueError, match="finish must be"):
         MCConfig(**{**cfg, "finish": {"diff": 0.01}})

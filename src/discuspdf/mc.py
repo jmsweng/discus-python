@@ -566,9 +566,11 @@ class MCConfig:
         if self.finish is not None:
             if not isinstance(self.finish, Convergence):
                 raise ValueError("finish must be a Convergence (or None)")
-            if not all(isinstance(t, (OccupationalTarget, DisplacementTarget)) for t in tg):
-                raise ValueError("finish (convergence stop) is offered only with occupational and displacement "
-                                 "targets: other target types also enter DISCUS's convergence history")
+            if not (len(tg) == 1 and isinstance(tg[0], OccupationalTarget) and tg[0].mode == "CORR"):
+                raise ValueError("finish (convergence stop) is offered only for a run with one occupational target "
+                                 "given as correlation=: every other target type, and energy= targets, also enter "
+                                 "DISCUS's convergence history (mmc_basic.f90:1014, 1121-1316, 2429) with targets "
+                                 "the test cannot reach")
             if self.finish.aver is not None and len(tg) != 1:
                 raise ValueError("finish aver= needs exactly one target: DISCUS divides the whole history once per "
                                  "target (mmc_basic.f90:1410)")
