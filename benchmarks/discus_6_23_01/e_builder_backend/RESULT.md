@@ -42,3 +42,28 @@ sizes on one site, and it affected the builder's engine 1.0 as well. 3D results 
 
 Follow-up: v2 (`v2/`, registered separately) tests two ways out: the same crystal written as **one cell without
 VOID rows**, and the **scale law** with another VOID fraction and with X-rays.
+
+# Result of v2 (VOID atoms in the powder PDF)
+
+**All 7 criteria pass.** Run `20261103T114220Z_LAPTOP-NGU3BT0N` (evidence `v2/evidence/…`, same binary). The kit
+was registered at `ac0ff79` before the run. 9 runs, exit 0, no engine markers; re-analysed in the cloud with
+identical values.
+
+| Key | Value | Limit |
+|---|---|---|
+| V1 one cell without VOID rows = verified layout, neutron | 4.0e-16 | ≤ 1e-6 |
+| V2 same, X-ray | 4.0e-16 | ≤ 1e-6 |
+| V3 vacancies, neutron: (240/256)·padded = one cell | 7.3e-16 | ≤ 1e-6 |
+| V4 vacancies, X-ray | 5.2e-16 | ≤ 1e-6 |
+| V5 VOID padding, X-ray: (256/320)·padded = unpadded | 4.0e-16 | ≤ 1e-6 |
+| V6 power: vacancies change G | 4.9e-2 | ≥ 1e-3 |
+| V0 r grid, finite G | 0 | 0 |
+
+- **Fix confirmed:** writing the real atoms as one cell of the whole crystal (`ncell 1,1,1,N`, no VOID rows)
+  gives the same powder G(r) as the verified layout, for neutrons and X-rays, and with vacancies. The disorder
+  builder uses it for its 1D PDF (`supercell_pdf.stru`).
+- **Scale law:** G_padded = (rows / atoms) · G_true holds exactly (to 1e-15) for VOID fractions 1/5 and 1/16,
+  neutron and X-ray. This explains v1 P3.
+- **I1 (informational):** `p_mix_n` repeats v1's `p_mix` with byte-identical inputs and binary but is not
+  byte-identical: the values differ in the last bits (max 3e-16 relative). The powder Debye sum of 6.23.01 is
+  not bit-reproducible between runs; comparisons of powder runs need a tolerance, as all criteria here have.
