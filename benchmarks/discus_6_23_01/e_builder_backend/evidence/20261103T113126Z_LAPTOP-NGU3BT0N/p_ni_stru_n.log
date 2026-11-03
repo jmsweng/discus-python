@@ -1,0 +1,81 @@
+xdpyinfo:  unable to open display "".
+[49m
+[39m
+ ................................................................................................................................................................................................................................................................
+
+
+
+
+
+
+          ***********************************************************
+          *         D I S C U S - S U I T E  Version 6.23.01        *
+          *                                                         *
+          *         OpenMP is active; maximum threads   8           *
+          *         Created : 2026-10-22                            *
+          *---------------------------------------------------------*
+          * (c) R.B. Neder  (reinhard.neder@fau.de)                 *
+          * (c) T. Proffen  (tproffen@ornl.gov    )                 *
+          ***********************************************************
+
+ Start directory  : C:\tmp\e_probe\20261103T113126Z_LAPTOP-NGU3BT0N\work\p_ni_stru_n\
+ Access manuals at each section with   : manual
+ Access help at each section/menu with : help  
+ News at each section/Command_lang in  : help News
+ Change font size with                 : CTRL + /CTRL -
+ Preferences: Right click + Preferences: 
+pgxwin_server: cannot connect to X server []
+ suite >exit
+
+
+[31m ------ > Reading macro: [39mrun.mac
+ suite>  
+ suite> discus
+ discus> read
+ discus/read> stru model.stru
+ P 1                 1
+ Lattice constants :
+    a          b          c         alpha      beta       gamma      volume
+    3.52000    3.52000    3.52000   90.00000   90.00000   90.00000    43.6142    
+
+ Metric Tensor     :
+      12.39040      0.00000      0.00000
+       0.00000     12.39040      0.00000
+       0.00000      0.00000     12.39040
+
+ Reciprocal Lattice constants :
+    a*         b*         c*        alpha*     beta*      gamma*     volume
+    0.28409    0.28409    0.28409   90.00000   90.00000   90.00000   0.229283E-01
+
+ Reciprocal metric tensor     : 
+       0.08071     -0.00000     -0.00000
+      -0.00000      0.08071     -0.00000
+      -0.00000     -0.00000      0.08071
+
+ discus> powder
+ discus/powd> reset
+ discus/powd> neutron
+ discus/powd> set axis,q
+ discus/powd> set calc,debye
+ discus/powd> set qmin,0.5
+ discus/powd> set qmax,7
+ discus/powd> set dq,0.01
+ discus/powd> set delta,0
+ discus/powd> set wvle,1.54
+ discus/powd> run
+ Computing powder sine lookup table ...
+ Computing sin(theta)/lambda table ...
+  Starting histogram
+
+ Elapsed time H  :  0.308101E-02 sec
+ Elapsed time      Powder :  0.376100E-02 sec
+ Elapsed time Convolution :  0.198945E-05 sec
+ discus/powd> exit
+ discus> output
+ discus/output> outf result.pdf
+ discus/output> form pdf, r, 0.0, 10, 0.02
+ discus/output> value PDF
+ discus/output> run
+ discus/output> exit
+ discus> exit
+  

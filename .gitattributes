@@ -8,3 +8,4 @@ benchmarks/discus_6_23_01/gate0_prereg/** -text
 benchmarks/discus_6_23_01/powder_settings/inputs/** -text
 benchmarks/discus_6_23_01/powder_settings/inputs_v2/** -text
 benchmarks/discus_6_23_01/e_builder_backend/inputs/** -text
+benchmarks/discus_6_23_01/e_builder_backend/v2/inputs/** -text

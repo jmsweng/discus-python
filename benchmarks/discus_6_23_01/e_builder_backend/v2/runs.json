@@ -1,0 +1,105 @@
+{
+ "engine": "DISCUS_SUITE 6.23.01",
+ "follows": "v1 P3 (../RESULT.md)",
+ "pdf": {
+  "rmax": 10.0,
+  "dr": 0.02,
+  "qmin": 0.5,
+  "qmax": 7.0,
+  "dq": 0.01
+ },
+ "counts": {
+  "mix": {
+   "rows": 256,
+   "atoms": 256,
+   "ncell": [
+    4,
+    4,
+    4
+   ]
+  },
+  "mix_big": {
+   "rows": 256,
+   "atoms": 256,
+   "ncell": [
+    1,
+    1,
+    1
+   ]
+  },
+  "void": {
+   "rows": 320,
+   "atoms": 256,
+   "ncell": [
+    4,
+    4,
+    4
+   ]
+  },
+  "vac": {
+   "rows": 256,
+   "atoms": 240,
+   "ncell": [
+    4,
+    4,
+    4
+   ]
+  },
+  "vac_big": {
+   "rows": 240,
+   "atoms": 240,
+   "ncell": [
+    1,
+    1,
+    1
+   ]
+  }
+ },
+ "runs": [
+  {
+   "id": "p_mix_n",
+   "structure": "mix",
+   "radiation": "neutron"
+  },
+  {
+   "id": "p_mix_x",
+   "structure": "mix",
+   "radiation": "xray"
+  },
+  {
+   "id": "p_mix_big_n",
+   "structure": "mix_big",
+   "radiation": "neutron"
+  },
+  {
+   "id": "p_mix_big_x",
+   "structure": "mix_big",
+   "radiation": "xray"
+  },
+  {
+   "id": "p_void_x",
+   "structure": "void",
+   "radiation": "xray"
+  },
+  {
+   "id": "p_vac_void_n",
+   "structure": "vac",
+   "radiation": "neutron"
+  },
+  {
+   "id": "p_vac_void_x",
+   "structure": "vac",
+   "radiation": "xray"
+  },
+  {
+   "id": "p_vac_big_n",
+   "structure": "vac_big",
+   "radiation": "neutron"
+  },
+  {
+   "id": "p_vac_big_x",
+   "structure": "vac_big",
+   "radiation": "xray"
+  }
+ ]
+}

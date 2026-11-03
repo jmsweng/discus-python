@@ -1,0 +1,72 @@
+{
+ "E1": {
+  "what": "f_mix (Ni/Cu, set aver 100, neutron) vs reference_scattering.diffuse_intensity, rel L2",
+  "max": 1e-09,
+  "value": 2.52380218946883e-14,
+  "passed": true
+ },
+ "E2": {
+  "what": "f_relabel_scat (Cu renamed NI63, scat NI63 = 7.718 fm) vs f_mix, rel L2 (1e-9 .. 1e-6: custom b stored in single precision, recorded as a finding)",
+  "max": 1e-06,
+  "value": 0.0,
+  "passed": true
+ },
+ "E3": {
+  "what": "f_relabel_noscat: max |I| / max |I(f_mix)| (NI63 read as Ni, so no diffuse)",
+  "max": 1e-06,
+  "value": 1.545849717363822e-28,
+  "passed": true
+ },
+ "E4": {
+  "what": "f_void (one VOID per cell) vs f_mix, rel L2",
+  "max": 1e-09,
+  "value": 0.0,
+  "passed": true
+ },
+ "E5": {
+  "what": "Fourier runs with wrong Bragg metadata or shape (count)",
+  "max": 0,
+  "value": 0.0,
+  "passed": true
+ },
+ "P0": {
+  "what": "PDF runs whose r grid is not 0..10 step 0.02 or with non-finite G (count)",
+  "max": 0,
+  "value": 0.0,
+  "passed": true
+ },
+ "P1": {
+  "what": "p_relabel_scat vs p_mix: max |dG| / max |G|",
+  "max": 1e-06,
+  "value": 2.984745132595824e-16,
+  "passed": true
+ },
+ "P2": {
+  "what": "p_relabel_noscat vs p_mix: max |dG| / max |G| (scat must change the powder run; estimate 3.5e-3 with <b>^2 normalisation)",
+  "min": 0.0001,
+  "value": 0.0032116115267237675,
+  "passed": true
+ },
+ "P3": {
+  "what": "p_void vs p_mix: max |dG| / max |G|",
+  "max": 1e-06,
+  "value": 0.2500000000000002,
+  "passed": false
+ },
+ "P4": {
+  "what": "neutron: read stru (p_ni_stru_n) vs read cell 4x4x4 (p_ni_cll_n): max |dG| / max |G|",
+  "max": 1e-06,
+  "value": 3.971937042510191e-16,
+  "passed": true
+ },
+ "P5": {
+  "what": "X-ray: read stru (p_ni_stru_x) vs read cell 4x4x4 (p_ni_cll_x): max |dG| / max |G|",
+  "max": 1e-06,
+  "value": 3.9719370425101895e-16,
+  "passed": true
+ },
+ "I0": {
+  "what": "engine-marker lines in the logs (informational)",
+  "lines": []
+ }
+}
