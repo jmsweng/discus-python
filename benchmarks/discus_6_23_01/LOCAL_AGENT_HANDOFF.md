@@ -31,7 +31,7 @@ If anything deviates from this document, stop and report.
 
 ## Step 0: make a fresh, LF-only clone inside the WSL filesystem
 
-**Revised 2026-10-28 by the reviewer, after the first attempt correctly stopped here.** The existing clone at `/mnt/c/Users/jmswe/Documents/Programming projects/discus-python` shows ~53 files as modified, and they differ only in line endings. git stores every text file with LF; the Windows-side checkout wrote CRLF. If the registered inputs arrived the same way, their SHA-256 hashes would not match and DISCUS might misread the macros.
+**Revised 2026-10-28 by the reviewer, after the first attempt correctly stopped here.** The existing clone at `/mnt/c/.../discus-python` (a Windows checkout) shows ~53 files as modified, and they differ only in line endings. git stores every text file with LF; the Windows-side checkout wrote CRLF. If the registered inputs arrived the same way, their SHA-256 hashes would not match and DISCUS might misread the macros.
 
 So: **do not use, change, clean, pull or commit in the `/mnt/c` clone.** Leave its modified and untracked files exactly as they are; the owner will deal with them separately. Make a new clone on the Linux filesystem, with no line-ending conversion:
 
