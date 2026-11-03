@@ -54,9 +54,10 @@ def supercell_macro(engine_note: str) -> Macro:
 
 
 def check_supercell(run):
-    s = read_stru(run.output("supercell.stru")).structure
+    # DISCUS 'save' writes no ncell line (known since PR #12), so the crystal size is given
+    s = read_stru(run.output("supercell.stru"), supercell=(2, 2, 2)).structure
     assert s.n_atoms == 64  # F-43m: 8 atoms per cell, 2x2x2 cells
-    assert sorted(set(s.species)) == ["AS", "GA"] or sorted({x.upper() for x in s.species}) == ["AS", "GA"]
+    assert sorted({x.upper() for x in s.species}) == ["AS", "GA"]
 
 
 def test_discus_read_and_save_on_stock():
