@@ -202,7 +202,7 @@
 ?                               0.00e+00       0.00e+00         8.87e-01         8.41e-01     0.00e+00     0.00e+00       True
 ?                               0.00e+00       0.00e+00         9.34e-01         8.41e-01     0.00e+00     0.00e+00       True
 ?                               0.00e+00       0.00e+00         1.32e+00         8.41e-01     0.00e+00     0.00e+00       True
-{'triclinic_p1bar': "EXCEPTION: ImportError: cannot import name 'read_cif' from 'discuspdf.interop' (C:\\Users\\jmswe\\.local\\share\\opencode\\worktree\\9d7e5c\\calm-sailor\\src\\discuspdf\\interop.py)"}
+{'triclinic_p1bar': "EXCEPTION: ImportError: cannot import name 'read_cif' from 'discuspdf.interop' (<worktree>\\src\\discuspdf\\interop.py)"}
 
 === Invalid input behaviour ===
 angles_sum_360:

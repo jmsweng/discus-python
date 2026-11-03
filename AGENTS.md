@@ -14,7 +14,7 @@ Read the tracked docs before working: `README.md`, `docs/VERIFIED_DISCUS_MACRO.m
 ## Project commands (Ubuntu WSL2)
 
 ```bash
-cd ~/projects/discuspdf_starter
+cd <repository root>
 source .venv/bin/activate
 python -m pytest -q
 jupyter lab --no-browser --ip=127.0.0.1 --port=8888
