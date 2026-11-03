@@ -232,3 +232,29 @@ def test_runs_on_a_cp1252_console(tmp_path, monkeypatch):
     assert "Results in" in text and "?" in text                    # unencodable characters replaced
     log = (tmp_path / "o" / "run_log.txt").read_text(encoding="utf-8")
     assert "→" in log or "Å" in log                                # the log file keeps the exact text
+
+
+def test_pdf_leaves_void_rows_out(tmp_path):
+    """DISCUS counts VOID rows in the powder-PDF normalisation (probe e_builder_backend v1 P3): the 1D run gets
+    the real atoms as one cell; positions and B unchanged. Models without VOID keep using supercell.stru."""
+    from discuspdf import read_stru
+    cfg = load_model(FIX / "coverage_asis.json")
+    cfg["calc"]["pdf"] = {"enabled": True, "rmax": 10, "dr": 0.02, "qmax": 7.0, "qmin": 0.5, "dq": 0.01,
+                          "radiation": "xray"}
+    res = run(cfg, out=tmp_path / "o", dry_run=True, log=lambda m: None)
+    out = res["out"]
+    full = read_stru(out / "supercell.stru", check_order=False, min_separation=None).structure
+    pdf = read_stru(out / "supercell_pdf.stru", min_separation=None).structure
+    real = np.asarray(full.species) != "VOID"
+    assert tuple(pdf.supercell) == (1, 1, 1) and pdf.n_atoms == int(real.sum()) == 94
+    assert list(pdf.species) == list(np.asarray(full.species)[real])
+    assert np.allclose(pdf.cartesian, full.cartesian[real], atol=1e-5)
+    assert np.allclose(pdf.b_iso, full.b_iso[real])
+    staged = sorted((out / "runs_pdf").glob("*/model.stru"))
+    assert len(staged) == 1 and staged[0].read_bytes() == (out / "supercell_pdf.stru").read_bytes()
+    assert "ncell       1,       1,       1,       94" in staged[0].read_text()
+    # no VOID: no extra file, the PDF reads the supercell itself (engine 1.0 behaviour)
+    res2 = run(FIX / "nh4cl_neutron.json", out=tmp_path / "p", dry_run=True, log=lambda m: None)
+    assert not (res2["out"] / "supercell_pdf.stru").exists()
+    staged2 = sorted((res2["out"] / "runs_pdf").glob("*/model.stru"))
+    assert staged2[0].read_bytes() == (res2["out"] / "supercell.stru").read_bytes()

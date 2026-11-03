@@ -27,6 +27,21 @@ from .model import VOID, ModelError, export_formats, load_model
 ENGINE_VERSION = "2.0"   # 1.0 was the builder's self-contained engine.py
 
 
+def real_atoms_one_cell(structure, keep):
+    """The atoms where ``keep`` is True as one cell of the whole crystal (``ncell 1,1,1,N``): same Cartesian
+    positions and B, no VOID rows. Used for the 1D powder PDF, whose normalisation counts VOID rows."""
+    from ..lattice import Lattice
+    from ..structure import Structure
+    keep = np.asarray(keep, bool)
+    n = int(keep.sum())
+    if n == 0:
+        raise ModelError("the structure has no atoms for the 1D PDF (only VOID rows)")
+    lattice = Lattice.from_parameters(*structure.lattice.parameters)
+    b = None if structure.b_iso is None else np.asarray(structure.b_iso)[keep]
+    return Structure(lattice, np.asarray(structure.species, dtype=object)[keep], structure.frac[keep],
+                     model="configuration", site_label=[f"a{i}" for i in range(n)], b_iso=b, min_separation=None)
+
+
 def _console(msg: str) -> None:
     """Print a progress line; characters the console cannot encode (Å, Δ, λ, → on a Windows cp1252 console)
     are replaced instead of raising UnicodeEncodeError. run_log.txt keeps the exact text (UTF-8)."""
@@ -155,8 +170,19 @@ def run(model, *, out=None, seed=None, launcher=None, dry_run=False, structure_o
         say("1D powder PDF (DISCUS powder, Debye sum over the supercell) …")
         if structure.n_atoms > 60000:
             say(f"  note: {structure.n_atoms} atoms; the Debye sum scales as N², this can take long")
-        prun = runs.run_powder_pdf(cfg, out, stru_path, launcher, dry_run=dry_run, log=say,
-                                   species=structure.species)
+        pdf_stru = stru_path
+        is_void = np.asarray(structure.species, dtype=object) == VOID
+        if is_void.any():
+            # DISCUS 6.23.01 counts VOID rows in the powder-PDF normalisation: G(r) comes out scaled by
+            # rows / atoms (probe e_builder_backend v1, P3). The 1D run gets the real atoms only, written as
+            # one cell of the whole crystal (probe v2 checks that this layout equals the verified one).
+            pdf_stru = out / "supercell_pdf.stru"
+            write_stru(pdf_stru, real_atoms_one_cell(structure, ~is_void), title=title, overwrite=True,
+                       check_order=False, min_separation=None)
+            say(f"  {int(is_void.sum())} VOID rows left out of the 1D PDF ({pdf_stru.name}, "
+                f"{int((~is_void).sum())} atoms in one cell)")
+        prun = runs.run_powder_pdf(cfg, out, pdf_stru, launcher, dry_run=dry_run, log=say,
+                                   species=structure.species[~is_void])
         if prun is not None:
             result["pdf"] = outputs.write_pdf_outputs(prun, out, formats, cfg.get("title", "model"), say)
 
