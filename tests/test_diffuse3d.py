@@ -300,3 +300,13 @@ def test_output_spec_validation():
                    expected_shape=(8, 8))
     s = OutputSpec(intensity_dataset="i", q_datasets=("qx", "qy", "qz"))
     assert s.expected_shape is None
+
+
+def test_invalid_engine_settings_after_construction_fail_before_running(tmp_path):
+    runner, macro = fake_runner(tmp_path, "print('never')\n")
+    runner.timeout_seconds = 0
+    run = runner.prepare(macro)
+    with pytest.raises(ValueError):
+        runner.execute(run)
+    st = status_of(run)
+    assert st["status"] == "failed" and st["engine_started"] is False

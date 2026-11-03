@@ -133,8 +133,8 @@
      "source": "lib_f90/kdo_all_mod.f90:98",
      "keywords": {},
      "optional": [
-      "log",
-      "status"
+      "status",
+      "log"
      ],
      "help": {
       "topic": "fopen",
@@ -429,8 +429,8 @@
      "optional": [
       "author",
       "nthread",
-      "plot",
-      "useomp"
+      "useomp",
+      "plot"
      ],
      "help": {
       "topic": "set",
@@ -532,8 +532,8 @@
      "source": "lib_f90/kdo_all_mod.f90:231",
      "keywords": {},
      "optional": [
-      "mode",
       "number",
+      "mode",
       "output",
       "type"
      ],
@@ -716,14 +716,14 @@
      "source": "diffev/prog/diffev_kdo.f90:184",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ],
      "help": {
@@ -929,14 +929,14 @@
       "real": 3
      },
      "optional": [
-      "dim",
       "init",
-      "points",
-      "range",
-      "shift",
-      "status",
       "type",
-      "value"
+      "shift",
+      "points",
+      "value",
+      "status",
+      "range",
+      "dim"
      ],
      "help": {
       "topic": "newparam",
@@ -1007,11 +1007,11 @@
       "real": 3
      },
      "optional": [
-      "compute",
-      "dim",
-      "logfile",
       "partial",
-      "repeat"
+      "repeat",
+      "logfile",
+      "compute",
+      "dim"
      ],
      "help": {
       "topic": "run_mpi",
@@ -1072,11 +1072,11 @@
      "source": "diffev/prog/diffev_kdo.f90:945",
      "keywords": {},
      "optional": [
-      "dismiss",
-      "max",
-      "min",
       "range",
-      "value"
+      "value",
+      "min",
+      "max",
+      "dismiss"
      ],
      "help": {
       "topic": "release",
@@ -1305,11 +1305,11 @@
      "source": "discus/prog/discus_kdo.f90:164",
      "keywords": {},
      "optional": [
-      "output",
-      "prin",
       "type",
       "values",
-      "wyckoff"
+      "wyckoff",
+      "output",
+      "prin"
      ],
      "help": {
       "topic": "anis",
@@ -1365,13 +1365,13 @@
      "optional": [
       "dstar",
       "dval",
-      "energy",
-      "lambda",
-      "output",
       "q",
-      "radiation",
+      "energy",
       "theta",
-      "twotheta"
+      "twotheta",
+      "lambda",
+      "radiation",
+      "output"
      ],
      "help": {
       "topic": "bragg",
@@ -1391,17 +1391,17 @@
      "source": "discus/prog/discus_kdo.f90:185",
      "keywords": {},
      "optional": [
-      "accum",
-      "axis",
-      "center",
+      "thick",
       "centx",
       "centy",
       "centz",
-      "exec",
-      "first",
+      "center",
       "keep",
-      "thick",
-      "third"
+      "accum",
+      "exec",
+      "third",
+      "first",
+      "axis"
      ],
      "help": {
       "topic": "boundary",
@@ -2019,20 +2019,20 @@
       "internal": 8
      },
      "optional": [
-      "atom",
-      "conn",
+      "version",
       "cycle",
-      "emax",
-      "emin",
-      "force",
-      "lambda",
-      "nmax",
-      "nmin",
-      "no",
-      "origin",
-      "site",
       "spcgr",
-      "version"
+      "site",
+      "force",
+      "origin",
+      "lambda",
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "export",
@@ -2100,11 +2100,11 @@
      "source": "discus/prog/discus_kdo.f90:278",
      "keywords": {},
      "optional": [
-      "file",
       "mode",
       "symm",
       "table",
       "technique",
+      "file",
       "trust"
      ],
      "help": {
@@ -2312,36 +2312,36 @@
       "Unit": 4
      },
      "optional": [
-      "UNUSED",
-      "atom",
-      "compute",
-      "conn",
-      "diffev",
-      "disorder",
-      "dump",
-      "emax",
-      "emin",
-      "first",
-      "form",
-      "free",
-      "lambda",
       "metric",
-      "mode",
-      "molescope",
-      "name",
-      "nmax",
-      "nmin",
-      "no",
-      "qmax",
-      "radiation",
-      "refine",
-      "sort",
       "space",
-      "style",
-      "type",
+      "sort",
+      "atom",
       "unique",
+      "name",
+      "refine",
+      "diffev",
+      "form",
+      "dump",
+      "qmax",
+      "style",
+      "lambda",
+      "compute",
+      "free",
+      "radiation",
+      "disorder",
+      "UNUSED",
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "conn",
+      "type",
       "value",
-      "vector"
+      "first",
+      "molescope",
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "import",
@@ -2721,15 +2721,15 @@
      "source": "discus/prog/discus_kdo.f90:325",
      "keywords": {},
      "optional": [
-      "biso",
-      "central",
-      "conn",
       "corrlin",
       "corrquad",
-      "exclude",
-      "finish",
+      "biso",
       "moletype",
-      "start"
+      "finish",
+      "start",
+      "exclude",
+      "conn",
+      "central"
      ],
      "help": {
       "topic": "molecularize",
@@ -2756,17 +2756,17 @@
      "source": "discus/prog/discus_kdo.f90:330",
      "keywords": {},
      "optional": [
-      "des",
-      "dsmax",
-      "hklmax",
-      "maxval",
-      "mode",
-      "patt",
-      "qmax",
       "scale",
+      "maxval",
+      "dsmax",
+      "qmax",
+      "hklmax",
+      "patt",
       "sel",
-      "trans",
-      "type"
+      "des",
+      "mode",
+      "type",
+      "trans"
      ],
      "help": {
       "topic": "output",
@@ -3156,18 +3156,18 @@
      "source": "discus/prog/discus_kdo.f90:352",
      "keywords": {},
      "optional": [
-      "color",
-      "dmax",
       "dmin",
-      "export",
+      "dmax",
+      "nmin",
+      "nmax",
       "face",
-      "geom",
       "hue",
+      "color",
+      "plot",
       "keep",
       "kill",
-      "nmax",
-      "nmin",
-      "plot",
+      "geom",
+      "export",
       "posit"
      ],
      "help": {
@@ -3367,8 +3367,8 @@
      "source": "discus/prog/discus_kdo.f90:357",
      "keywords": {},
      "optional": [
-      "file",
-      "table"
+      "table",
+      "file"
      ],
      "help": {
       "topic": "powder",
@@ -3536,15 +3536,15 @@
      "source": "discus/prog/discus_kdo.f90:387",
      "keywords": {},
      "optional": [
-      "asymmetric",
-      "dump",
-      "identical",
-      "occupancy",
-      "origin",
       "radius",
+      "origin",
+      "occupancy",
+      "identical",
       "setting",
       "site",
-      "unique"
+      "unique",
+      "dump",
+      "asymmetric"
      ],
      "help": {
       "topic": "read",
@@ -3768,17 +3768,17 @@
      "source": "discus/prog/discus_kdo.f90:409",
      "keywords": {},
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
       "first",
-      "mode",
       "molescope",
-      "nmax",
+      "vector",
+      "mode",
       "nmin",
+      "nmax",
+      "emin",
+      "emax",
       "no",
-      "vector"
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "reset",
@@ -4504,10 +4504,10 @@
      "source": "discus/prog/discus_kdo.f90:460",
      "keywords": {},
      "optional": [
-      "echo",
-      "mode",
+      "radius",
       "occupied",
-      "radius"
+      "echo",
+      "mode"
      ],
      "help": {
       "topic": "symmetry",
@@ -5245,14 +5245,14 @@
      "source": "discus/prog/discus_3dpdf.f90:200",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ]
     }
@@ -6268,9 +6268,9 @@
      "keywords": {},
      "optional": [
       "first",
-      "mode",
       "molescope",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "add",
@@ -6289,9 +6289,9 @@
      "keywords": {},
      "optional": [
       "first",
-      "mode",
       "molescope",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "remove",
@@ -6342,9 +6342,9 @@
      "keywords": {},
      "optional": [
       "first",
-      "mode",
       "molescope",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "reset",
@@ -6362,9 +6362,9 @@
      "keywords": {},
      "optional": [
       "first",
-      "mode",
       "molescope",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "set",
@@ -6572,13 +6572,13 @@
      "source": "discus/prog/place_molecule.f90:205",
      "keywords": {},
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
-      "nmax",
       "nmin",
-      "no"
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ]
     },
     {
@@ -6590,19 +6590,19 @@
       "internal": 8
      },
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
-      "first",
-      "mode",
-      "molescope",
-      "nmax",
-      "nmin",
-      "no",
       "number",
+      "first",
+      "molescope",
+      "vector",
+      "mode",
       "type",
-      "vector"
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "run",
@@ -6640,8 +6640,8 @@
      "source": "discus/prog/place_molecule.f90:240",
      "keywords": {},
      "optional": [
-      "anchor",
       "angle",
+      "anchor",
       "distri"
      ],
      "help": {
@@ -6825,8 +6825,8 @@
      "source": "discus/prog/demolec.f90:154",
      "keywords": {},
      "optional": [
-      "atomrange",
-      "molerange"
+      "molerange",
+      "atomrange"
      ],
      "help": {
       "topic": "include",
@@ -6845,13 +6845,13 @@
      "source": "discus/prog/demolec.f90:159",
      "keywords": {},
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
-      "nmax",
       "nmin",
-      "no"
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "prop",
@@ -6883,8 +6883,8 @@
      "source": "discus/prog/demolec.f90:165",
      "keywords": {},
      "optional": [
-      "atomtype",
-      "moletype"
+      "moletype",
+      "atomtype"
      ],
      "help": {
       "topic": "select",
@@ -6903,8 +6903,8 @@
      "source": "discus/prog/demolec.f90:165",
      "keywords": {},
      "optional": [
-      "atomtype",
-      "moletype"
+      "moletype",
+      "atomtype"
      ],
      "help": {
       "topic": "deselect",
@@ -7781,17 +7781,17 @@
       "internal": 8
      },
      "optional": [
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
       "atom",
       "conn",
-      "emax",
-      "emin",
-      "nmax",
-      "nmin",
-      "no",
-      "origin",
-      "setting",
       "type",
-      "value"
+      "origin",
+      "value",
+      "setting"
      ],
      "help": {
       "topic": "run",
@@ -7900,15 +7900,15 @@
      "source": "discus/prog/discus_exp2pdf.f90:116",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "scale",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
-      "scale",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ],
      "help": {
@@ -7948,15 +7948,15 @@
      "source": "discus/prog/discus_exp2pdf.f90:126",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "scale",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
-      "scale",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ],
      "help": {
@@ -7994,15 +7994,15 @@
      "source": "discus/prog/discus_exp2pdf.f90:136",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "scale",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
-      "scale",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ],
      "help": {
@@ -8023,15 +8023,15 @@
      "source": "discus/prog/discus_exp2pdf.f90:141",
      "keywords": {},
      "optional": [
-      "format",
-      "fq",
-      "gr",
-      "iq",
-      "rmax",
       "rmin",
+      "rmax",
       "rstep",
       "scale",
-      "sq"
+      "gr",
+      "iq",
+      "sq",
+      "fq",
+      "format"
      ],
      "help": {
       "topic": "outfile",
@@ -8053,15 +8053,15 @@
      "source": "discus/prog/discus_exp2pdf.f90:141",
      "keywords": {},
      "optional": [
-      "format",
-      "fq",
-      "gr",
-      "iq",
-      "rmax",
       "rmin",
+      "rmax",
       "rstep",
       "scale",
-      "sq"
+      "gr",
+      "iq",
+      "sq",
+      "fq",
+      "format"
      ]
     },
     {
@@ -8089,8 +8089,8 @@
      "source": "discus/prog/discus_exp2pdf.f90:152",
      "keywords": {},
      "optional": [
-      "energy",
-      "lambda"
+      "lambda",
+      "energy"
      ],
      "help": {
       "topic": "radiation",
@@ -8119,21 +8119,21 @@
      "source": "discus/prog/discus_exp2pdf.f90:162",
      "keywords": {},
      "optional": [
-      "author",
-      "chi",
-      "conf",
-      "damp",
-      "dchi",
-      "filter",
       "mode",
+      "author",
       "nthread",
-      "plot",
-      "pshift",
-      "range",
-      "scale",
-      "status",
       "useomp",
-      "width"
+      "plot",
+      "scale",
+      "damp",
+      "width",
+      "filter",
+      "range",
+      "dchi",
+      "pshift",
+      "conf",
+      "chi",
+      "status"
      ],
      "help": {
       "topic": "run",
@@ -8161,8 +8161,8 @@
      "source": "discus/prog/discus_exp2pdf.f90:173",
      "keywords": {},
      "optional": [
-      "dcrystal",
       "qcrystal",
+      "dcrystal",
       "qobs"
      ],
      "help": {
@@ -8182,8 +8182,8 @@
      "source": "discus/prog/discus_exp2pdf.f90:178",
      "keywords": {},
      "optional": [
-      "fourier",
-      "inst"
+      "inst",
+      "fourier"
      ],
      "help": {
       "topic": "limits",
@@ -8429,9 +8429,9 @@
      "source": "discus/prog/fourier.f90:395",
      "keywords": {},
      "optional": [
+      "scale",
       "in",
       "out",
-      "scale",
       "style"
      ],
      "help": {
@@ -8668,15 +8668,15 @@
      "source": "discus/prog/fourier.f90:819",
      "keywords": {},
      "optional": [
+      "scale",
       "damp",
       "exti",
+      "width",
       "filter",
       "mode",
-      "scale",
       "symm",
       "table",
-      "technique",
-      "width"
+      "technique"
      ],
      "help": {
       "topic": "set",
@@ -8766,11 +8766,11 @@
      "source": "discus/prog/fourier.f90:949",
      "keywords": {},
      "optional": [
-      "file",
       "mode",
       "symm",
       "table",
       "technique",
+      "file",
       "trust"
      ],
      "help": {
@@ -9973,18 +9973,18 @@
      "source": "discus/prog/mmc.f90:279",
      "keywords": {},
      "optional": [
-      "aver",
-      "change",
-      "diff",
-      "dir",
+      "type",
       "feed",
       "final",
-      "log",
-      "number",
-      "rdiff",
       "site",
+      "number",
+      "diff",
+      "rdiff",
+      "change",
+      "aver",
       "stop",
-      "type"
+      "log",
+      "dir"
      ],
      "help": {
       "topic": "set",
@@ -10292,17 +10292,17 @@
      "source": "discus/prog/graphic.f90:218",
      "keywords": {},
      "optional": [
-      "des",
-      "dsmax",
-      "hklmax",
-      "maxval",
-      "mode",
-      "patt",
-      "qmax",
       "scale",
+      "maxval",
+      "dsmax",
+      "qmax",
+      "hklmax",
+      "patt",
       "sel",
-      "trans",
-      "type"
+      "des",
+      "mode",
+      "type",
+      "trans"
      ],
      "help": {
       "topic": "format",
@@ -10364,17 +10364,17 @@
      "source": "discus/prog/graphic.f90:485",
      "keywords": {},
      "optional": [
-      "des",
-      "dsmax",
-      "hklmax",
-      "maxval",
-      "mode",
-      "patt",
-      "qmax",
       "scale",
+      "maxval",
+      "dsmax",
+      "qmax",
+      "hklmax",
+      "patt",
       "sel",
-      "trans",
-      "type"
+      "des",
+      "mode",
+      "type",
+      "trans"
      ],
      "help": {
       "topic": "outfile",
@@ -10393,9 +10393,9 @@
      "keywords": {},
      "optional": [
       "center",
-      "hklmax",
       "pixel",
-      "quad"
+      "quad",
+      "hklmax"
      ],
      "help": {
       "topic": "range",
@@ -10433,46 +10433,46 @@
      "source": "discus/prog/graphic.f90:515",
      "keywords": {},
      "optional": [
-      "atom",
-      "coldx",
-      "coldy",
+      "scale",
+      "maxval",
+      "dsmax",
+      "qmax",
+      "hklmax",
+      "patt",
+      "sel",
+      "des",
+      "mode",
+      "type",
+      "trans",
+      "comp",
+      "rmin",
+      "rmax",
+      "rstep",
+      "gr",
+      "iq",
+      "sq",
+      "fq",
+      "format",
+      "order",
+      "inst",
+      "fourier",
+      "lambda",
+      "energy",
+      "skip",
       "colx",
       "coly",
-      "comp",
-      "conn",
-      "decimal",
-      "des",
-      "dsmax",
-      "emax",
-      "emin",
-      "energy",
-      "format",
-      "fourier",
-      "fq",
-      "gr",
-      "hklmax",
-      "inst",
-      "iq",
-      "lambda",
+      "coldx",
+      "coldy",
       "layer",
-      "maxval",
-      "mode",
-      "nmax",
-      "nmin",
-      "no",
-      "order",
-      "patt",
-      "qmax",
-      "rmax",
-      "rmin",
-      "rstep",
-      "scale",
-      "sel",
       "separator",
-      "skip",
-      "sq",
-      "trans",
-      "type"
+      "decimal",
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "run",
@@ -10569,17 +10569,17 @@
      "source": "discus/prog/graphic.f90:782",
      "keywords": {},
      "optional": [
-      "des",
-      "dsmax",
-      "hklmax",
-      "maxval",
-      "mode",
-      "patt",
-      "qmax",
       "scale",
+      "maxval",
+      "dsmax",
+      "qmax",
+      "hklmax",
+      "patt",
       "sel",
-      "trans",
-      "type"
+      "des",
+      "mode",
+      "type",
+      "trans"
      ],
      "help": {
       "topic": "value",
@@ -11778,8 +11778,8 @@
      "source": "discus/prog/perioditize.f90:174",
      "keywords": {},
      "optional": [
-      "atoms",
       "number",
+      "atoms",
       "pos"
      ],
      "help": {
@@ -12090,13 +12090,13 @@
      "source": "discus/prog/discus_plot.f90:336",
      "keywords": {},
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
-      "nmax",
       "nmin",
-      "no"
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "prop",
@@ -12130,9 +12130,9 @@
      "source": "discus/prog/discus_plot.f90:362",
      "keywords": {},
      "optional": [
-      "end",
       "number",
-      "start"
+      "start",
+      "end"
      ],
      "help": {
       "topic": "line",
@@ -12250,18 +12250,18 @@
      "source": "discus/prog/discus_plot.f90:522",
      "keywords": {},
      "optional": [
-      "color",
-      "dmax",
       "dmin",
-      "export",
+      "dmax",
+      "nmin",
+      "nmax",
       "face",
-      "geom",
       "hue",
+      "color",
+      "plot",
       "keep",
       "kill",
-      "nmax",
-      "nmin",
-      "plot",
+      "geom",
+      "export",
       "posit"
      ],
      "help": {
@@ -12303,18 +12303,18 @@
      "source": "discus/prog/discus_plot.f90:630",
      "keywords": {},
      "optional": [
-      "color",
-      "dmax",
       "dmin",
-      "export",
+      "dmax",
+      "nmin",
+      "nmax",
       "face",
-      "geom",
       "hue",
+      "color",
+      "plot",
       "keep",
       "kill",
-      "nmax",
-      "nmin",
-      "plot",
+      "geom",
+      "export",
       "posit"
      ],
      "help": {
@@ -12607,28 +12607,28 @@
      "source": "discus/prog/powder.f90:187",
      "keywords": {},
      "optional": [
-      "accum",
-      "atom",
-      "axis",
-      "center",
+      "current",
+      "fraction",
+      "mode",
+      "thick",
       "centx",
       "centy",
       "centz",
-      "conn",
-      "current",
-      "emax",
-      "emin",
-      "exec",
-      "first",
-      "fraction",
+      "center",
       "keep",
-      "mode",
-      "nmax",
-      "nmin",
-      "no",
-      "thick",
+      "accum",
+      "exec",
       "third",
-      "type"
+      "first",
+      "axis",
+      "type",
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "run",
@@ -12665,29 +12665,29 @@
      "source": "discus/prog/powder.f90:213",
      "keywords": {},
      "optional": [
-      "a0",
-      "a1",
-      "angle",
-      "b0",
-      "b1",
-      "bq",
+      "rcut",
+      "qzero",
+      "tthzero",
       "difa",
       "difb",
       "difc",
-      "fwhm",
-      "qzero",
-      "rcut",
+      "zero",
+      "angle",
+      "a0",
+      "a1",
+      "b0",
+      "b1",
+      "bq",
       "s0",
       "s1",
       "s2",
-      "size",
       "sq",
-      "strain",
-      "tthzero",
-      "x",
-      "y",
       "z",
-      "zero"
+      "y",
+      "x",
+      "size",
+      "strain",
+      "fwhm"
      ],
      "help": {
       "topic": "set",
@@ -12952,8 +12952,8 @@
      "source": "discus/prog/powder.f90:233",
      "keywords": {},
      "optional": [
-      "file",
-      "table"
+      "table",
+      "file"
      ],
      "help": {
       "topic": "xray",
@@ -13112,13 +13112,13 @@
      "source": "discus/prog/prop_para_func.f90:152",
      "keywords": {},
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
-      "nmax",
       "nmin",
-      "no"
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "prop",
@@ -13195,15 +13195,15 @@
      "source": "discus/prog/structur.f90:184",
      "keywords": {},
      "optional": [
-      "asymmetric",
-      "dump",
-      "identical",
-      "occupancy",
-      "origin",
       "radius",
+      "origin",
+      "occupancy",
+      "identical",
       "setting",
       "site",
-      "unique"
+      "unique",
+      "dump",
+      "asymmetric"
      ],
      "standard": true
     },
@@ -13221,24 +13221,24 @@
       "internal": 8
      },
      "optional": [
-      "atom",
-      "diffev",
-      "dump",
-      "first",
-      "form",
       "metric",
-      "mode",
-      "molescope",
-      "name",
-      "origin",
-      "refine",
-      "setting",
-      "sort",
       "space",
-      "type",
+      "sort",
+      "atom",
       "unique",
+      "name",
+      "refine",
+      "diffev",
+      "form",
+      "dump",
+      "type",
+      "origin",
       "value",
-      "vector"
+      "setting",
+      "first",
+      "molescope",
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "cell",
@@ -13268,24 +13268,24 @@
       "internal": 8
      },
      "optional": [
-      "atom",
-      "diffev",
-      "dump",
-      "first",
-      "form",
       "metric",
-      "mode",
-      "molescope",
-      "name",
-      "origin",
-      "refine",
-      "setting",
-      "sort",
       "space",
-      "type",
+      "sort",
+      "atom",
       "unique",
+      "name",
+      "refine",
+      "diffev",
+      "form",
+      "dump",
+      "type",
+      "origin",
       "value",
-      "vector"
+      "setting",
+      "first",
+      "molescope",
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "lcell",
@@ -13305,9 +13305,9 @@
      "keywords": {},
      "optional": [
       "first",
-      "mode",
       "molescope",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "free",
@@ -13333,22 +13333,22 @@
       "internal": 8
      },
      "optional": [
-      "atom",
-      "diffev",
-      "dump",
       "first",
-      "form",
-      "metric",
-      "mode",
       "molescope",
+      "vector",
+      "mode",
+      "type",
+      "value",
+      "metric",
+      "space",
+      "sort",
+      "atom",
+      "unique",
       "name",
       "refine",
-      "sort",
-      "space",
-      "type",
-      "unique",
-      "value",
-      "vector"
+      "diffev",
+      "form",
+      "dump"
      ],
      "help": {
       "topic": "stru",
@@ -14027,13 +14027,13 @@
      "source": "discus/prog/discus_save.f90:435",
      "keywords": {},
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
-      "nmax",
       "nmin",
-      "no"
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "prop",
@@ -14789,17 +14789,17 @@
       "internal": 8
      },
      "optional": [
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
       "atom",
       "conn",
-      "emax",
-      "emin",
       "first",
-      "mode",
       "molescope",
-      "nmax",
-      "nmin",
-      "no",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "dist",
@@ -14833,13 +14833,13 @@
      "source": "discus/prog/stack.f90:347",
      "keywords": {},
      "optional": [
-      "first",
-      "mode",
-      "molescope",
       "sigabs",
       "sigord",
       "sigtop",
-      "vector"
+      "first",
+      "molescope",
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "four",
@@ -14859,17 +14859,17 @@
       "internal": 8
      },
      "optional": [
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
       "atom",
       "conn",
-      "emax",
-      "emin",
       "first",
-      "mode",
       "molescope",
-      "nmax",
-      "nmin",
-      "no",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "layer",
@@ -14965,9 +14965,9 @@
      },
      "optional": [
       "first",
-      "mode",
       "molescope",
-      "vector"
+      "vector",
+      "mode"
      ],
      "help": {
       "topic": "run",
@@ -14985,10 +14985,10 @@
      "source": "discus/prog/stack.f90:717",
      "keywords": {},
      "optional": [
-      "atoms",
       "aver",
       "modulus",
-      "trans"
+      "trans",
+      "atoms"
      ],
      "help": {
       "topic": "set",
@@ -15286,24 +15286,24 @@
       "all": 3
      },
      "optional": [
-      "amp",
-      "character",
       "current",
-      "displacement",
-      "file",
-      "function",
       "group",
-      "new",
-      "number",
-      "old",
-      "phase",
-      "prob",
-      "pseudo",
-      "qvec",
-      "replace",
-      "site",
       "up",
-      "vec"
+      "phase",
+      "site",
+      "pseudo",
+      "character",
+      "function",
+      "displacement",
+      "replace",
+      "file",
+      "qvec",
+      "amp",
+      "vec",
+      "number",
+      "prob",
+      "old",
+      "new"
      ],
      "help": {
       "topic": "assign",
@@ -15407,24 +15407,24 @@
       "all": 3
      },
      "optional": [
-      "amp",
-      "character",
       "current",
-      "displacement",
-      "file",
-      "function",
       "group",
-      "new",
-      "number",
-      "old",
-      "phase",
-      "prob",
-      "pseudo",
-      "qvec",
-      "replace",
-      "site",
       "up",
-      "vec"
+      "phase",
+      "site",
+      "pseudo",
+      "character",
+      "function",
+      "displacement",
+      "replace",
+      "file",
+      "qvec",
+      "amp",
+      "vec",
+      "number",
+      "prob",
+      "old",
+      "new"
      ],
      "help": {
       "topic": "set",
@@ -15558,17 +15558,17 @@
      "source": "discus/prog/surface_func_mod.f90:129",
      "keywords": {},
      "optional": [
-      "accum",
-      "axis",
-      "center",
+      "thick",
       "centx",
       "centy",
       "centz",
-      "exec",
-      "first",
+      "center",
       "keep",
-      "thick",
-      "third"
+      "accum",
+      "exec",
+      "third",
+      "first",
+      "axis"
      ],
      "help": {
       "topic": "boundary",
@@ -15728,10 +15728,10 @@
      "source": "discus/prog/symm.f90:194",
      "keywords": {},
      "optional": [
-      "echo",
-      "mode",
+      "radius",
       "occupied",
-      "radius"
+      "echo",
+      "mode"
      ],
      "help": {
       "topic": "calc",
@@ -15773,10 +15773,10 @@
      "source": "discus/prog/symm.f90:297",
      "keywords": {},
      "optional": [
-      "echo",
-      "mode",
+      "radius",
       "occupied",
-      "radius"
+      "echo",
+      "mode"
      ],
      "help": {
       "topic": "incl",
@@ -15826,10 +15826,10 @@
      "source": "discus/prog/symm.f90:422",
      "keywords": {},
      "optional": [
-      "echo",
-      "mode",
+      "radius",
       "occupied",
-      "radius"
+      "echo",
+      "mode"
      ],
      "help": {
       "topic": "mode",
@@ -16823,14 +16823,14 @@
      },
      "optional": [
       "abs",
+      "ord",
+      "top",
+      "outfile",
+      "npoints",
       "ll",
       "lr",
-      "npoints",
-      "ord",
-      "outfile",
-      "tl",
-      "top",
       "ul",
+      "tl",
       "zone"
      ],
      "help": {
@@ -17699,8 +17699,8 @@
      "source": "kuplot/prog/kuplot_kdo.f90:236",
      "keywords": {},
      "optional": [
-      "map",
-      "range"
+      "range",
+      "map"
      ],
      "help": {
       "topic": "color",
@@ -17770,15 +17770,15 @@
      "source": "kuplot/prog/kuplot_kdo.f90:270",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "partial",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
-      "partial",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ],
      "help": {
@@ -18089,9 +18089,9 @@
      "source": "kuplot/prog/kuplot_kdo.f90:323",
      "keywords": {},
      "optional": [
+      "real",
       "imag",
       "pad",
-      "real",
       "style"
      ],
      "help": {
@@ -18131,10 +18131,10 @@
      "source": "kuplot/prog/kuplot_kdo.f90:333",
      "keywords": {},
      "optional": [
-      "damp",
-      "filter",
       "scale",
-      "width"
+      "damp",
+      "width",
+      "filter"
      ],
      "help": {
       "topic": "glat",
@@ -18152,10 +18152,10 @@
      "source": "kuplot/prog/kuplot_kdo.f90:335",
      "keywords": {},
      "optional": [
-      "damp",
-      "filter",
       "scale",
-      "width"
+      "damp",
+      "width",
+      "filter"
      ],
      "help": {
       "topic": "smooth",
@@ -18395,14 +18395,14 @@
       "all": 1
      },
      "optional": [
-      "coldx",
-      "coldy",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ],
      "help": {
@@ -18730,8 +18730,8 @@
      "source": "kuplot/prog/kuplot_kdo.f90:450",
      "keywords": {},
      "optional": [
-      "logfile",
-      "partial"
+      "partial",
+      "logfile"
      ],
      "help": {
       "topic": "rvalue",
@@ -18821,8 +18821,8 @@
      "source": "kuplot/prog/kuplot_kdo.f90:477",
      "keywords": {},
      "optional": [
-      "map",
-      "range"
+      "range",
+      "map"
      ],
      "help": {
       "topic": "plot",
@@ -18840,10 +18840,10 @@
      "source": "kuplot/prog/kuplot_kdo.f90:482",
      "keywords": {},
      "optional": [
-      "map",
-      "range",
       "res",
-      "trans"
+      "trans",
+      "range",
+      "map"
      ],
      "help": {
       "topic": "save",
@@ -18861,10 +18861,10 @@
      "source": "kuplot/prog/kuplot_kdo.f90:482",
      "keywords": {},
      "optional": [
-      "map",
-      "range",
       "res",
-      "trans"
+      "trans",
+      "range",
+      "map"
      ],
      "help": {
       "topic": "print",
@@ -18942,8 +18942,8 @@
      "keywords": {},
      "optional": [
       "dataset",
-      "kuplot",
-      "refine"
+      "refine",
+      "kuplot"
      ],
      "help": {
       "topic": "torefine",
@@ -19584,13 +19584,13 @@
      "source": "kuplot/prog/kuplot_2dmap.f90:144",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "skip",
       "colx",
       "coly",
+      "coldx",
+      "coldy",
       "scale",
-      "separator",
-      "skip"
+      "separator"
      ],
      "help": {
       "topic": "back",
@@ -19613,12 +19613,12 @@
      "source": "kuplot/prog/kuplot_2dmap.f90:146",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "skip",
       "colx",
       "coly",
-      "separator",
-      "skip"
+      "coldx",
+      "coldy",
+      "separator"
      ],
      "help": {
       "topic": "load",
@@ -19639,11 +19639,11 @@
      "source": "kuplot/prog/kuplot_2dmap.f90:148",
      "keywords": {},
      "optional": [
-      "counter",
-      "end",
-      "miss",
       "start",
-      "step"
+      "end",
+      "step",
+      "counter",
+      "miss"
      ],
      "help": {
       "topic": "loop",
@@ -19664,8 +19664,8 @@
      "source": "kuplot/prog/kuplot_2dmap.f90:150",
      "keywords": {},
      "optional": [
-      "xmax",
-      "xmin"
+      "xmin",
+      "xmax"
      ],
      "help": {
       "topic": "xrange",
@@ -19703,15 +19703,15 @@
      "source": "kuplot/prog/kuplot_2dmap.f90:154",
      "keywords": {},
      "optional": [
-      "coldx",
-      "coldy",
+      "plot",
+      "skip",
       "colx",
       "coly",
-      "decimal",
+      "coldx",
+      "coldy",
       "layer",
-      "plot",
       "separator",
-      "skip",
+      "decimal",
       "trans"
      ],
      "help": {
@@ -19785,8 +19785,8 @@
      "source": "kuplot/prog/kuplot_adt.f90:179",
      "keywords": {},
      "optional": [
-      "cell",
       "data",
+      "cell",
       "log"
      ],
      "help": {
@@ -19821,18 +19821,18 @@
      "source": "kuplot/prog/kuplot_adt.f90:183",
      "keywords": {},
      "optional": [
-      "abs",
-      "interval",
-      "lattice",
-      "limits",
       "mode",
-      "normal",
-      "ord",
-      "output",
-      "rod",
-      "sigma",
+      "limits",
       "steps",
-      "zero"
+      "sigma",
+      "zero",
+      "rod",
+      "normal",
+      "abs",
+      "ord",
+      "interval",
+      "output",
+      "lattice"
      ],
      "help": {
       "topic": "set",
@@ -20157,11 +20157,11 @@
      "source": "kuplot/prog/fit_top.f90:180",
      "keywords": {},
      "optional": [
-      "axis",
-      "nback",
-      "origin",
       "peaks",
-      "wave"
+      "origin",
+      "nback",
+      "wave",
+      "axis"
      ],
      "help": {
       "topic": "func",
@@ -20347,8 +20347,8 @@
      "source": "kuplot/prog/fit_top.f90:250",
      "keywords": {},
      "optional": [
-      "map",
-      "range"
+      "range",
+      "map"
      ],
      "help": {
       "topic": "plot",
@@ -20366,8 +20366,8 @@
      "source": "kuplot/prog/fit_top.f90:255",
      "keywords": {},
      "optional": [
-      "fail",
       "start",
+      "fail",
       "success"
      ],
      "help": {
@@ -20387,10 +20387,10 @@
      "source": "kuplot/prog/fit_top.f90:260",
      "keywords": {},
      "optional": [
-      "chi",
-      "conf",
       "dchi",
       "pshift",
+      "conf",
+      "chi",
       "status"
      ],
      "help": {
@@ -20444,14 +20444,14 @@
       "stop": 4
      },
      "optional": [
-      "author",
-      "compute",
-      "logfile",
-      "nthread",
       "partial",
-      "plot",
       "repeat",
-      "useomp"
+      "logfile",
+      "compute",
+      "author",
+      "nthread",
+      "useomp",
+      "plot"
      ]
     },
     {
@@ -21002,19 +21002,19 @@
      "source": "refine/prog/refine_kdo.f90:169",
      "keywords": {},
      "optional": [
-      "author",
-      "chisq",
-      "conf",
       "dchi",
-      "fail",
-      "lambda",
-      "nthread",
-      "plot",
       "pshift",
-      "start",
+      "conf",
+      "chisq",
+      "lambda",
       "status",
+      "start",
+      "fail",
       "success",
-      "useomp"
+      "author",
+      "nthread",
+      "useomp",
+      "plot"
      ],
      "help": {
       "topic": "set",
@@ -21072,19 +21072,19 @@
       "real": 3
      },
      "optional": [
-      "coldx",
-      "coldy",
+      "dataset",
+      "weight",
+      "maxdata",
+      "skip",
       "colx",
       "coly",
-      "dataset",
-      "decimal",
-      "dim",
+      "coldx",
+      "coldy",
       "layer",
-      "maxdata",
       "separator",
-      "skip",
+      "decimal",
       "trans",
-      "weight"
+      "dim"
      ],
      "help": {
       "topic": "data",
@@ -21108,19 +21108,19 @@
       "real": 3
      },
      "optional": [
-      "coldx",
-      "coldy",
+      "dataset",
+      "weight",
+      "maxdata",
+      "skip",
       "colx",
       "coly",
-      "dataset",
-      "decimal",
-      "dim",
+      "coldx",
+      "coldy",
       "layer",
-      "maxdata",
       "separator",
-      "skip",
+      "decimal",
       "trans",
-      "weight"
+      "dim"
      ],
      "help": {
       "topic": "sigma",
@@ -21178,15 +21178,15 @@
       "real": 3
      },
      "optional": [
-      "dim",
-      "init",
+      "shift",
       "move",
       "points",
-      "range",
-      "shift",
+      "value",
       "status",
+      "range",
+      "init",
       "type",
-      "value"
+      "dim"
      ],
      "help": {
       "topic": "newparam",
@@ -21223,8 +21223,8 @@
      "source": "refine/prog/refine_kdo.f90:222",
      "keywords": {},
      "optional": [
-      "init",
-      "plot"
+      "plot",
+      "init"
      ],
      "help": {
       "topic": "run",
@@ -21351,10 +21351,10 @@
       "stop": 4
      },
      "optional": [
-      "compute",
-      "logfile",
       "partial",
-      "repeat"
+      "repeat",
+      "logfile",
+      "compute"
      ],
      "help": {
       "topic": "diffev",
@@ -21373,21 +21373,21 @@
       "stop": 4
      },
      "optional": [
-      "atom",
-      "compute",
-      "conn",
-      "emax",
-      "emin",
-      "first",
-      "logfile",
-      "mode",
-      "molescope",
-      "nmax",
-      "nmin",
-      "no",
       "partial",
       "repeat",
-      "vector"
+      "logfile",
+      "compute",
+      "first",
+      "molescope",
+      "vector",
+      "mode",
+      "nmin",
+      "nmax",
+      "emin",
+      "emax",
+      "no",
+      "atom",
+      "conn"
      ],
      "help": {
       "topic": "discus",
@@ -21414,11 +21414,11 @@
       "stop": 4
      },
      "optional": [
-      "compute",
       "data",
-      "logfile",
       "partial",
-      "repeat"
+      "repeat",
+      "logfile",
+      "compute"
      ],
      "help": {
       "topic": "kuplot",
@@ -21437,10 +21437,10 @@
       "stop": 4
      },
      "optional": [
-      "compute",
-      "logfile",
       "partial",
-      "repeat"
+      "repeat",
+      "logfile",
+      "compute"
      ],
      "help": {
       "topic": "refine",
@@ -21473,24 +21473,24 @@
      "source": "suite/prog/suite_kdo.f90:326",
      "keywords": {},
      "optional": [
-      "color",
-      "dmax",
+      "site",
       "dmin",
-      "export",
+      "dmax",
+      "nmin",
+      "nmax",
       "face",
-      "first",
-      "geom",
       "hue",
+      "color",
+      "plot",
       "keep",
       "kill",
-      "mode",
-      "molescope",
-      "nmax",
-      "nmin",
-      "plot",
+      "geom",
+      "export",
       "posit",
-      "site",
-      "vector"
+      "first",
+      "molescope",
+      "vector",
+      "mode"
      ]
     },
     {
@@ -21508,17 +21508,17 @@
      "source": "suite/prog/suite_kdo.f90:336",
      "keywords": {},
      "optional": [
-      "atom",
-      "conn",
-      "emax",
-      "emin",
       "first",
-      "mode",
       "molescope",
-      "nmax",
+      "vector",
+      "mode",
       "nmin",
+      "nmax",
+      "emin",
+      "emax",
       "no",
-      "vector"
+      "atom",
+      "conn"
      ],
      "standard": true
     }

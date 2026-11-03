@@ -72,6 +72,10 @@ These rules are implemented in `str_comp` and `Catalogue.resolve`, and checked b
   `discus`, `kuplot`, `refine`, `diffev`, `mixscat`). Inside a sub-menu, a `do ...=...` line
   is an assignment and fails.
 - **Menus**: `exit` returns to the parent menu, and at the suite level it ends the run.
+  `finished` acts like `exit` in DISCUS, in KUPLOT and at the suite level. KUPLOT `ksave` …
+  `run` writes the file and returns to the KUPLOT prompt by itself
+  (`kuplot_save.f90:526-529`). `branch` always fails in 6.23.01, because it is a stub that
+  sets error -7.
   `read` handles one line, whatever it is, and returns, which is why `read` / `cell x.cll`
   needs no `exit`. In a macro, every other menu reads until `exit`; after an error inside a
   macro the sub-menu returns to its caller (e.g. `ier_num = -10`, `fourier.f90:1027`) and the

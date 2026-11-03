@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -27,6 +26,7 @@ from typing import Any
 
 import numpy as np
 
+from .engine import current_engine, Engine, as_engine
 from .fourier_macro import Seed
 from .structure import Structure
 
@@ -803,12 +803,15 @@ class MCRunner:
     default ``("discus_suite", "-noautorun", "-macro")`` inside WSL/Linux."""
 
     def __init__(self, runs_directory="runs_mc", launcher=("discus_suite", "-noautorun", "-macro"),
-                 timeout_seconds: float = 3600):
+                 timeout_seconds: float = 3600, *, engine: Engine | None = None):
+        """``engine`` (a :class:`discuspdf.engine.Engine`) replaces ``launcher`` and ``timeout_seconds``."""
         self.runs_directory = Path(runs_directory)
-        self.launcher = tuple(launcher)
-        if not self.launcher or timeout_seconds <= 0:
+        launcher = tuple(launcher)
+        if engine is None and (not launcher or timeout_seconds <= 0):
             raise ValueError("invalid launcher or timeout")
-        self.timeout_seconds = timeout_seconds
+        self.engine = as_engine(engine, launcher, timeout_seconds)
+        self.launcher = self.engine.launcher
+        self.timeout_seconds = self.engine.timeout_seconds
 
     def prepare(self, config: MCConfig, structure: Structure, *, title: str | None = None) -> MCRun:
         from .discus_io import format_stru
@@ -848,18 +851,17 @@ class MCRunner:
         out = run.directory / run.config.output_file
         if out.exists():
             raise FileExistsError(f"{out} exists; prepare a new run")
-        env = os.environ.copy()
-        env.pop("DISPLAY", None)
-        env["PGPLOT"] = "none"
+        try:
+            engine = current_engine(self)
+        except ValueError as exc:
+            self._status(run, "failed", reason=f"invalid engine settings: {exc}", engine_started=False)
+            raise
         self._status(run, "running")
         try:
-            proc = subprocess.run([*self.launcher, "run.mac"], cwd=run.directory, input="exit\n", text=True,
-                                  capture_output=True, timeout=self.timeout_seconds, env=env, check=False)
+            proc = engine.run(run.directory, "run.mac", error_pattern=None)  # load() checks the log
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
             self._status(run, "failed", reason=str(exc))
             raise RuntimeError(f"DISCUS could not complete; see {run.directory}") from exc
-        text = proc.stdout + "\n--- STDERR ---\n" + proc.stderr
-        (run.directory / "run.log").write_text(text, encoding="utf-8")
         return self.load(run, returncode=proc.returncode)
 
     def load(self, run: MCRun, *, returncode: int | None = None) -> MCResult:

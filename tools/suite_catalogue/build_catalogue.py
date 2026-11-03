@@ -150,7 +150,7 @@ def build(root: Path, version: str, commit: str, label: str) -> dict:
             "compare_len": branch.compare_len,
             "source": f"{routine.file}:{branch.line}",
             "keywords": dict(sorted(keywords.items())),
-            "optional": sorted(dict.fromkeys(optional)),
+            "optional": list(dict.fromkeys(optional)),  # declaration order: get_optional takes the first match
         }
         if topic is not None:
             entry["help"] = {"topic": topic.name, "line": topic.line, "syntax": topic.syntax,
