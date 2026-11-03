@@ -177,6 +177,48 @@ def _check_wavelength(w) -> str | float:
     return w
 
 
+# DISCUS atom names: up to 4 characters (longer names break the .stru reader), compared upper case.
+_ATOM_NAME_RE = re.compile(r"^[A-Z][A-Z0-9+\-.]{0,3}$")
+
+
+def normalize_scattering_lengths(value) -> tuple[tuple[str, float], ...]:
+    """Own coherent neutron scattering lengths (fm) per DISCUS atom name, as sorted ``(NAME, b)`` pairs.
+
+    Accepts a mapping ``{"NI62": 10.3}`` or pairs. Names are upper-cased (DISCUS ignores case) and must
+    be DISCUS atom names (1–4 characters, starting with a letter); names equal up to case are refused.
+    """
+    if value is None:
+        return ()
+    items = list(value.items()) if hasattr(value, "items") else [tuple(p) for p in value]
+    out: dict[str, float] = {}
+    for item in items:
+        if len(item) != 2:
+            raise ValueError("scattering_lengths entries are (atom name, b in fm)")
+        name, b = item
+        if not isinstance(name, str):
+            raise ValueError(f"scattering_lengths: atom name must be a string, got {name!r}")
+        up = name.strip().upper()
+        if not _ATOM_NAME_RE.match(up):
+            raise ValueError(f"scattering_lengths: {name!r} is not a DISCUS atom name (1-4 characters, "
+                             "starting with a letter)")
+        if up == "VOID":
+            raise ValueError("scattering_lengths: VOID does not scatter and cannot get a scattering length")
+        if up in out:
+            raise ValueError(f"scattering_lengths: {up!r} given twice (DISCUS ignores upper/lower case)")
+        if isinstance(b, (bool, np.bool_)) or not isinstance(b, (int, float, np.integer, np.floating)) \
+                or not np.isfinite(float(b)):
+            raise ValueError(f"scattering_lengths: b of {up} must be a finite number of fm, got {b!r}")
+        out[up] = float(b)
+    return tuple(sorted(out.items()))
+
+
+def scat_commands(scattering_lengths) -> list[str]:
+    """``scat NAME, 0,0,0,0,0,0,0,0, b`` lines (fourier menu). The eight form-factor coefficients are zero
+    and the constant term is b; for neutrons DISCUS 6.23.01 uses only that term (fourier_sup.f90 ``form``),
+    so b is the scattering length in fm. The setting is kept for a later ``powder`` run."""
+    return [f"  scat {name}, 0,0,0,0,0,0,0,0, {b:.8g}" for name, b in scattering_lengths]
+
+
 def axis_labels(grid: ReciprocalGrid, tol: float = 1e-12) -> tuple[str, str, str]:
     """``abs/ord/top`` labels for DISCUS: each active axis must have a nonzero hkl component along its
     label (6.23.01 refused an hhl plane labelled ``ord k``: 'Component of increment vector is zero').
@@ -209,6 +251,11 @@ class FourierConfig:
     radiation: ``'xray'`` (default) or ``'neutron'``.
     wavelength: a DISCUS symbol from :data:`WAVELENGTHS` (default ``'moa1'``, 0.70926 Å in DISCUS) or a
         number in Å (> 0). With ``disp off`` it changes only the file metadata, not the intensities.
+    scattering_lengths: own coherent neutron scattering lengths (fm) by DISCUS atom name, e.g.
+        ``{"NI62": 10.3}`` for an isotope label; neutron runs only. Each becomes a
+        ``scat NAME, 0,0,0,0,0,0,0,0, b`` line before ``show``. Give only names that occur in the
+        structure (what DISCUS does with ``scat`` for an absent name was not checked).
+        Empty (the default) leaves the macro unchanged.
     """
     grid: ReciprocalGrid
     outputs: tuple[tuple[str, str], ...]
@@ -220,6 +267,7 @@ class FourierConfig:
     wavelength: str | float = "moa1"
     radiation: str = "xray"
     labels: tuple[str, str, str] | None = field(default=None)
+    scattering_lengths: Any = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.grid, ReciprocalGrid):
@@ -243,6 +291,11 @@ class FourierConfig:
         if self.radiation not in RADIATIONS:
             raise ValueError(f"radiation must be one of {RADIATIONS}")
         object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
+        scat = normalize_scattering_lengths(self.scattering_lengths)
+        if scat and self.radiation != "neutron":
+            raise ValueError("scattering_lengths are neutron scattering lengths; use radiation='neutron' "
+                             "(X-rays always use the element's form factor)")
+        object.__setattr__(self, "scattering_lengths", scat)
         outs = tuple(tuple(o) for o in self.outputs)
         if not outs:
             raise ValueError("at least one output is required")
@@ -307,6 +360,7 @@ class FourierConfig:
                  "  set technique:turbo", f"  set aver,{self.aver_percent:.1f}"]
         if self.symmetry is not None:
             lines.append(f"  set symm:{self.symmetry}")
+        lines += scat_commands(self.scattering_lengths)
         lines += ["  show", "  run", "exit"]
         return lines
 
@@ -345,7 +399,10 @@ class FourierConfig:
                 "seed": None if self.seed is None else list(self.seed.values),
                 "temperature": self.temperature, "symmetry": self.symmetry, "wavelength": self.wavelength,
                 "radiation": self.radiation, "labels": list(self.labels), "technique": "turbo", "engine": "DISCUS_SUITE 6.23.01",
-                "bragg": self.bragg, "labels_verified": self.labels_verified}
+                "bragg": self.bragg, "labels_verified": self.labels_verified,
+                # only written when used, so descriptions of existing runs stay unchanged
+                **({"scattering_lengths": {n: b for n, b in self.scattering_lengths}}
+                   if self.scattering_lengths else {})}
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "FourierConfig":
@@ -359,7 +416,8 @@ class FourierConfig:
                    aver_percent=d["aver_percent"], lots=lots,
                    seed=None if d["seed"] is None else Seed(tuple(d["seed"])),
                    temperature=d["temperature"], symmetry=d["symmetry"], wavelength=d["wavelength"],
-                   radiation=radiation, labels=tuple(d["labels"]))
+                   radiation=radiation, labels=tuple(d["labels"]),
+                   scattering_lengths=d.get("scattering_lengths") or ())
 
 
 def prepare_fourier_run(runner, config: FourierConfig, structure: StructureSource, structure_path,

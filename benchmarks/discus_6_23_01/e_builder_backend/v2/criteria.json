@@ -1,0 +1,9 @@
+{
+ "V1": {"what": "one-cell file without VOID rows = verified layout, neutron: p_mix_big_n vs p_mix_n, max |dG| / max |G|", "max": 1e-6},
+ "V2": {"what": "same, X-ray: p_mix_big_x vs p_mix_x", "max": 1e-6},
+ "V3": {"what": "vacancies, neutron: (240/256) * p_vac_void_n vs p_vac_big_n (scale law + one-cell route)", "max": 1e-6},
+ "V4": {"what": "vacancies, X-ray: (240/256) * p_vac_void_x vs p_vac_big_x", "max": 1e-6},
+ "V5": {"what": "VOID padding, X-ray: (256/320) * p_void_x vs p_mix_x (scale law, X-ray)", "max": 1e-6},
+ "V6": {"what": "power: vacancies change G, p_vac_big_n vs p_mix_n (estimate ~6e-2)", "min": 1e-3},
+ "V0": {"what": "every PDF run has r = 0..10 step 0.02 and finite G (count of failures)", "max": 0}
+}
