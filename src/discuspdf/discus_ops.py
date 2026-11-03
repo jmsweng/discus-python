@@ -23,6 +23,7 @@ documented with the source it comes from; the wrappers here are at the *engine-r
 
 from __future__ import annotations
 
+import math
 import numbers
 import tempfile
 from dataclasses import dataclass, field
@@ -127,7 +128,8 @@ class ReplaceRandom(Step):
     def __post_init__(self):
         _atom("old", self.old)
         _atom("new", self.new)
-        _prob("probability", self.probability)
+        if _prob("probability", self.probability) == 0.0:
+            raise ValueError("probability must be > 0 (modify_mod.f90 do_replace refuses 0)")
         if self.site != "all":
             _int("site", self.site)
 
@@ -179,6 +181,213 @@ class Purge(Step):
             m.command("purge", type="yes")
         else:
             m.command("purge")
+
+
+WAVE_KINDS = ("longitudinal", "transverse", "density")
+WAVE_FUNCTIONS = ("sinus", "box", "triangle")
+WAVE_BRANCHES = ("acoustic", "optical")
+
+
+def _real(name: str, v) -> float:
+    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(float(v)):
+        raise ValueError(f"{name} must be a finite number, got {v!r}")
+    return float(v)
+
+
+def _vec3(name: str, v) -> tuple[float, float, float]:
+    try:
+        items = tuple(v)
+    except TypeError:
+        raise ValueError(f"{name} must be three numbers, got {v!r}") from None
+    if len(items) != 3:
+        raise ValueError(f"{name} must be three numbers, got {v!r}")
+    vec = tuple(_real(f"{name}[{i}]", x) for i, x in enumerate(items))
+    if all(x == 0.0 for x in vec):
+        raise ValueError(f"{name} must not be the zero vector")
+    return vec
+
+
+@dataclass(frozen=True)
+class Wave(Step):
+    """A displacement or density wave of the DISCUS ``waves`` menu (``discus/wave``).
+
+    Atom-based modes only. Molecule selection (``mselect``, ``mreplace``) and rotation
+    (``rotation``) are left out on purpose; so are the ``site:`` option of ``select``: the
+    source parses it into ``wv_lsite`` (``modify_mod.f90`` 1862-1884) but ``wave_run`` never reads
+    that array (``waves.f90`` 715-1036), so it would have no effect.
+
+    * ``kind``: ``"longitudinal"`` (``long``), ``"transverse"`` (``tran``, needs
+      ``oscillation``) or ``"density"`` (``dens``, needs ``replace``, ``plow``, ``phigh``).
+    * ``vector`` (``vect``): wave vector in lattice units, not all zero. Only its direction is
+      used: ``wave_run`` normalises it (``waves.f90`` 815-817).
+    * ``length`` (``len``): wavelength in Angstrom, > 0 (source default 50).
+    * ``function`` (``func``): ``"sinus"``, ``"box"`` or ``"triangle"``; ``box_width`` is the
+      optional ``box,<delta>`` with 0 < delta < 1 (``waves.f90`` 242-243, default 0.5).
+    * ``amplitude`` (``amp``): displacement amplitude in Angstrom, required for the displacement
+      modes. ``sinus`` is ``amp*cos(2 pi arg) + shift`` (``waves.f90`` sinus function).
+    * ``shift`` (``shift``): constant displacement in Angstrom, optional, displacement modes only.
+    * ``phase`` (``phase``): degrees, or ``"random"`` (written unquoted, see below).
+    * ``branch`` (``accoustic`` / ``optical``): displacement modes only, default acoustic. An
+      optical wave reverses the displacement of atoms whose name contains '-' (``waves.f90``
+      1019-1022). The density branch ignores it, so it must be None there.
+    * ``select`` (``select``): displacement modes only: ``"all"`` (default) or names/type numbers.
+    * ``replace`` (``replace <from>,<to>[,viceversa]``): density modes only: atoms of type
+      ``from`` are replaced by ``to`` (``waves.f90`` 408-437). ``viceversa`` replaces the
+      complementary probability of the atoms of type ``to``.
+    * ``plow``, ``phigh``: density modes only, 0 <= plow <= phigh <= 1.
+
+    Density runs overwrite ``amp`` and ``shift`` (``waves.f90`` 825-836), so they must be None
+    there. The macro is ``waves``: optional ``reset`` (only when the menu has that command), the
+    settings, then ``run`` (``waves.f90`` 470-471, 715). ``select`` is needed because a reset
+    leaves every atom unselected (``waves.f90`` 1310); without it ``run`` moves nothing.
+
+    The source reads quoted values literally (``get_params_mod.f90`` 67-68 keeps the quotes and
+    ``str_comp`` does not strip them), so ``func "box"``, ``phase "random"`` and a quoted
+    ``"viceversa"`` would not be recognised. The step writes them unquoted.
+    """
+
+    kind: str
+    vector: Sequence[float]
+    length: float
+    function: str = "sinus"
+    box_width: float | None = None
+    amplitude: float | None = None
+    shift: float | None = None
+    phase: float | str = 0.0
+    branch: str | None = None
+    oscillation: Sequence[float] | None = None
+    select: object = None
+    replace: Sequence | None = None
+    viceversa: bool = False
+    plow: float | None = None
+    phigh: float | None = None
+
+    def __post_init__(self):
+        if self.kind not in WAVE_KINDS:
+            raise ValueError(f"kind must be one of {WAVE_KINDS}, got {self.kind!r}")
+        density = self.kind == "density"
+        object.__setattr__(self, "vector", _vec3("vector", self.vector))
+        length = _real("length", self.length)
+        if length <= 0:
+            raise ValueError(f"length must be > 0 Angstrom, got {self.length!r}")
+        object.__setattr__(self, "length", length)
+
+        if self.function not in WAVE_FUNCTIONS:
+            raise ValueError(f"function must be one of {WAVE_FUNCTIONS}, got {self.function!r}")
+        if self.function == "box" and self.box_width is not None:
+            width = _real("box_width", self.box_width)
+            if not 0.0 < width < 1.0:
+                raise ValueError(f"box_width must be in (0, 1), got {self.box_width!r}")
+            object.__setattr__(self, "box_width", width)
+        elif self.box_width is not None:
+            raise ValueError("box_width is only accepted with function 'box'")
+
+        if isinstance(self.phase, str):
+            if self.phase != "random":
+                raise ValueError(f"phase must be a number or 'random', got {self.phase!r}")
+        else:
+            object.__setattr__(self, "phase", _real("phase", self.phase))
+
+        if density:
+            self._check_density()
+        else:
+            self._check_displacement()
+
+    def _check_density(self) -> None:
+        for name in ("amplitude", "shift", "branch", "select", "oscillation"):
+            if getattr(self, name) is not None:
+                raise ValueError(f"{name} is not used by density waves (it is overwritten at run time)")
+        if not isinstance(self.viceversa, bool):
+            raise ValueError("viceversa must be True or False")
+        if self.replace is None:
+            raise ValueError("a density wave needs replace=(from, to)")
+        pair = tuple(self.replace)
+        if len(pair) != 2:
+            raise ValueError(f"replace must be (from, to), got {self.replace!r}")
+        object.__setattr__(self, "replace", (_atom("replace from", pair[0]), _atom("replace to", pair[1])))
+        if self.plow is None or self.phigh is None:
+            raise ValueError("a density wave needs plow and phigh")
+        plow, phigh = _real("plow", self.plow), _real("phigh", self.phigh)
+        if not 0.0 <= plow <= phigh <= 1.0:
+            raise ValueError(f"need 0 <= plow <= phigh <= 1, got plow={plow!r}, phigh={phigh!r}")
+        object.__setattr__(self, "plow", plow)
+        object.__setattr__(self, "phigh", phigh)
+
+    def _check_displacement(self) -> None:
+        if self.amplitude is None:
+            raise ValueError(f"a {self.kind} wave needs amplitude (Angstrom)")
+        object.__setattr__(self, "amplitude", _real("amplitude", self.amplitude))
+        if self.shift is not None:
+            object.__setattr__(self, "shift", _real("shift", self.shift))
+        branch = "acoustic" if self.branch is None else self.branch
+        if branch not in WAVE_BRANCHES:
+            raise ValueError(f"branch must be one of {WAVE_BRANCHES}, got {self.branch!r}")
+        object.__setattr__(self, "branch", branch)
+
+        select = self.select if self.select is not None else "all"
+        if isinstance(select, (str, numbers.Integral)):
+            select = (select,)
+        items = tuple(_atom("select", x) for x in select)
+        if not items:
+            raise ValueError("select must name at least one atom")
+        if "all" in items and len(items) > 1:
+            raise ValueError("select 'all' cannot be combined with other atoms")
+        object.__setattr__(self, "select", items)
+
+        if self.kind == "transverse":
+            if self.oscillation is None:
+                raise ValueError("a transverse wave needs oscillation=(x, y, z)")
+            object.__setattr__(self, "oscillation", _vec3("oscillation", self.oscillation))
+        elif self.oscillation is not None:
+            raise ValueError("oscillation is only used by transverse waves")
+
+        if self.viceversa or self.replace is not None or self.plow is not None or self.phigh is not None:
+            raise ValueError("replace, viceversa, plow and phigh are only used by density waves")
+
+    def apply(self, m: Macro) -> None:
+        density = self.kind == "density"
+        with m.menu("waves"):
+            if m.catalogue.menu("discus/wave").command("reset") is not None:
+                m.command("reset")  # waves.f90 163-164; the menu has it, so the step starts from defaults
+            if density:
+                m.command("density")
+            elif self.kind == "transverse":
+                m.command("transverse")
+            else:
+                m.command("long")
+            if not density:
+                # waves.f90 182 spells it 'accoustic'; 'optical' at 294
+                m.command("accoustic" if self.branch == "acoustic" else "optical")
+            if self.box_width is not None:
+                m.command("function", self.function, self.box_width)
+            else:
+                m.command("function", self.function)
+            m.command("length", self.length)
+            if not density:
+                m.command("amplitude", self.amplitude)
+            m.command("vector", *self.vector)
+            m.command("phase", self.phase)
+            if not density and self.shift is not None:
+                m.command("shift", self.shift)
+            if self.kind == "transverse":
+                m.command("osci", *self.oscillation)
+            if density:
+                m.command("plow", self.plow)
+                m.command("phigh", self.phigh)
+                m.command("replace", *(list(self.replace) + (["viceversa"] if self.viceversa else [])))
+            else:
+                m.command("select", *self.select)
+            m.command("run")
+
+
+class ResultNotAStructure(ValueError):
+    """The saved crystal could not be read back as a Structure (e.g. after ``purge`` the atom
+    count is no longer a whole number per unit cell). ``run`` is the finished SuiteRun, so the
+    file is still available as ``run.output("result.stru")``."""
+
+    def __init__(self, message, run):
+        super().__init__(message)
+        self.run = run
 
 
 @dataclass
@@ -271,9 +480,14 @@ class StructureJob:
                 raise ValueError(f"inputs must contain {self.source.file!r}")
             cells = self.crystal_cells(inputs)
             run = runner.run(self.macro(), inputs, [RESULT_NAME], engine=engine)
-        stru = read_stru(run.output(RESULT_NAME), supercell=cells, check_order=False, min_separation=None)
+        from .discus_io import DiscusFormatError
+
+        try:
+            stru = read_stru(run.output(RESULT_NAME), supercell=cells, check_order=False, min_separation=None)
+        except DiscusFormatError as exc:
+            raise ResultNotAStructure(f"DISCUS ran, but {RESULT_NAME} is not a {cells} crystal: {exc}", run) from exc
         return JobResult(stru.structure, run, stru)
 
 
-__all__ = ["Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
-           "StructureJob", "JobResult", "MacroError", "format_value"]
+__all__ = ["ResultNotAStructure", "Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
+           "Wave", "StructureJob", "JobResult", "MacroError", "format_value"]

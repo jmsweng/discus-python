@@ -107,3 +107,16 @@ def test_purge_drops_the_vacancies():
     text = exc.value.run.output("result.stru").read_text()
     atoms = text.lower().split("atoms", 1)[1].strip().splitlines()[1:]  # skip the column header line
     assert sum(1 for line in atoms if line.strip()) == 4 * N**3 - 3
+
+
+def test_longitudinal_wave_displaces_along_the_wave_vector_only():
+    from discuspdf.discus_ops import Wave
+    ideal = run([]).structure
+    amp = 0.05
+    w = Wave("longitudinal", (1, 0, 0), 3.615 * N, amplitude=amp, phase=0)
+    moved = run([w]).structure
+    d = (np.asarray(moved.frac) - np.asarray(ideal.frac))
+    d -= np.round(d)
+    u = d * 3.615 * N  # Angstrom (cubic)
+    assert np.max(np.abs(u[:, 1:])) < 1e-6  # nothing perpendicular to [100]
+    assert 0.9 * amp < np.max(np.abs(u[:, 0])) <= amp + 1e-6

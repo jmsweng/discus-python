@@ -129,3 +129,14 @@ def test_run_needs_the_source_file(tmp_path):
     runner = SuiteRunner(tmp_path / "runs", Engine((sys.executable, "-c", "pass")))
     with pytest.raises(ValueError, match="inputs must contain"):
         StructureJob(StructureSource.cell("cu_b05.cll", (2, 2, 2))).run(runner, {})
+
+
+def test_result_that_is_not_a_whole_crystal_raises_with_the_run(tmp_path):
+    from discuspdf.discus_ops import Purge, ResultNotAStructure
+    script = tmp_path / "fake.py"
+    script.write_text(FAKE.replace('lines = [l for l in text.splitlines() if not l.lower().startswith("ncell")]',
+                                   'lines = [l for l in text.splitlines() if not l.lower().startswith("ncell")][:-3]'))
+    runner = SuiteRunner(tmp_path / "runs", Engine((sys.executable, str(script))))
+    with pytest.raises(ResultNotAStructure) as exc:
+        StructureJob(_cu_structure(2), [Purge()]).run(runner)
+    assert exc.value.run.output("result.stru").is_file()

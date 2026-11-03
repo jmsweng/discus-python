@@ -171,9 +171,32 @@ def _mc_samples() -> list[tuple[str, str]]:
     return out
 
 
+def _ops_samples() -> list[tuple[str, str]]:
+    """discuspdf.discus_ops: every step and wave variant in StructureJobs."""
+    from discuspdf.discus_ops import (Purge, Remove, ReplaceAtom, ReplaceRandom, StructureJob, Switch,
+                                      Thermal, Wave)
+
+    cell = StructureSource.cell(GAAS_CLL.name, (4, 4, 4))
+    stru = StructureSource.stru(GAAS_222_STRU.name, (2, 2, 2))
+    jobs = {
+        "ops_edit_steps": StructureJob(cell, [ReplaceRandom("GA", "IN", 0.3), ReplaceRandom("AS", "P", 0.5, site=2),
+                                              ReplaceAtom(1, "AL", b=0.6), Switch(1, 2), Remove(3, 4), Purge(types=True),
+                                              Remove("last"), Purge()], seed=SEED_A),
+        "ops_thermal": StructureJob(stru, [Thermal(), Thermal(two_d=True), Thermal(molecules=True)], seed=SEED_B),
+        "ops_wave_long_sinus": StructureJob(cell, [Wave("longitudinal", (1, 0, 0), 20.0, amplitude=0.05)]),
+        "ops_wave_trans_box": StructureJob(cell, [Wave("transverse", (1, 1, 0), 15.0, function="box", box_width=0.3,
+                                                       amplitude=0.1, shift=0.01, phase="random", branch="optical",
+                                                       oscillation=(0, 0, 1), select=("GA",))], seed=SEED_A),
+        "ops_wave_density_triangle": StructureJob(cell, [Wave("density", (0, 0, 1), 30.0, function="triangle",
+                                                              replace=("GA", "IN"), viceversa=True, plow=0.1,
+                                                              phigh=0.9)], seed=SEED_B),
+    }
+    return [(label, job.macro().render()) for label, job in jobs.items()]
+
+
 def sample_macros() -> list[tuple[str, str]]:
-    """Every sample macro as ``(label, macro_text)``, PDF then Fourier then MC."""
-    return _pdf_samples() + _fourier_samples() + _mc_samples()
+    """Every sample macro as ``(label, macro_text)``, PDF, Fourier, MC, then discus_ops."""
+    return _pdf_samples() + _fourier_samples() + _mc_samples() + _ops_samples()
 
 
 if __name__ == "__main__":

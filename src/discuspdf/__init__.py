@@ -138,3 +138,7 @@ from .macro import Macro, MacroError
 from .suite_runner import SuiteRun, SuiteRunner
 __all__ += ["Engine", "EngineChoiceError", "choose_engine", "fork_reasons", "Macro", "MacroError",
             "SuiteRun", "SuiteRunner"]
+
+# DISCUS structure operations as steps of a StructureJob (suite phase 2).
+from . import discus_ops
+__all__ += ["discus_ops"]
