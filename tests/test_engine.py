@@ -2,6 +2,7 @@
 
 The engine is a fake Python script; no DISCUS_SUITE is run."""
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -272,10 +273,12 @@ def test_refine_points_two_needs_fork():
 
 
 def test_rmc_lots_needs_fork_but_lots_off_does_not():
-    on = fork_reasons("discus\nrmc\nset lots,on\nexit\nexit\n")
-    off = fork_reasons("discus\nrmc\nset lots,off\nexit\nexit\n")
+    # rmc_sup_mod.f90: lots need >= 6 parameters; a single parameter starting with 'O' is off
+    on = fork_reasons("discus\nrmc\nset lots,box,3,3,3,20,y\nexit\nexit\n")
     assert len(on) == 1 and "RMC with lots" in on[0]
-    assert off == []
+    for off in ("off", "o", "OFF", "on"):  # 'on' starts with O: DISCUS reads it as off
+        assert fork_reasons(f"discus\nrmc\nset lots,{off}\nexit\nexit\n") == [], off
+    assert fork_reasons("discus\nrmc\nset LOT,box,3,3,3,20,y\nexit\nexit\n")  # upper case, 3 letters
 
 
 def test_nufft_needs_fork():
@@ -332,3 +335,49 @@ def test_choose_engine_checks_labels_even_for_stock_macros():
         choose_engine("discus\nexit\n", stock, Engine(("y",), "stock"))
     with pytest.raises(EngineChoiceError):
         choose_engine("discus\nexit\n", Engine(("y",), "fork"))
+
+
+def test_fork_rules_use_discus_abbreviations():
+    assert fork_reasons("discus\nfourier\nset tech:nufft\nexit\nexit\n")
+    assert fork_reasons("discus\nfourier\nset technique:turbo\nexit\nexit\n") == []
+    # 't:' is 'table' (declared before 'technique'), not NUFFT
+    assert fork_reasons("discus\nfourier\nset t:nufft\nexit\nexit\n") == []
+    assert fork_reasons("refine\nnewparam P_a,value:1,poi:2\nexit\n")
+    for other in ("points:20", "points:3", "points:2.5"):
+        assert fork_reasons(f"refine\nnewparam P_a,value:1,{other}\nexit\n") == [], other
+
+
+def test_temp_use_rules_follow_the_source():
+    assert fork_reasons("discus\nfourier\ntemp us\nrun\nrun\nexit\nexit\n")
+    assert fork_reasons("discus\nfourier\ntemp use\nrun\nreset\nrun\nexit\nexit\n") == []
+    assert fork_reasons("discus\nfourier\ntemp use\nrun\ntemp ignore\nrun\nexit\nexit\n") == []
+    # a run inside a loop at program level, or after an @macro call, may repeat
+    loop = "discus\ndo i[1]=1,3\nfourier\ntemp use\nrun\nexit\nenddo\nexit\n"
+    assert fork_reasons(loop)
+    assert fork_reasons("discus\nfourier\ntemp use\n@more.mac\nrun\nexit\nexit\n")
+
+
+def test_from_env_keeps_quoted_paths(monkeypatch):
+    monkeypatch.setenv("DISCUSPDF_ENGINE_FORK", '"/opt/my fork/discus_suite" -noautorun -macro')
+    if os.name == "nt":
+        pytest.skip("POSIX quoting")
+    assert Engine.from_env("fork").launcher == ("/opt/my fork/discus_suite", "-noautorun", "-macro")
+
+
+def test_timeout_keeps_partial_log(tmp_path):
+    script = make_script(tmp_path, "import sys, time\nprint('started', flush=True)\ntime.sleep(30)\n")
+    engine = Engine((sys.executable, str(script)), timeout_seconds=1)
+    with pytest.raises(subprocess.TimeoutExpired):
+        engine.run(tmp_path)
+    log = (tmp_path / "run.log").read_text()
+    assert "TIMEOUT" in log
+
+
+def test_timeout_none_means_no_limit():
+    assert Engine(("x",), timeout_seconds=None).timeout_seconds is None
+
+
+def test_runners_accept_iterator_launchers(tmp_path):
+    for cls in (PDFRunner, Diffuse3DRunner, MCRunner):
+        r = cls(tmp_path / cls.__name__, launcher=iter(["discus_suite", "-macro"]))
+        assert r.launcher == ("discus_suite", "-macro")

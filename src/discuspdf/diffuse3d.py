@@ -20,7 +20,6 @@ from dataclasses import dataclass
 from pathlib import Path
 import hashlib
 import json
-import re
 import shutil
 import subprocess
 import uuid
@@ -156,7 +155,8 @@ class Diffuse3DRunner:
         """``engine`` (a :class:`discuspdf.engine.Engine`) replaces ``launcher`` and
         ``timeout_seconds``."""
         self.runs_directory = Path(runs_directory)
-        if engine is None and (not tuple(launcher) or timeout_seconds <= 0):
+        launcher = tuple(launcher)
+        if engine is None and (not launcher or timeout_seconds <= 0):
             raise ValueError("Invalid launcher or timeout")
         self.engine = as_engine(engine, launcher, timeout_seconds)
         self.launcher = self.engine.launcher
@@ -246,9 +246,14 @@ class Diffuse3DRunner:
         if native_nexus and output_spec is not None:
             raise ValueError("Use native_nexus=True OR output_spec, not both")
         self._preflight(run)
+        try:
+            engine = current_engine(self)
+        except ValueError as exc:
+            self._status(run, "failed", reason=f"Preflight check failed: {exc}", engine_started=False)
+            raise
         self._status(run, "running")
         try:
-            proc = current_engine(self).run(run.directory, "run.mac", error_pattern=_ENGINE_ERROR_PATTERN)
+            proc = engine.run(run.directory, "run.mac", error_pattern=_ENGINE_ERROR_PATTERN)
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
             self._status(run, "failed", reason=str(exc), engine_started=False)
             raise RuntimeError(f"DISCUS could not complete; see {run.directory}") from exc

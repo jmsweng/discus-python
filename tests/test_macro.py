@@ -252,3 +252,36 @@ def test_finished_ends_a_program_like_exit():
     assert m.render().splitlines() == ["discus", "finished"]
     with pytest.raises(MacroError):
         Macro().command("finished")  # at the suite level it ends the run
+
+
+def test_refused_command_leaves_no_line():
+    m = Macro()
+    with m.program("discus"):
+        with pytest.raises(MacroError):
+            m.command("fourier")
+        m.command("save", "x.stru")
+    assert "fourier" not in m.render()
+
+
+def test_exception_inside_a_block_blocks_rendering():
+    m = Macro()
+    with pytest.raises(KeyError):
+        with m.program("discus"):
+            with m.menu("fourier"):
+                raise KeyError("user code failed")
+    with pytest.raises(MacroError, match="exception"):
+        m.render()
+
+
+def test_raw_line_counts_as_the_one_read_command():
+    m = Macro()
+    with m.program("discus"):
+        with m.menu("read"):
+            m.raw("cell gaas.cll,1,1,1")
+        m.command("save", "x.stru")
+    assert m.render().splitlines() == ["discus", "read", "cell gaas.cll,1,1,1", "save x.stru", "exit"]
+
+
+def test_comment_may_not_end_with_continuation():
+    with pytest.raises(MacroError):
+        Macro().comment("see next line &")

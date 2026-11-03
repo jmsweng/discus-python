@@ -806,7 +806,8 @@ class MCRunner:
                  timeout_seconds: float = 3600, *, engine: Engine | None = None):
         """``engine`` (a :class:`discuspdf.engine.Engine`) replaces ``launcher`` and ``timeout_seconds``."""
         self.runs_directory = Path(runs_directory)
-        if engine is None and (not tuple(launcher) or timeout_seconds <= 0):
+        launcher = tuple(launcher)
+        if engine is None and (not launcher or timeout_seconds <= 0):
             raise ValueError("invalid launcher or timeout")
         self.engine = as_engine(engine, launcher, timeout_seconds)
         self.launcher = self.engine.launcher
@@ -850,9 +851,14 @@ class MCRunner:
         out = run.directory / run.config.output_file
         if out.exists():
             raise FileExistsError(f"{out} exists; prepare a new run")
+        try:
+            engine = current_engine(self)
+        except ValueError as exc:
+            self._status(run, "failed", reason=f"invalid engine settings: {exc}", engine_started=False)
+            raise
         self._status(run, "running")
         try:
-            proc = current_engine(self).run(run.directory, "run.mac", error_pattern=None)  # load() checks the log
+            proc = engine.run(run.directory, "run.mac", error_pattern=None)  # load() checks the log
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
             self._status(run, "failed", reason=str(exc))
             raise RuntimeError(f"DISCUS could not complete; see {run.directory}") from exc

@@ -97,6 +97,7 @@ class Macro:
         self._lines: list[_Line] = []
         self._stack = [start]
         self._blocks: list[tuple[int, str]] = []  # (stack depth, menu) of open with-blocks
+        self._broken = False
         if title:
             self.comment(title)
 
@@ -107,8 +108,12 @@ class Macro:
         return self._stack[-1]
 
     def comment(self, text: str) -> "Macro":
+        self._check_open()
         for part in str(text).splitlines() or [""]:
-            self._lines.append(_Line(f"# {part}".rstrip(), None, "comment"))
+            line = f"# {part}".rstrip()
+            if line.endswith("&"):
+                raise MacroError("a comment ending in '&' would swallow the next line")
+            self._lines.append(_Line(line, None, "comment"))
         return self
 
     def command(self, word: str, *params, **options) -> "Macro":
@@ -121,11 +126,12 @@ class Macro:
         leaves = cmd.name == "exit" or (cmd.menu, cmd.name) in LEAVING_COMMANDS
         if leaves and len(self._stack) == 1:
             raise MacroError(f"{word!r} at the top level ends the run")
+        if not leaves and self.current_menu not in ONE_SHOT_MENUS and cmd.enters \
+                and self.catalogue._opens(cmd, line):
+            raise MacroError(f"{word!r} opens the menu {cmd.enters!r}; use 'with macro.menu(...)'")
         self._lines.append(_Line(line, self.current_menu, "command"))
         if self.current_menu in ONE_SHOT_MENUS or leaves:
             self._stack.pop()
-        elif cmd.enters and self.catalogue._opens(cmd, line):
-            raise MacroError(f"{word!r} opens the menu {cmd.enters!r}; use 'with macro.menu(...)'")
         return self
 
     def _check_open(self) -> None:
@@ -139,10 +145,13 @@ class Macro:
         """A line written exactly as given (the escape hatch for anything the other methods do
         not cover: assignments, ``do``/``if`` blocks, ``@macro`` calls). It is still read by the
         catalogue when the macro is rendered; menu changes it causes are not tracked."""
+        self._check_open()
         text = str(line).strip()
         if "\n" in text:
             raise MacroError("raw() takes one line")
         self._lines.append(_Line(text, None, "raw"))
+        if self.current_menu in ONE_SHOT_MENUS:  # read leaves after any line
+            self._stack.pop()
         return self
 
     @contextmanager
@@ -160,6 +169,9 @@ class Macro:
         self._blocks.append((depth, cmd.enters))
         try:
             yield self
+        except BaseException:
+            self._broken = True  # the menu state no longer matches the lines; do not render
+            raise
         finally:
             self._blocks.pop()
         if len(self._stack) < depth:  # left by its one command (read) or a leaving command
@@ -180,6 +192,8 @@ class Macro:
     def problems(self) -> list[str]:
         """Lines the engine would read differently from what the builder intended."""
         out = []
+        if self._broken:
+            out.append("an exception was raised inside a menu block while building this macro")
         if len(self._stack) != 1:
             out.append(f"macro ends inside {self.current_menu!r}")
         text = "\n".join(line.text for line in self._lines) + "\n"

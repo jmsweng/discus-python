@@ -318,6 +318,40 @@ def test_forced_stock_is_flagged(tmp_path):
     run = runner.run(refine_macro(), (), ["out.txt"], engine="stock")
     assert run.record["stock_despite_fork_reasons"] is True
     assert run.status()["warnings"] and "fork" in run.status()["warnings"][0]
-    plain = runner.run(plain_macro("a.stru"), {"model.cll": model_file(tmp_path)}, [],)
+    plain = make_runner(tmp_path, fake_engine(tmp_path, outputs={"a.stru": "x"}, name="f2.py")).run(
+        plain_macro("a.stru"), {"model.cll": model_file(tmp_path)}, ["a.stru"])
     assert plain.record["stock_despite_fork_reasons"] is False
     assert plain.status()["warnings"] == []
+
+
+def test_tagged_warning_is_not_an_error(tmp_path):
+    engine = fake_engine(tmp_path, outputs={"a.stru": "x"}, stdout=" ***MAC *** Warning in macro line 3\n")
+    run = make_runner(tmp_path, engine).run(plain_macro("a.stru"), {"model.cll": model_file(tmp_path)}, ["a.stru"])
+    assert run.status()["status"] == "complete"
+    assert any("Warning in macro" in w for w in run.status()["warnings"])
+
+
+def test_tagged_error_still_fails(tmp_path):
+    engine = fake_engine(tmp_path, outputs={"a.stru": "x"}, stdout=" ***MAC *** Error in macro line 3\n")
+    runner = make_runner(tmp_path, engine)
+    run = runner.prepare(plain_macro("a.stru"), {"model.cll": model_file(tmp_path)}, ["a.stru"])
+    with pytest.raises(RuntimeError):
+        runner.execute(run)
+
+
+def test_finished_run_is_never_re_executed(tmp_path):
+    engine = fake_engine(tmp_path, outputs={"a.stru": "x"})
+    runner = make_runner(tmp_path, engine)
+    run = runner.run(plain_macro("a.stru"), {"model.cll": model_file(tmp_path)}, ["a.stru"])
+    (run.directory / "a.stru").unlink()
+    with pytest.raises(RuntimeError, match="not 'prepared'"):
+        runner.execute(run)
+    assert run.status()["status"] == "complete"
+
+
+def test_duplicate_input_basenames_are_refused(tmp_path):
+    a = tmp_path / "a" / "model.cll"; b = tmp_path / "b" / "model.cll"
+    for p in (a, b):
+        p.parent.mkdir(); p.write_text("x")
+    with pytest.raises(ValueError, match="share a file name"):
+        make_runner(tmp_path, fake_engine(tmp_path)).prepare(plain_macro(), [a, b], [])

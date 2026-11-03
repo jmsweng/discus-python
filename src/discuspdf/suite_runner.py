@@ -29,11 +29,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Mapping
 
-from .engine import Engine, EngineChoiceError, fork_reasons
+from .engine import _ANSI, ENGINE_ERROR_PATTERN, Engine, EngineChoiceError, fork_reasons
 from .macro import Macro
 from .suite_catalogue import load_catalogue
 
 RUN_FORMAT = "discuspdf.suite_run"
+
+
+def engine_error_in(log: str) -> str | None:
+    """The first engine-error line of a log (ANSI colours removed). DISCUS also tags warnings
+    (``***MAC *** Warning ...``); those lines are not errors."""
+    for line in _ANSI.sub("", log).splitlines():
+        m = ENGINE_ERROR_PATTERN.search(line)
+        if m and "warning" not in line.lower():
+            return m.group(0)
+    return None
+
+
+def engine_warnings_in(log: str) -> list[str]:
+    return [line.strip() for line in _ANSI.sub("", log).splitlines()
+            if ENGINE_ERROR_PATTERN.search(line) and "warning" in line.lower()][:20]
 
 
 def _sha256(path: Path) -> str:
@@ -107,7 +122,11 @@ class SuiteRunner:
         reasons = fork_reasons(text)
         chosen = self._choose(engine, reasons)
         if not isinstance(inputs, Mapping):
-            inputs = {Path(p).name: p for p in inputs}
+            inputs = list(inputs)
+            basenames = [Path(p).name for p in inputs]
+            if len(set(basenames)) != len(basenames):
+                raise ValueError(f"two inputs share a file name: {sorted(basenames)}; pass a dict")
+            inputs = dict(zip(basenames, inputs))
         names = {_plain_name(n, "input name"): Path(p).expanduser() for n, p in inputs.items()}
         outs = [_plain_name(n, "output name") for n in outputs]
         reserved = {"run.mac", "run.log", "run.json", "status.json"}
@@ -139,6 +158,9 @@ class SuiteRunner:
         record = run.record
         if record.get("format") != RUN_FORMAT:
             raise ValueError(f"{run.directory} is not a suite run")
+        state = run.status().get("status")
+        if state != "prepared":  # never overwrite the record of a finished run
+            raise RuntimeError(f"run is {state!r}, not 'prepared'; prepare a new run ({run.directory})")
         engine = self.engine if record["engine"]["label"] == "stock" else self.fork
         if engine is None or list(engine.launcher) != record["engine"]["launcher"]:
             self._fail(run, "the engine recorded at prepare() is not this runner's", engine_started=False)
@@ -152,19 +174,23 @@ class SuiteRunner:
                 self._fail(run, f"output {path.name} exists already; prepare a new run", engine_started=False)
         self._status(run, "running")
         try:
-            result = engine.run(run.directory, "run.mac", strip_ansi=True)
+            result = engine.run(run.directory, "run.mac", error_pattern=None)
         except FileNotFoundError as exc:
             self._fail(run, str(exc), engine_started=False)
         except subprocess.TimeoutExpired as exc:
             self._fail(run, f"timed out after {exc.timeout} s; the engine was stopped", engine_started=True)
         missing = [p.name for p in run.outputs if not p.is_file() or p.stat().st_size == 0]
-        if result.returncode != 0 or result.engine_error or missing:
+        engine_error = engine_error_in(result.log)
+        if result.returncode != 0 or engine_error or missing:
             reason = ("nonzero exit" if result.returncode != 0 else
-                      f"engine error in log: {result.engine_error!r}" if result.engine_error else
+                      f"engine error in log: {engine_error!r}" if engine_error else
                       f"missing or empty output: {', '.join(missing)}")
-            self._fail(run, reason, returncode=result.returncode, engine_error=result.engine_error)
+            self._fail(run, reason, returncode=result.returncode, engine_error=engine_error)
         warnings = (["run on stock although the fork corrects: " + "; ".join(record["fork_reasons"])]
                     if record.get("stock_despite_fork_reasons") else [])
+        if not record["outputs"]:
+            warnings.append("no outputs were declared, so none were checked")
+        warnings += [f"engine warning: {w}" for w in engine_warnings_in(result.log)]
         self._status(run, "complete", returncode=result.returncode, seconds=round(result.seconds, 3),
                      outputs={p.name: _sha256(p) for p in run.outputs}, warnings=warnings)
         return run

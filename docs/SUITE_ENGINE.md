@@ -61,6 +61,18 @@ only the fork computes correctly. `fork_reasons(macro)` lists those uses:
 | Fourier `set technique:nufft` | coordinate scaling on non-integer grids |
 | a second Fourier `run` after `temp use` in one session | Debye–Waller cache key; a single run is correct on stock (Gate 0 v2.1) |
 
+Options and keywords are read the way DISCUS reads them:
+
+- `set tech:nufft` is NUFFT, while `set t:nufft` is `table` (the first declared option that
+  matches);
+- `temp us` counts as `temp use`;
+- `set LOT,…` counts as lots, while `set lots,o…` (one parameter starting with `O`) switches
+  them off;
+- `points:2` must evaluate to 2.
+
+A Fourier `run` inside a `do`/`if` block or after an `@macro` call may repeat, so it counts as
+a second run. A Fourier `reset` clears `temp use`.
+
 `SuiteRunner` uses the fork when the list is not empty. If the runner has no fork, it refuses
 to prepare the run (`EngineChoiceError`). `engine="stock"` or `engine="fork"` forces a
 choice. The chosen engine and the reasons are recorded in `run.json`.
@@ -106,7 +118,11 @@ outputs.
 - re-checks every hash and refuses outputs that already exist;
 - runs the engine;
 - fails on a nonzero exit, an engine error in the log (ANSI colours removed first) or a
-  missing or empty output.
+  missing or empty output;
+- records tagged DISCUS warnings (`***MAC *** Warning …`) in `status.json` instead of failing.
+
+A run is executed only from the `prepared` state, so a finished run's record is never
+overwritten. A timeout keeps the partial log in `run.log`.
 
 `complete` means the engine ran cleanly and wrote the files, not that the results are
 physically right.

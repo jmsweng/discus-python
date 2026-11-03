@@ -356,8 +356,9 @@ class PDFRunner:
         """launcher is the executable and args preceding 'run.mac'; ``engine`` (a
         :class:`discuspdf.engine.Engine`) replaces ``launcher`` and ``timeout_seconds``."""
         self.runs_directory = Path(runs_directory)
+        launcher = tuple(launcher)
         if engine is None:
-            if not tuple(launcher):
+            if not launcher:
                 raise ValueError("launcher must not be empty")
             if timeout_seconds <= 0:
                 raise ValueError("timeout_seconds must be positive")
@@ -437,9 +438,13 @@ class PDFRunner:
                 preflight_fail(FileExistsError(f"Refusing to overwrite existing output: {existing}; "
                                               "delete it or use a new run directory to rerun"))
 
+        try:
+            engine = current_engine(self)
+        except ValueError as exc:
+            preflight_fail(exc)
         status("running")
         try:
-            completed = current_engine(self).run(prepared.directory, "run.mac", error_pattern=_PDF_ENGINE_ERROR)
+            completed = engine.run(prepared.directory, "run.mac", error_pattern=_PDF_ENGINE_ERROR)
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
             status("failed", reason=str(exc), engine_started=False)
             raise RuntimeError(f"DISCUS could not complete; see {prepared.directory}") from exc
