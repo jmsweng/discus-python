@@ -42,6 +42,10 @@ class Step:
 
     uses_random_numbers = False  # True when the step draws from DISCUS's random generator
 
+    def input_names(self) -> tuple[str, ...]:
+        """Files the step reads; the job's ``inputs`` must contain them."""
+        return ()
+
     def apply(self, m: Macro) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
@@ -413,6 +417,39 @@ class ResultNotAStructure(ValueError):
         self.run = run
 
 
+def read_box(path, cells) -> tuple:
+    """Read a DISCUS-saved crystal as ONE periodic box of ``cells`` unit cells, in any atom order
+    and with any atom count (after ``purge``, domains, stacking...). The lattice is the whole box
+    (cell x cells), ``frac`` are fractions of it, ``supercell`` is (1, 1, 1) and no cell labels
+    are kept. Returns ``(Structure, None)``."""
+    from .discus_io import _parse_cell_line, _parse_stru_atoms, _split_directive, DiscusFormatError
+    from .lattice import Lattice
+    from .structure import Structure
+    import numpy as np
+
+    text = Path(path).read_text(errors="replace")
+    cell = None
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        key, rest = _split_directive(line)
+        if key == "cell":
+            cell = _parse_cell_line(rest, str(path), line_no)
+        if key == "atoms":
+            break
+    if cell is None:
+        raise DiscusFormatError(f"{path}: no cell line")
+    n = np.asarray([int(c) for c in cells], dtype=float)
+    a, b, c, al, be, ga = cell.parameters
+    box = Lattice.from_parameters(a * n[0], b * n[1], c * n[2], al, be, ga)
+    atoms, _ = _parse_stru_atoms(text, str(path))
+    if not atoms:
+        raise DiscusFormatError(f"{path}: no atoms")
+    species = np.array([at[0] for at in atoms], dtype=object)
+    xyz = np.array([at[1][:3] for at in atoms], dtype=float)
+    b_iso = np.array([at[1][3] for at in atoms], dtype=float)
+    structure = Structure(box, species, xyz / n, model="configuration", b_iso=b_iso, min_separation=None)
+    return structure, None
+
+
 class CrystalBuilder:
     """A source that *builds* the crystal inside DISCUS instead of reading one file (for example
     the stacking-fault generator). Subclasses implement:
@@ -458,6 +495,7 @@ class StructureJob:
     seed: Seed | None = None
     title: str | None = None
     allow_unseeded: bool = False
+    readback: str = "cells"  # "cells": a Structure of unit cells; "box": one box (read_box); "none"
 
     def __post_init__(self):
         from .structure import Structure
@@ -473,6 +511,8 @@ class StructureJob:
         object.__setattr__(self, "steps", steps)
         if self.seed is not None and not isinstance(self.seed, Seed):
             raise TypeError("seed must be a Seed (8 values)")
+        if self.readback not in ("cells", "box", "none"):
+            raise ValueError("readback must be 'cells', 'box' or 'none'")
         random_steps = [s for s in steps if s.uses_random_numbers]
         if isinstance(self.source, CrystalBuilder) and self.source.uses_random_numbers:
             random_steps.insert(0, self.source)
@@ -538,6 +578,9 @@ class StructureJob:
         from .structure import Structure
 
         inputs = dict(inputs or {})
+        needed = [n for step in self.steps for n in step.input_names() if n not in inputs]
+        if needed:
+            raise ValueError(f"inputs must contain {sorted(set(needed))} (files the steps read)")
         with tempfile.TemporaryDirectory() as tmp:
             if isinstance(self.source, CrystalBuilder):
                 missing = [n for n in self.source.input_names() if n not in inputs]
@@ -556,6 +599,16 @@ class StructureJob:
             run = runner.run(self.macro(), inputs, [RESULT_NAME], engine=engine)
         from .discus_io import DiscusFormatError
 
+        if self.readback == "none":
+            return JobResult(None, run, None)
+        if self.readback == "box":
+            if cells is None:
+                raise ValueError("readback='box' needs a source with a known cell count")
+            try:
+                structure, _ = read_box(run.output(RESULT_NAME), cells)
+            except DiscusFormatError as exc:
+                raise ResultNotAStructure(f"DISCUS ran, but {RESULT_NAME} could not be read: {exc}", run) from exc
+            return JobResult(structure, run, None)
         if isinstance(self.source, CrystalBuilder):
             try:
                 structure, stru = self.source.read_result(run.output(RESULT_NAME), check_order)
@@ -570,12 +623,13 @@ class StructureJob:
             stru = read_stru(run.output(RESULT_NAME), supercell=cells, check_order=check_order,
                              min_separation=None, allow_loss=True)
         except DiscusFormatError as exc:
-            raise ResultNotAStructure(f"DISCUS ran, but {RESULT_NAME} is not a {cells} crystal: {exc}", run) from exc
+            raise ResultNotAStructure(f"DISCUS ran, but {RESULT_NAME} is not a {cells} crystal: {exc}; "
+                                      "readback='box' reads it as one periodic box", run) from exc
         extra = [c for c in stru.dropped if c != "Property"]
         if extra:
             raise ResultNotAStructure(f"{RESULT_NAME} has non-constant {extra} columns the Structure cannot keep", run)
         return JobResult(stru.structure, run, stru)
 
 
-__all__ = ["CrystalBuilder", "ResultNotAStructure", "Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
+__all__ = ["read_box", "CrystalBuilder", "ResultNotAStructure", "Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
            "Wave", "StructureJob", "JobResult", "MacroError", "format_value"]
