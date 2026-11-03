@@ -75,7 +75,9 @@ The specialised runners do not route. Their macros contain none of these feature
 - The command word must exist in the current menu. Abbreviations are resolved the way DISCUS
   resolves them.
 - `menu(word, …)` is a `with` block that enters the sub-menu and writes `exit` at its end. The
-  `read` menu takes exactly one command and needs no `exit`. A command that would open a menu
+  `read` menu takes exactly one command and needs no `exit`. A block whose last command leaves
+  the menu by itself (KUPLOT `ksave` … `run`) gets no `exit` either, and nothing may follow
+  that command inside the block. A command that would open a menu
   must be written as a `menu(...)` block.
 - `raw(line)` writes a line unchanged. It is the escape hatch for assignments, `do`/`if`
   blocks and `@macro` calls. Raw lines are still checked for unknown commands, but menu

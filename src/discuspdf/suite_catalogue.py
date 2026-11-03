@@ -27,6 +27,11 @@ SCHEMA = "discuspdf.suite_catalogue"
 # Lines handled by the macro machinery of lib_f90 before any menu sees them.
 # Menus that process exactly one line and return to their parent (structur.f90:135-145).
 ONE_SHOT_MENUS = {"discus/read"}
+# Commands that leave their menu when they succeed, besides 'exit' (checked in the source):
+# ksave 'run' writes and returns to KUPLOT (kuplot_save.f90:526-529); 'finished' ends a program
+# like 'exit' (discus_kdo.f90:263, kuplot_kdo.f90:174) and ends the suite (suite_kdo.f90:136).
+LEAVING_COMMANDS = {("kuplot/ksav", "run"), ("discus", "finished"), ("kuplot", "finished"),
+                    ("suite", "finished")}
 # Where do/if blocks are recognised (discus_loop.f90, kuplot_loop.f90, ... test line(1:3)=='do ').
 PROGRAM_LEVELS = {"suite", "discus", "kuplot", "diffev", "refine", "mixscat"}
 
@@ -274,7 +279,7 @@ class Catalogue:
                     yield Step(number, line, menu, "unknown")
                 else:
                     yield Step(number, line, menu, "command", cmd.name, cmd.menu)
-                    if cmd.name == "exit":
+                    if cmd.name == "exit" or (cmd.menu, cmd.name) in LEAVING_COMMANDS:
                         if len(stack) > 1:
                             stack.pop()
                         else:

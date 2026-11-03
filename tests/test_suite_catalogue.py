@@ -197,3 +197,10 @@ def test_lines_after_final_exit(cat):
 def test_compare_len_and_longer_words(cat):
     assert cat.resolve("discus/fourier", "run").name == "run"
     assert cat.resolve("discus/fourier", "runx") is None  # branch 'run ' with length 4
+
+
+def test_leaving_commands(cat):
+    steps = [(s.menu, s.command) for s in cat.walk("kuplot\nksave 1\nrun\nload xy,a.xy\nexit\n")]
+    assert steps == [("suite", "kuplot"), ("kuplot", "ksave"), ("kuplot/ksav", "run"),
+                     ("kuplot", "load"), ("kuplot", "exit")]
+    assert _kinds(cat, "finished\ndiscus\n")[-1][1] == "after_end"

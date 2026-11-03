@@ -112,10 +112,13 @@ class Engine:
         callers record them as "engine not started / did not finish". ``error_pattern`` is
         searched in the log (after removing ANSI colour codes if ``strip_ansi``)."""
         directory = Path(directory)
+        timeout = self.timeout_seconds if timeout_seconds is None else timeout_seconds
+        if not timeout or timeout <= 0:
+            raise ValueError("timeout_seconds must be positive")
         command = self.command(macro)
         start = time.monotonic()
         proc = subprocess.run(command, cwd=directory, input="exit\n", text=True, capture_output=True,
-                              timeout=timeout_seconds or self.timeout_seconds,
+                              timeout=timeout,
                               env=self.environment(), check=False)
         seconds = time.monotonic() - start
         log = proc.stdout + "\n--- STDERR ---\n" + proc.stderr
@@ -203,11 +206,13 @@ class EngineChoiceError(RuntimeError):
 
 def choose_engine(macro: str, stock: Engine, fork: Engine | None = None, catalogue=None) -> Engine:
     """``fork`` if :func:`fork_reasons` finds a reason, otherwise ``stock``."""
+    if fork is not None and fork.label != "fork":
+        raise EngineChoiceError(f"engine given as fork is labelled {fork.label!r}")
+    if stock.label != "stock":
+        raise EngineChoiceError(f"engine given as stock is labelled {stock.label!r}")
     reasons = fork_reasons(macro, catalogue)
     if not reasons:
         return stock
     if fork is None:
         raise EngineChoiceError("this macro needs the fork engine: " + "; ".join(reasons))
-    if fork.label != "fork":
-        raise EngineChoiceError(f"engine given as fork is labelled {fork.label!r}")
     return fork

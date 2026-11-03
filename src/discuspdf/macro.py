@@ -36,7 +36,7 @@ import numbers
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-from .suite_catalogue import ONE_SHOT_MENUS, Catalogue, load_catalogue
+from .suite_catalogue import LEAVING_COMMANDS, ONE_SHOT_MENUS, Catalogue, load_catalogue
 
 
 class MacroError(ValueError):
@@ -96,6 +96,7 @@ class Macro:
             raise MacroError(f"unknown start menu {start!r}")
         self._lines: list[_Line] = []
         self._stack = [start]
+        self._blocks: list[tuple[int, str]] = []  # (stack depth, menu) of open with-blocks
         if title:
             self.comment(title)
 
@@ -114,18 +115,25 @@ class Macro:
         """One command line: ``word p1,p2,...,name:value``. ``options`` become ``name:value``
         parameters after the positional ones (a trailing ``_`` in the name is dropped, so
         ``global_=...`` writes ``global:``)."""
+        self._check_open()
         cmd = self._resolve(word)
         line = self._format(word, params, options)
+        leaves = cmd.name == "exit" or (cmd.menu, cmd.name) in LEAVING_COMMANDS
+        if leaves and len(self._stack) == 1:
+            raise MacroError(f"{word!r} at the top level ends the run")
         self._lines.append(_Line(line, self.current_menu, "command"))
-        if self.current_menu in ONE_SHOT_MENUS:
-            self._stack.pop()
-        if cmd.name == "exit":
-            if len(self._stack) == 1:
-                raise MacroError("'exit' at the top level ends the run; use the context managers")
+        if self.current_menu in ONE_SHOT_MENUS or leaves:
             self._stack.pop()
         elif cmd.enters and self.catalogue._opens(cmd, line):
             raise MacroError(f"{word!r} opens the menu {cmd.enters!r}; use 'with macro.menu(...)'")
         return self
+
+    def _check_open(self) -> None:
+        if self._blocks and len(self._stack) < self._blocks[-1][0]:
+            menu = self._blocks[-1][1]
+            msg = ("takes exactly one command" if menu in ONE_SHOT_MENUS
+                   else "was already left (its last command leaves the menu)")
+            raise MacroError(f"the {menu!r} menu {msg}; write the next command after the with-block")
 
     def raw(self, line: str) -> "Macro":
         """A line written exactly as given (the escape hatch for anything the other methods do
@@ -141,6 +149,7 @@ class Macro:
     def menu(self, word: str, *params, **options):
         """Enter the sub-menu ``word`` opens, and leave it with ``exit`` at the end of the block
         (``read`` leaves by itself after one line)."""
+        self._check_open()
         cmd = self._resolve(word)
         line = self._format(word, params, options)
         if not cmd.enters or not self.catalogue._opens(cmd, line):
@@ -148,11 +157,15 @@ class Macro:
         self._lines.append(_Line(line, self.current_menu, "command"))
         self._stack.append(cmd.enters)
         depth = len(self._stack)
-        yield self
-        if cmd.enters in ONE_SHOT_MENUS:
-            if len(self._stack) >= depth:
-                raise MacroError(f"the {cmd.enters!r} menu takes exactly one command")
+        self._blocks.append((depth, cmd.enters))
+        try:
+            yield self
+        finally:
+            self._blocks.pop()
+        if len(self._stack) < depth:  # left by its one command (read) or a leaving command
             return
+        if cmd.enters in ONE_SHOT_MENUS:
+            raise MacroError(f"the {cmd.enters!r} menu takes exactly one command")
         if len(self._stack) != depth or self._stack[-1] != cmd.enters:
             raise MacroError(f"menu nesting broken inside {word!r}")
         self._lines.append(_Line("exit", cmd.enters, "exit"))

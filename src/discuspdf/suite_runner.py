@@ -127,7 +127,8 @@ class SuiteRunner:
             shutil.copyfile(path, directory / name)
             hashes[name] = _sha256(directory / name)
         record = {"format": RUN_FORMAT, "format_version": 1, "engine": chosen.describe(),
-                  "fork_reasons": reasons, "inputs": sorted(names), "outputs": outs,
+                  "fork_reasons": reasons,
+                  "stock_despite_fork_reasons": bool(reasons) and chosen.label == "stock", "inputs": sorted(names), "outputs": outs,
                   "sha256": hashes}
         (directory / "run.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         run = SuiteRun(directory)
@@ -152,16 +153,20 @@ class SuiteRunner:
         self._status(run, "running")
         try:
             result = engine.run(run.directory, "run.mac", strip_ansi=True)
-        except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        except FileNotFoundError as exc:
             self._fail(run, str(exc), engine_started=False)
+        except subprocess.TimeoutExpired as exc:
+            self._fail(run, f"timed out after {exc.timeout} s; the engine was stopped", engine_started=True)
         missing = [p.name for p in run.outputs if not p.is_file() or p.stat().st_size == 0]
         if result.returncode != 0 or result.engine_error or missing:
             reason = ("nonzero exit" if result.returncode != 0 else
                       f"engine error in log: {result.engine_error!r}" if result.engine_error else
                       f"missing or empty output: {', '.join(missing)}")
             self._fail(run, reason, returncode=result.returncode, engine_error=result.engine_error)
+        warnings = (["run on stock although the fork corrects: " + "; ".join(record["fork_reasons"])]
+                    if record.get("stock_despite_fork_reasons") else [])
         self._status(run, "complete", returncode=result.returncode, seconds=round(result.seconds, 3),
-                     outputs={p.name: _sha256(p) for p in run.outputs})
+                     outputs={p.name: _sha256(p) for p in run.outputs}, warnings=warnings)
         return run
 
     def run(self, macro: Macro | str, inputs=(), outputs=(), *, engine: str | None = None) -> SuiteRun:
