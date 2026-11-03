@@ -201,3 +201,14 @@ def test_box_readback_keeps_any_atom_count(tmp_path):
     assert none.structure is None and none.run.output("result.stru").is_file()
     with pytest.raises(ValueError):
         StructureJob(src, readback="cell")
+
+
+def test_read_box_estimates_cells_and_refuses_negative_b(tmp_path):
+    from discuspdf.discus_io import DiscusFormatError
+    from discuspdf.discus_ops import estimate_cells, read_box
+    assert estimate_cells(np.array([[-1.0, 0, 0], [1.5, 0.2, 0]])) == (3, 1, 1)
+    f = tmp_path / "x.stru"
+    f.write_text("title x\nspcgr P1\ncell 2,2,2,90,90,90\natoms\n"
+                 "CU 0, 0, 0, -0.5, 1, 0, 0, 1, _, 0, 0, 0\n")
+    with pytest.raises(DiscusFormatError):
+        read_box(f)

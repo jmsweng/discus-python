@@ -1,9 +1,15 @@
 """DISCUS ``domain`` menu as a typed step: insert domains of a second structure into the host crystal.
 
 A domain is a region of a *content* structure (another phase or orientation) that replaces part
-of the host. DISCUS places each domain at a *pseudo-atom* position: an atom line of the input
-file whose name is the pseudo-atom name, with its position in columns 5-52 (``domain.f90``
-2894-2913). The shape, orientation, character and fuzzy distance of each pseudo atom are set with
+of the host. DISCUS places each domain at a *pseudo-atom* position: an atom of the input file
+whose name is the pseudo-atom name. The input file is a ``.stru``, read into internal storage
+with the full structure reader (``read_to_internal``, ``domain.f90`` 733-746), so the name
+comes from its atom type. Its lattice must equal the host's (within 1e-4 A and 1e-3 deg) and its
+space-group letter must match (``domain.f90`` 1083-1103, errors -87 / -88).
+
+Positions are in the host's frame: after ``read cell ...,n1,n2,n3`` that frame is centred,
+running from about -n/2 to n/2 cells. Content atoms are placed at ``O u + position``, so the
+content file must be a crystal centred on its own origin that spans the domain shape. The shape, orientation, character and fuzzy distance of each pseudo atom are set with
 ``assign`` at the domain level. The file-level facts behind every choice here are in
 ``docs/DISCUS_DOMAIN_FACTS.md`` (with file:line references into DISCUS 6.23.01).
 
@@ -27,7 +33,8 @@ Semantics used (all from ``discus/prog/domain.f90`` unless stated):
   host fractional coordinates ``h = S s + (t + position)`` (``micro_read_simple`` 2918-2924,
   ``micro_read_atom`` 2474-2475). The unit shape is a cube of half-width 1 (``|s_i| <= 1``), a
   cylinder along the third axis (``|s_3| <= 1`` and radial metric length < |b|), or a sphere of
-  metric radius |b| (2482-2513). The identity S gives a domain one unit cell in each direction.
+  metric radius |b| (2482-2513). The identity S gives a half-width of one unit cell (two cells
+  across).
 * ``orient`` row i is ``(O[i][0], O[i][1], O[i][2], t_i)``. Each content atom with fractional
   coordinates ``u`` is placed at ``O u + (t + position)`` (``micro_read_simple`` 2920-2924,
   ``micro_read_atom`` 2474). The default in DISCUS is an all-zero matrix (``domain_reset``
@@ -39,8 +46,9 @@ Semantics used (all from ``discus/prog/domain.f90`` unless stated):
   in the list) when it lies within ``fuzzy`` of an inserted atom (``micro_fuzzy_rem`` 3014,
   3075). The removal runs only when ``fuzzy > 0`` (``micro_read_atom`` 2776). DISCUS's default
   fuzzy distance is 2.55 A (``domain_reset`` 3220), so this step always writes it.
-* ``run`` draws random numbers (``gasdev`` on every pseudo-atom line, ``domain.f90`` 2916;
-  ``lib_f90/random.f90`` 11-49), so the job needs a seed even with no ``sigma``.
+* ``run`` draws random numbers (``gasdev`` three times on every pseudo-atom line, ``domain.f90``
+  2916), even though with no size spread the result does not depend on them. The job still asks
+  for a seed because these draws change the random state that later steps see.
 
 Left out on purpose (not pinned down for this step): mode ``domain`` (explicit domain lists,
 ``CLU_IN_CLUSTER``), mode ``irregular`` (``CLU_IN_IRREG``, ``domain_irregular``), the size
@@ -108,9 +116,9 @@ class Domains(Step):
     """Insert the domains of ``content`` at the pseudo-atom positions of ``inputfile``.
 
     * ``content``: DISCUS ``.stru`` of the domain atoms, fractional coordinates of the host cell,
-      same cell and space group as the host (``domain.f90`` 2912-2921 for lattice checks).
+      same cell and space group as the host (``domain.f90`` 1083-1103).
     * ``inputfile``: DISCUS ``.stru`` whose atom lines name the pseudo atom (``name``, columns 1-4)
-      and give its position (columns 5-52). It must contain only atoms of this step's ``name``:
+      and give its position (a normal ``.stru`` atom line). It must contain only atoms of this step's ``name``:
       an unknown name is an error (``domain.f90`` 2903-2906).
     * ``name``: pseudo-atom name, 1 to 4 characters.
     * ``character``: ``"cube"``, ``"cylinder"``, ``"sphere"`` or ``"fuzzy"``.
@@ -136,7 +144,7 @@ class Domains(Step):
     character: str
     shape: Sequence[Sequence[float]]
     orient: Sequence[Sequence[float]] | None = None
-    fuzzy: float = 0.0
+    fuzzy: float = 2.55  # DISCUS's own default (domain_reset, domain.f90 3220); 0 removes nothing
     mode: str = "pseudoatoms"
 
     def __post_init__(self):

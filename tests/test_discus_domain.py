@@ -165,3 +165,10 @@ def test_validation_errors(override, message):
 def test_missing_fields_are_rejected():
     with pytest.raises(TypeError):
         Domains(content="dom_cu.stru", name="DOM1", character="sphere", shape=DIAG)  # no inputfile
+
+
+def test_fuzzy_defaults_to_discus_value():
+    from discuspdf.discus_domain import Domains
+    d = Domains(content="dom.stru", inputfile="pseudo.stru", name="DOM1", character="sphere",
+                shape=((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0)))
+    assert d.fuzzy == 2.55

@@ -8,7 +8,7 @@ was confirmed by running the DISCUS binary; "verified" means read from the sourc
 
 - A pseudo atom is **not** an atom of the host crystal and needs no special name. It is an atom
   line of the input file (`inputfile`, a DISCUS `.stru`). The name is the first 4 characters
-  (`line(1:4)`), the position is free-format in columns 5-52 (`domain.f90:2894-2913`).
+  is an atom of the input file. In pseudo-atom mode the file is copied to internal storage and read with the full structure reader (`read_to_internal`, `domain.f90:733-746`), so the name is the atom type; the columns-5-52 disk reader (`domain.f90:1040-1068`) is not used in this mode. The file's lattice must equal the host's within 1e-4 A / 1e-3 deg and its space-group letter must match (`domain.f90:1083-1103`, errors -87/-88); the content file is checked the same way (`domain.f90:950-968`).
 - The name is matched against names given by `assign` (`domain.f90:2897`, `str_comp` with
   4 characters; names are upper-cased, `domain.f90:2894`). The name is stored in
   `CHARACTER(LEN=4)` (`domain_mod.f90:28`), so names are at most 4 characters.
@@ -71,7 +71,7 @@ forms.
   Default all zero (`domain.f90:3222`).
   - Units: host fractional (unit-cell) coordinates. `micro_read_atom` multiplies the host
     fractional position by the inverse of the shape matrix (`domain.f90:2474-2475`), so a shape
-    entry of 1 is one unit cell.
+    entry of 1 is a half-width of one unit cell (two cells across); a sphere's radius is measured in |b| (`domain.f90:2482-2489`).
   - Clamp: in the 3x3 part, every entry is `MAX(shape * size_sigma, 0.001)` (`domain.f90:2918`).
     Negative entries cannot be represented, and zeros are stored as 0.001. The 4th column
     (translation) is not clamped (`domain.f90:2922`).
@@ -185,3 +185,14 @@ is therefore True, and `StructureJob` requires a seed.
   pinned down, not implemented.
 - Whether DISCUS draws the RANDOM_NUMBER stream in the same order on every platform (only that the
   step needs a seed).
+
+## Frame of positions (added after review)
+
+- Pseudo-atom positions and content atoms are in the host's frame. After `read cell …,n1,n2,n3`
+  that frame is centred, from about -n/2 to n/2 cells. Content atoms are placed at
+  `O·u + position`, so the content file must be a crystal centred on its own origin that spans
+  the shape.
+- `fuzzy` defaults to DISCUS's own 2.55 A in the Python step (`domain_reset`, `domain.f90:3220`):
+  with `fuzzy = 0` no host atom is removed and domain and host atoms overlap.
+- `gasdev` is drawn three times per pseudo-atom line (`domain.f90:2916`); with no size spread
+  the result does not depend on them, but they advance the random state for later steps.

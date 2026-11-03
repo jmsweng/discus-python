@@ -417,11 +417,22 @@ class ResultNotAStructure(ValueError):
         self.run = run
 
 
-def read_box(path, cells) -> tuple:
+def estimate_cells(xyz) -> tuple[int, int, int]:
+    """DISCUS's own crystal size estimate from atom coordinates in unit cells: floor(span) + 1
+    per axis (``estimate_ncells``, ``discus_estimate.f90`` 57-63), with a 1e-6 tolerance."""
+    import numpy as np
+
+    span = np.max(xyz, axis=0) - np.min(xyz, axis=0)
+    return tuple(int(np.floor(float(v) + 1e-6)) + 1 for v in span)
+
+
+def read_box(path, cells=None) -> tuple:
     """Read a DISCUS-saved crystal as ONE periodic box of ``cells`` unit cells, in any atom order
-    and with any atom count (after ``purge``, domains, stacking...). The lattice is the whole box
+    and with any atom count (after ``purge``, domains, stacking...). ``cells=None`` uses DISCUS's
+    own estimate from the atom extents (:func:`estimate_cells`). The lattice is the whole box
     (cell x cells), ``frac`` are fractions of it, ``supercell`` is (1, 1, 1) and no cell labels
-    are kept. Returns ``(Structure, None)``."""
+    are kept. B values are taken as saved (DISCUS writes the B it used); occupancies are not
+    kept. Returns ``(Structure, None)``."""
     from .discus_io import _parse_cell_line, _parse_stru_atoms, _split_directive, DiscusFormatError
     from .lattice import Lattice
     from .structure import Structure
@@ -437,15 +448,17 @@ def read_box(path, cells) -> tuple:
             break
     if cell is None:
         raise DiscusFormatError(f"{path}: no cell line")
-    n = np.asarray([int(c) for c in cells], dtype=float)
-    a, b, c, al, be, ga = cell.parameters
-    box = Lattice.from_parameters(a * n[0], b * n[1], c * n[2], al, be, ga)
     atoms, _ = _parse_stru_atoms(text, str(path))
     if not atoms:
         raise DiscusFormatError(f"{path}: no atoms")
     species = np.array([at[0] for at in atoms], dtype=object)
     xyz = np.array([at[1][:3] for at in atoms], dtype=float)
     b_iso = np.array([at[1][3] for at in atoms], dtype=float)
+    if np.any(b_iso < 0):
+        raise DiscusFormatError(f"{path}: negative B values")
+    n = np.asarray([int(c) for c in (cells if cells is not None else estimate_cells(xyz))], dtype=float)
+    a, b, c, al, be, ga = cell.parameters
+    box = Lattice.from_parameters(a * n[0], b * n[1], c * n[2], al, be, ga)
     structure = Structure(box, species, xyz / n, model="configuration", b_iso=b_iso, min_separation=None)
     return structure, None
 
@@ -495,7 +508,8 @@ class StructureJob:
     seed: Seed | None = None
     title: str | None = None
     allow_unseeded: bool = False
-    readback: str = "cells"  # "cells": a Structure of unit cells; "box": one box (read_box); "none"
+    readback: str = "cells"  # "cells": a Structure of unit cells; "box": one box (read_box; for a
+    # CrystalBuilder the cell count is DISCUS's estimate from the atom extents); "none"
 
     def __post_init__(self):
         from .structure import Structure
@@ -602,8 +616,6 @@ class StructureJob:
         if self.readback == "none":
             return JobResult(None, run, None)
         if self.readback == "box":
-            if cells is None:
-                raise ValueError("readback='box' needs a source with a known cell count")
             try:
                 structure, _ = read_box(run.output(RESULT_NAME), cells)
             except DiscusFormatError as exc:
@@ -631,5 +643,5 @@ class StructureJob:
         return JobResult(stru.structure, run, stru)
 
 
-__all__ = ["read_box", "CrystalBuilder", "ResultNotAStructure", "Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
+__all__ = ["estimate_cells", "read_box", "CrystalBuilder", "ResultNotAStructure", "Step", "Raw", "Thermal", "ReplaceAtom", "ReplaceRandom", "Switch", "Remove", "Purge",
            "Wave", "StructureJob", "JobResult", "MacroError", "format_value"]

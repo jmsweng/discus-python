@@ -121,14 +121,21 @@ class Stacking(CrystalBuilder):
     * ``first``: ``"random"`` (weighted by the correlation matrix, the DISCUS default) or the 1-based
       type of the first layer (``first``).
     * ``average``: ``None`` takes the average translation the DISCUS way, from the matrix
-      (``set trans:average``); a vector sets it with ``aver`` and ``set trans:fixed``. Must be non-zero.
+      (``set trans:average``, the equal-weight mean of the translations, ``stack.f90`` 1263-1268);
+      a vector sets it with ``aver`` and ``set trans:fixed``. Must be non-zero. Modulo wrapping
+      removes only whole multiples of the two modulus vectors from each origin
+      (``stack.f90`` 1445-1451), so a sheared average (e.g. (1/3, 2/3, 1/3) for close packing)
+      makes the in-plane origins drift with the layer number. For close packing give the
+      straight stacking vector, ``average=(0, 0, 1/3)``.
     * ``modulus_on``: ``set modulus:on|off``. On, origins are wrapped into the modulo cell around the
       average, which keeps random in-plane offsets from accumulating (``stack.f90:1445-1451``).
     * ``sigmas``: ``None`` or ``sigmas[i][j] = (sx, sy, sz)``, Gaussian spread of each translation
       (``sigma``, non-negative). Pairs with all zeros are not written.
-    * ``random_probability``: probability of a random stacking fault per layer (``random prob``).
-      A random fault draws the next type from the column sums of the matrix and adds a random
-      fraction of the modulo vectors (``stack.f90:1320-1336``, ``1429-1435``).
+    * ``random_probability``: probability per layer of a *random-displacement* fault
+      (``random prob``): the next type is drawn from the column sums of the matrix and the origin
+      gets ``r1*mod1 + r2*mod2`` with r1, r2 uniform in [0, 1) (``stack.f90:1320-1336``,
+      ``1429-1435``). This is not a close-packed growth or deformation fault; such sequences are
+      written in the correlation matrix instead (``row i = P(next | i)``).
     * ``random_offset`` / ``random_sigma``: extra vector added at a random fault and its Gaussian
       spread (``random offset`` / ``random sigma``), both as in the DISCUS help. Written only if non-zero.
     * ``atoms``: ``None`` (DISCUS default ``off``) or ``"on"`` / ``"strict"`` (``set atoms``), shifts
@@ -274,6 +281,8 @@ class Stacking(CrystalBuilder):
             m.command("set", f"trans:{'fixed' if self.average is not None else 'average'}")
             m.command("set", f"modulus:{'on' if self.modulus_on else 'off'}")
             if self.atoms is not None:
+                # last on purpose: every other 'set' line resets st_mod_atom to off unless it
+                # carries atoms: itself (stack.f90 921-934)
                 m.command("set", f"atoms:{self.atoms}")
             if self.random_probability > 0.0:
                 m.command("random", "prob", self.random_probability)
@@ -285,34 +294,17 @@ class Stacking(CrystalBuilder):
             m.command("run")
 
     def read_result(self, path: Path, check_order: bool):
-        """Read the saved stacking crystal as ``(Structure, DiscusStru)``.
+        """Read the saved stack as one periodic box (:func:`discuspdf.discus_ops.read_box`).
 
-        DISCUS writes no ``ncell`` line (``discus_save.f90:910``; ``sav_w_ncell`` is off by default,
-        ``discus_save_mod.f90:29``), so the cell count is DISCUS's own estimate: ``cr_icc`` from
-        ``estimate_ncells`` (``stack.f90:2245-2247``), which is ``floor(max - min) + 1`` of the atom
-        coordinates along each axis (``discus_estimate.f90:57-63``). The file is then read with
-        :func:`~discuspdf.discus_io.read_stru` for that supercell. A stack whose atoms are not a
-        whole number of cells in cell-major order (typical: layers that do not wrap into the cell)
-        is refused with ``DiscusFormatError``; the file is still available from the run.
-        """
-        path = Path(path)
-        probe = read_stru(path, supercell=(1, 1, 1), check_order=False, min_separation=None,
-                          allow_loss=True)
-        frac = probe.structure.frac
-        span = frac.max(axis=0) - frac.min(axis=0)
-        cells = tuple(int(math.floor(float(s) + _CELL_TOL)) + 1 for s in span)
-        try:
-            stru = read_stru(path, supercell=cells, check_order=check_order, min_separation=None,
-                             allow_loss=True)
-        except DiscusFormatError as exc:
-            raise DiscusFormatError(
-                f"{path.name}: no whole-cell layout for DISCUS's estimated {cells} cells "
-                f"(no ncell line is written; the atoms of a stack are not in cell-major order "
-                f"unless the layers wrap into whole cells): {exc}") from exc
-        extra = [c for c in stru.dropped if c != "Property"]
-        if extra:
-            raise DiscusFormatError(f"{path.name}: non-constant {extra} columns cannot be kept")
-        return stru.structure, stru
+        ``run`` appends the atoms layer by layer (``stack.f90`` 2186-2191), so they are not in
+        DISCUS's cell-major order and cannot be labelled by unit cell. DISCUS writes no ``ncell``
+        line; the box is DISCUS's own estimate from the atom extents, ``floor(span) + 1`` per axis
+        (``estimate_ncells``, ``stack.f90`` 2245-2247, ``discus_estimate.f90`` 57-63). With a
+        sheared average stacking vector the layer origins drift in plane, and the estimated box
+        grows accordingly (see ``docs/DISCUS_STACK_FACTS.md``)."""
+        from .discus_ops import read_box
+
+        return read_box(path)
 
 
 __all__ = ["Stacking", "ATOM_MODES", "RANDOM_FIRST"]
