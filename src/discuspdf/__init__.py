@@ -125,3 +125,9 @@ __all__ += [
 from . import reference_scattering
 from .reference_scattering import ScatteringFactors
 __all__ += ["reference_scattering", "ScatteringFactors"]
+
+# DISCUS atom names and extended XYZ output (disorder builder back end). The builder itself is the
+# subpackage discuspdf.builder (imported on use: python -m discuspdf.builder run model.json).
+from . import atom_names
+from .xyz_io import format_extxyz, write_extxyz
+__all__ += ["atom_names", "format_extxyz", "write_extxyz"]

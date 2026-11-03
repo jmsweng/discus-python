@@ -575,8 +575,16 @@ def parse_stru(
     source: str = "<string>",
     supercell: tuple[int, int, int] | str | None = None,
     allow_loss: bool = False,
+    check_order: bool = True,
+    min_separation: float | None = 0.1,
 ) -> DiscusStru:
     """Parse DISCUS ``.stru`` text into a :class:`DiscusStru`.
+
+    ``check_order=False`` skips the cell-major order check below (rows are still assigned to cells by
+    their row number). Use it for configurations of molecules in several orientations, where an atom
+    of one slot can lie more than half a cell from that slot's median position. ``min_separation`` is
+    passed to :class:`~discuspdf.structure.Structure` (``None``: no overlap check, e.g. for ``VOID``
+    padding atoms that share a position with a real atom).
 
     The returned ``structure`` is the whole crystal (``model="configuration"``):
     ``lattice`` is the whole periodic frame and ``frac`` are fractions of it.
@@ -798,7 +806,7 @@ def parse_stru(
     # keepdims broadcasts it to every cell.
     ref = np.median(d.reshape(ncells, m, 3), axis=0, keepdims=True)  # (1, m, 3)
     bad = np.abs(d.reshape(ncells, m, 3) - ref) > 0.5
-    if bad.any():
+    if check_order and bad.any():
         # first bad (cell, slot, axis); row = cell * m + slot
         cell_idx, slot_idx, axis = np.unravel_index(int(np.argmax(bad)), bad.shape)
         r = int(cell_idx) * m + int(slot_idx)
@@ -835,6 +843,7 @@ def parse_stru(
         cell_index=cell_index,
         supercell=n,
         pbc=(True, True, True),
+        min_separation=min_separation,
     )
     defaults: list[str] = []
     if b_was_zero:
@@ -854,17 +863,21 @@ def read_stru(
     *,
     supercell: tuple[int, int, int] | str | None = None,
     allow_loss: bool = False,
+    check_order: bool = True,
+    min_separation: float | None = 0.1,
 ) -> DiscusStru:
     """Read a DISCUS ``.stru`` file from ``path``.
 
     ``supercell`` selects the supercell for files without an ``ncell`` line
     (see :func:`parse_stru`): ``None`` reads as one cell only if the atoms
     span less than one unit cell, ``(n1,n2,n3)`` uses the given supercell, and
-    ``"infer"`` recovers the supercell of a DISCUS-saved centred crystal.
+    ``"infer"`` recovers the supercell of a DISCUS-saved centred crystal. ``check_order`` and
+    ``min_separation``: see :func:`parse_stru`.
     """
     p = Path(path)
     text = p.read_text(encoding="ascii")
-    return parse_stru(text, source=str(p), supercell=supercell, allow_loss=allow_loss)
+    return parse_stru(text, source=str(p), supercell=supercell, allow_loss=allow_loss,
+                      check_order=check_order, min_separation=min_separation)
 
 
 def format_stru(obj, *, title: str | None = None, spacegroup: str | None = None) -> str:
@@ -969,6 +982,8 @@ def write_stru(
     title: str | None = None,
     spacegroup: str | None = None,
     overwrite: bool = False,
+    check_order: bool = True,
+    min_separation: float | None = 0.1,
 ) -> Path:
     """Write ``obj`` to ``path`` as a ``.stru`` file, atomically.
 
@@ -977,13 +992,24 @@ def write_stru(
     ``os.replace``; parse the written text back and require ``isclose`` agreement
     with ordering preserved; on failure delete the temp file, leave the target
     untouched, and raise.
+
+    ``check_order`` and ``min_separation`` apply to that read-back (see
+    :func:`parse_stru`). Molecule configurations (atoms of one slot more than half a cell from the
+    slot's median position, ``VOID`` padding on top of real atoms) need ``check_order=False,
+    min_separation=None``; the writer still refuses rows that are not in cell-major order, and the
+    read-back still compares species, coordinates, B and cell assignment row by row.
     """
     target = Path(path)
     text = format_stru(obj, title=title, spacegroup=spacegroup)
     # Write atomically (refuses existing unless overwrite; temp file + os.replace).
     tmp = atomic_write_text(target, text, overwrite=overwrite)
     # Read back and verify agreement with the input.
-    written = parse_stru(tmp.read_text(encoding="ascii"), source=str(tmp))
+    try:
+        written = parse_stru(tmp.read_text(encoding="ascii"), source=str(tmp),
+                             check_order=check_order, min_separation=min_separation)
+    except Exception:
+        tmp.unlink()
+        raise
     ref = obj if isinstance(obj, DiscusStru) else obj
     if not _stru_roundtrip_agrees(ref, written):
         tmp.unlink()

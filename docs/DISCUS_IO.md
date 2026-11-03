@@ -139,3 +139,19 @@ kind = detect_discus_kind("file.txt")  # "cll" or "stru"
 - Occupancy < 1 in `.stru` (rejected by `parse_stru`).
 - Molecule/property columns (dropped only with `allow_loss=True`).
 - CIF/ASE formats (next PR).
+
+## Molecule configurations: `check_order` and `min_separation`
+
+`write_stru` parses the file it wrote and compares it with the input. That read-back checks the DISCUS
+cell-major order from the coordinates: for every slot, each atom must lie within half a cell of the slot's median
+position. With molecules in several orientations an atom of one slot can be further away, and `VOID` padding can
+share a position with a real atom, which the `Structure` overlap check refuses. For such files use
+
+```python
+write_stru(path, structure, check_order=False, min_separation=None)
+read_stru(path, check_order=False, min_separation=None)
+```
+
+The writer still refuses rows that are not in cell-major order (from `cell_index`), and the read-back still
+compares species, coordinates, B and the cell of every row. The defaults keep both checks on. (`parse_stru` takes
+the same two options.)
