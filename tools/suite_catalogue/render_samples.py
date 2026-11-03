@@ -1,0 +1,181 @@
+"""Sample DISCUS macros from the package's three macro generators, for the suite catalogue.
+
+``sample_macros()`` returns ``(label, macro_text)`` pairs. Together they exercise every option of
+:func:`discuspdf.pdf.render_pdf_macro`, :meth:`discuspdf.fourier_macro.FourierConfig.render` and
+:meth:`discuspdf.mc.MCConfig.render` that changes the generated text. Nothing here runs DISCUS.
+
+The generators read no input files. Structure names written into the macros are basenames of committed
+fixtures, and the crystal sizes and atom counts come from those files, located from the repository root.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from discuspdf import Lattice, PDFConfig, ReciprocalGrid, read_stru, render_pdf_macro
+from discuspdf.fourier_macro import SYMMETRY, FourierConfig, Lots, Seed, StructureSource
+from discuspdf.mc import (DisplacementTarget, LennardJonesTarget, MCConfig, Neighborhood, OccupationalTarget,
+                          Shift, SpringTarget, Swap, SwapDisplacement, Vector)
+
+REPO = Path(__file__).resolve().parents[2]
+FIXTURES = REPO / "tests" / "fixtures" / "discus_6_23_01"
+MC_INPUTS = REPO / "benchmarks" / "discus_6_23_01" / "d_mc_probes" / "inputs"
+GAAS_CLL = FIXTURES / "gaas.cll"                  # 2-atom GaAs cell, read by PDF/Fourier only by name
+CUAU_STRU = MC_INPUTS / "cuau.stru"               # Cu/Au, 16x16x16 cells, one site per cell
+CU_DISP_STRU = MC_INPUTS / "cu_disp.stru"         # Cu, 12x12x12 cells, one site per cell
+GAAS_222_STRU = FIXTURES / "gaas_222.stru"        # GaAs, 2x2x2 cells, eight sites per cell
+
+SEED_A = Seed((11, 22, 33, 44, 55, 66, 77, 88))
+SEED_B = Seed((81, 72, 63, 54, 45, 36, 27, 18))
+PAIRINGS = ("all", "local", "slocal", "site")     # the values MCConfig accepts (mc._PAIRING)
+
+
+def _pdf_samples() -> list[tuple[str, str]]:
+    base = dict(structure=GAAS_CLL, qmax=7.5)
+    cases = [
+        ("pdf_defaults", {}),                                             # xray, default wavelength, qsig 0
+        ("pdf_supercell_rgrid_qmin_dq", dict(supercell=(3, 4, 5), rmax=12.0, dr=0.03, qmin=0.8, dq=0.02)),
+        ("pdf_neutron_default_wavelength", dict(radiation="neutron")),
+        ("pdf_xray_explicit_wavelength", dict(qmax=16.0, wavelength=0.7107)),
+        ("pdf_neutron_explicit_wavelength", dict(radiation="neutron", wavelength=1.2)),
+        ("pdf_qsig_allowed", dict(qsig=0.03, allow_qsig=True)),          # the only path that writes a nonzero delta
+    ]
+    return [(label, render_pdf_macro(PDFConfig(**{**base, **kw}))) for label, kw in cases]
+
+
+def _fourier_samples() -> list[tuple[str, str]]:
+    cuau = read_stru(CUAU_STRU)
+    cu_disp = read_stru(CU_DISP_STRU)
+    lat: Lattice = cuau.structure.lattice
+    cells_cuau = tuple(cuau.ncell[:3])
+    cells_disp = tuple(cu_disp.ncell[:3])
+
+    g_hkl = ReciprocalGrid.from_ranges(lat, (-2, 2, 17), (-2, 2, 17), (-2, 2, 17))          # volume
+    g_hk0 = ReciprocalGrid.from_ranges(lat, (-2, 2, 41), (-2, 2, 41), (0, 0, 1))            # plane
+    g_h00 = ReciprocalGrid.from_ranges(lat, (-2, 2, 41), (0, 0, 1), (0, 0, 1))              # line
+    g_hhl = ReciprocalGrid.from_corners(lat, (-2, -2, -2), (2, 2, -2), (-2, -2, 2), (-2, -2, -2), (41, 41, 1))
+
+    s_cell = StructureSource.cell(GAAS_CLL.name, (4, 4, 4))
+    s_cuau = StructureSource.stru(CUAU_STRU.name, cells_cuau)
+    s_cu_disp = StructureSource.stru(CU_DISP_STRU.name, cells_disp)
+    s_cuau_no_cells = StructureSource.stru(CUAU_STRU.name)
+
+    out: list[tuple[str, str]] = []
+
+    def add(label, grid, outputs, structure, *, title=True, **options):
+        cfg = FourierConfig(grid, tuple(outputs), **options)
+        out.append((label, cfg.render(structure, title=label if title else None)))
+
+    add("fourier_hkl_int_real_imag", g_hkl,
+        [("int", "hkl_int.h5"), ("real", "hkl_real.h5"), ("imag", "hkl_imag.h5")], s_cuau)
+    add("fourier_hk0_plane_cell_source_no_title", g_hk0, [("int", "hk0_int.h5")], s_cell, title=False)
+    add("fourier_h00_line_stru_without_cells", g_h00, [("int", "h00_int.h5")], s_cuau_no_cells)
+    add("fourier_hhl_plane_auto_labels", g_hhl, [("int", "hhl_int.h5")], s_cuau, aver_percent=100)
+    add("fourier_hhl_plane_explicit_labels", g_hhl, [("int", "hhl_k_l_h.h5")], s_cuau,
+        aver_percent=100, labels=("k", "l", "h"))
+    add("fourier_3dpdf_output_aver100", g_hkl, [("3DPDF", "hkl_3dpdf.h5")], s_cuau, aver_percent=100)
+    add("fourier_all_four_outputs_aver100", g_hkl,
+        [("int", "all_int.h5"), ("real", "all_real.h5"), ("imag", "all_imag.h5"), ("3DPDF", "all_3dpdf.h5")],
+        s_cuau, aver_percent=100)
+    add("fourier_hdf5_suffix_plane", g_hk0, [("int", "out.hdf5")], s_cell, aver_percent=100)
+    add("fourier_aver50_seed_a", g_hkl, [("int", "aver50_int.h5"), ("real", "aver50_real.h5")], s_cu_disp,
+        aver_percent=50, seed=SEED_A)
+    add("fourier_aver12p5_seed_b", g_hkl, [("int", "aver12_int.h5")], s_cu_disp,
+        aver_percent=12.5, seed=SEED_B)
+    add("fourier_lots_box_all_periodic", g_hkl, [("int", "lot_box_all_y.h5")], s_cuau,
+        lots=Lots("box", (4, 4, 4), "all", True))
+    add("fourier_lots_box_all_open_aver100", g_hkl, [("int", "lot_box_all_n.h5")], s_cuau,
+        lots=Lots("box", (4, 4, 4), "all", False), aver_percent=100)
+    add("fourier_lots_box_random_seeded", g_hkl, [("int", "lot_box_64.h5")], s_cu_disp,
+        lots=Lots("box", (4, 4, 4), 64, True), seed=SEED_A)
+    add("fourier_lots_ellipsoid_all_periodic", g_hkl, [("int", "lot_ell_all_y.h5")], s_cuau,
+        lots=Lots("ellipsoid", (4, 4, 4), "all", True))
+    add("fourier_lots_ellipsoid_random_open", g_hkl, [("int", "lot_ell_9_n.h5")], s_cuau,
+        lots=Lots("ellipsoid", (4, 5, 6), 9, False), seed=SEED_B)
+    add("fourier_neutron_default_wavelength", g_hkl, [("int", "neut_int.h5")], s_cuau, radiation="neutron")
+    add("fourier_neutron_cua1_symbol", g_hkl, [("real", "neut_cua1_real.h5")], s_cuau,
+        radiation="neutron", wavelength="cua1", aver_percent=100)
+    add("fourier_xray_wavelength_angstrom", g_hkl, [("real", "xray_0p7107_real.h5")], s_cell,
+        radiation="xray", wavelength=0.7107)
+    add("fourier_temperature_use_apply_aver100", g_hkl,
+        [("real", "t_use_real.h5"), ("imag", "t_use_imag.h5")], s_cuau,
+        temperature="use", symmetry="apply", aver_percent=100)
+    for sym in SYMMETRY:
+        add(f"fourier_symmetry_{sym}", g_hkl, [("int", f"sym_{sym}.h5")], s_cuau,
+            symmetry=sym, aver_percent=100)
+    return out
+
+
+def _mc_samples() -> list[tuple[str, str]]:
+    cuau = read_stru(CUAU_STRU).structure
+    cu_disp = read_stru(CU_DISP_STRU).structure
+    gaas = read_stru(GAAS_222_STRU, supercell=(2, 2, 2)).structure
+
+    nn = Neighborhood.from_translations([(1, 0, 0), (0, 1, 0), (0, 0, 1)])
+    out: list[tuple[str, str]] = []
+
+    def add(label, cfg, path, structure):
+        cfg.check_structure(structure)  # the sample must be valid for the structure it names
+        out.append((label, cfg.render(path.name, structure.n_atoms, title=label)))
+
+    def mc(neighborhoods, targets, moves, **options):
+        return MCConfig(neighborhoods=neighborhoods, targets=targets, moves=moves,
+                        seed=options.pop("seed", SEED_A), **options)
+
+    occ_corr = OccupationalTarget(0, "Cu", "Au", correlation=-0.3)
+    occ_energy = OccupationalTarget(0, "Cu", "Au", energy=0.5)
+
+    add("mc_occ_correlation_swap_all", mc((nn,), (occ_corr,), (Swap(),)), CUAU_STRU, cuau)
+    add("mc_occ_energy_swap_local_hot", mc((nn,), (occ_energy,), (Swap(0.5, "local"),),
+                                           moves_per_atom=2.5, feedback_per_atom=0.5, temperature=2.0),
+        CUAU_STRU, cuau)
+    add("mc_occ_energy_clustering_custom_output", mc((nn,), (OccupationalTarget(0, "Cu", "Au", energy=-0.4),),
+                                                     (Swap(1.0, "slocal"),), seed=Seed((1, 2, 3, 4, 5, 6, 7, 8)),
+                                                     output_file="cuau_clustered.stru"),
+        CUAU_STRU, cuau)
+    for move_cls in (Swap, SwapDisplacement):
+        for pairing in PAIRINGS:
+            add(f"mc_{move_cls.__name__.lower()}_{pairing}_p050",
+                mc((nn,), (OccupationalTarget(0, "Cu", "Au", energy=1.0),), (move_cls(0.5, pairing),)),
+                CUAU_STRU, cuau)
+    add("mc_shift_two_species_p030", mc((nn,), (OccupationalTarget(0, "Cu", "Au", energy=0.2),),
+                                        (Shift({"Cu": (0.01, 0.01, 0.02), "Au": (0.01, 0.01, 0.01)}, 0.3),)),
+        CUAU_STRU, cuau)
+    add("mc_spring_target_shift_single_species", mc((nn,), (SpringTarget(0, "Cu", "Cu", 3.0, 1.0),),
+                                                    (Shift({"Cu": (0.01, 0.01, 0.01)}),)),
+        CU_DISP_STRU, cu_disp)
+    add("mc_displacement_correlation", mc((nn,), (DisplacementTarget(0, "Cu", "Cu", (1, 0, 0), correlation=0.3),),
+                                          (Shift({"Cu": (0.01, 0.01, 0.01)}),)),
+        CU_DISP_STRU, cu_disp)
+    add("mc_displacement_energy_diagonal_dir", mc((nn,), (DisplacementTarget(0, "Cu", "Cu", (1, 1, 0), energy=1.0),),
+                                                  (Shift({"Cu": (0.01, 0.01, 0.01)}),)),
+        CU_DISP_STRU, cu_disp)
+    add("mc_lennard_jones_default_exponents", mc((nn,), (LennardJonesTarget(0, "Cu", "Cu", 2.9, 1.0),),
+                                                 (Shift({"Cu": (0.01, 0.01, 0.01)}),)),
+        CU_DISP_STRU, cu_disp)
+    add("mc_lennard_jones_custom_exponents", mc((nn,), (LennardJonesTarget(0, "Cu", "Cu", 2.5, 0.8, 9.0, 6.0),),
+                                                (Shift({"Cu": (0.01, 0.01, 0.01)}),)),
+        CU_DISP_STRU, cu_disp)
+
+    # Two-site neighbourhoods (origin and target sites differ), an asymmetric neighbourhood, one of each
+    # target kind on different neighbourhoods, and all three move types together.
+    nb_sites = Neighborhood((Vector(1, 2, (0, 0, 0)), Vector(1, 2, (-1, 0, 0))))
+    nb_asym = Neighborhood((Vector(1, 1, (1, 0, 0)), Vector(2, 2, (0, 1, 0))), symmetric=False)
+    nb_diag = Neighborhood.from_translations([(1, 1, 0), (1, 0, 1), (0, 1, 1)], site=1)
+    add("mc_gaas_two_sites_all_targets_all_moves",
+        mc((nb_sites, nb_asym, nb_diag),
+           (OccupationalTarget(0, "GA", "AS", correlation=-0.3),
+            DisplacementTarget(1, "GA", "AS", (1, 0, 0), energy=0.5),
+            LennardJonesTarget(2, "GA", "GA", 2.8, 0.5)),
+           (Swap(0.5, "all"), Shift({"GA": (0.01, 0.01, 0.01)}, 0.3), SwapDisplacement(0.2, "site"))),
+        GAAS_222_STRU, gaas)
+    return out
+
+
+def sample_macros() -> list[tuple[str, str]]:
+    """Every sample macro as ``(label, macro_text)``, PDF then Fourier then MC."""
+    return _pdf_samples() + _fourier_samples() + _mc_samples()
+
+
+if __name__ == "__main__":
+    for label, text in sample_macros():
+        print(f"{label}: {len(text.splitlines())} macro lines")

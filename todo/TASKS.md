@@ -143,6 +143,18 @@ The existing DISCUS engine may implement some of these physical methods already.
   - *Open: interactive viewer.*
 - ✅ Example notebook for Package D (Features 10, 11, 15–17, 21) on committed data. [`notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb`](../notebooks/10_monte_carlo_scattering_checks_and_magnetism.ipynb).
 
+## Python interface to all of DISCUS_SUITE
+
+Goal: every DISCUS_SUITE program (DISCUS, KUPLOT, REFINE, DIFFEV, MIXSCAT, the suite level) usable from Python. Plan agreed with the owner on 2026-11-03: subprocess + generated macros only (not the upstream f2py binding); stock DISCUS 6.23.01 except where the owner's fork fixed something ([`SUITE_CATALOGUE.md`](../docs/SUITE_CATALOGUE.md#stock-engine-or-fork)); levels generated / engine-ran / verified, pre-registration only for scattering, PDF and refinement results, with small models. Progress is measured in [`SUITE_COVERAGE.md`](../docs/SUITE_COVERAGE.md).
+
+- ✅ **S0 — Command catalogue.** All 44 menus and 1007 command entries of 6.23.01 from the Fortran dispatchers plus help, with abbreviation rules, sub-menu entry and fall-through as the engine applies them; macro checker; every committed and generated macro passes. Audited menu by menu against the source. [`suite_catalogue.py`](../src/discuspdf/suite_catalogue.py) · [`SUITE_CATALOGUE.md`](../docs/SUITE_CATALOGUE.md) · [`tests/test_suite_catalogue.py`](../tests/test_suite_catalogue.py).
+  - *Open: the quirks found (e.g. `pdf` `select` typo) are from source reading only; confirm on the engine before reporting them upstream.*
+- ⬜ **S1 — One engine layer and macro builder:** shared launcher/environment/log checks for `PDFRunner`, `Diffuse3DRunner`, `MCRunner` (macros byte-identical), engine choice stock/fork, raw-command escape hatch checked by the catalogue.
+- ⬜ **S2 — DISCUS menus:** disorder generation (`mc`/`mmc`, `rmc`, `kick`, `waves`, `stack`, `domain`, `chem`), then scattering (`fourier`, `powder`, `pdf`, `3dpdf`, `patterson`/`inverse`/`diff-four`, `exp2pdf`, `output`), then structure building and export.
+- ⬜ **S3 — REFINE** (fork engine): parameters, data, user macro, parsed cycle results.
+- ⬜ **S4 — KUPLOT:** data I/O, fit, processing (plots stay in matplotlib).
+- ⬜ **S5 — DIFFEV**, **S6 — MIXSCAT**, **S7 — notebooks and docs per program.**
+
 ## Maintenance rules
 
 1. Update this file **in the same PR** that delivers a feature; link the commit/PR and test or reference dataset.
