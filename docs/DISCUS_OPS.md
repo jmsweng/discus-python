@@ -5,7 +5,9 @@ displacements, modulation waves, atom edits. A `StructureJob`:
 
 1. reads a crystal into DISCUS: a `.cll` unit cell repeated, a `.stru` file, or a discuspdf
    `Structure`;
-2. writes the 8-value seed;
+2. writes the 8-value seed. A job with a step that draws random numbers (`ReplaceRandom`,
+   `Thermal`, a density wave or a random phase, `Raw(..., random=True)`) refuses to run
+   without one, because DISCUS would seed from the clock. `allow_unseeded=True` overrides this;
 3. applies the steps in order;
 4. saves the crystal and reads it back as a `Structure`.
 
@@ -47,8 +49,10 @@ result.structure     # the modified crystal; result.run is the run record
 - **Vectors:** the wave vector and the oscillation direction are normalised, so only their
   directions matter.
 - **Profile:** `sinus` is `amplitude·cos(2π·arg) + shift`.
-- **Density waves:** these replace atoms of one type by another with a probability between
-  `plow` and `phigh`. Amplitude, shift and branch do not apply to them.
+- **Density waves:** the profile f runs between `plow` and `phigh`. An atom of type `from` is
+  replaced by `to` when `ran1 > f`, so with probability 1 − f, i.e. between 1 − `phigh` and
+  1 − `plow`. With `viceversa`, atoms of type `to` become `from` with probability f.
+  Amplitude, shift and branch do not apply.
 - **Quotes:** DISCUS keeps quotes in parameters literally, so the step writes `box`, `random` and
   `viceversa` without quotes, unlike the help text.
 - **Optical branch:** it reverses the displacement only of atoms whose name contains `-`.
@@ -59,8 +63,13 @@ result.structure     # the modified crystal; result.run is the run record
 DISCUS `save` writes no `ncell` line, so the crystal size comes from the source: the cell
 count for `read cell`, the `ncell` line of an input `.stru`, or `Structure.supercell`.
 
-- **Vacancies** from `remove` are kept in the saved file, so the crystal is still a whole number
-  of cells.
+- **Vacancies** from `remove` stay in the saved file as `VOID` atoms, so the crystal is still a
+  whole number of cells. DISCUS writes their Property flag as 0 (`do_remove` clears
+  `PROP_NORMAL`), and that column is not kept: it is listed in `result.stru.dropped`.
+- **Order check:** the saved atoms are checked for DISCUS's cell-major order, which `read cell`
+  and `read stru` keep. A purge that happens to remove a whole number of cells' worth of atoms
+  would otherwise be mislabelled silently. `run(..., check_order=False)` skips the check, e.g.
+  after displacements of more than half a cell.
 - **After `purge`** the atom count is usually no longer a multiple of the cell count. The job
   then raises `ResultNotAStructure`, whose `.run` still gives the saved file
   (`run.output("result.stru")`).

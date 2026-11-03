@@ -40,6 +40,8 @@ INPUT_NAME = "input.stru"
 class Step:
     """One DISCUS operation. Subclasses implement :meth:`apply` (called in the DISCUS main menu)."""
 
+    uses_random_numbers = False  # True when the step draws from DISCUS's random generator
+
     def apply(self, m: Macro) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
@@ -67,9 +69,15 @@ def _atom(name: str, v) -> str | int:
 
 @dataclass(frozen=True)
 class Raw(Step):
-    """Lines written unchanged in the DISCUS main menu (checked against the catalogue on render)."""
+    """Lines written unchanged in the DISCUS main menu (checked against the catalogue on render).
+    Set ``random=True`` if they draw random numbers, so the job insists on a seed."""
 
     lines: tuple
+    random: bool = False
+
+    @property
+    def uses_random_numbers(self) -> bool:
+        return self.random
 
     def apply(self, m: Macro) -> None:
         for line in self.lines:
@@ -86,6 +94,8 @@ class Thermal(Step):
     ``molecules`` moves whole molecules rigidly with the molecule B (``ther mol``). The random
     numbers come from the job's seed. Note DISCUS 6.23.01 reads an atom B below 0.001 as 1.0
     (``docs/FOURIER_CONTROLS.md``)."""
+
+    uses_random_numbers = True
 
     two_d: bool = False
     molecules: bool = False
@@ -119,6 +129,8 @@ class ReplaceAtom(Step):
 class ReplaceRandom(Step):
     """Replace atoms of type ``old`` by ``new`` with probability ``probability`` on all sites or
     on one site of the unit cell (``replace <at1>,<at2>,{all|<site>},<prob>``). Uses the seed."""
+
+    uses_random_numbers = True
 
     old: str | int
     new: str | int
@@ -165,6 +177,10 @@ class Remove(Step):
             _int("start", self.start)
         if self.end is not None:
             _int("end", self.end)
+            if self.start in ("all", "last"):
+                raise ValueError("end is not used with start 'all' or 'last'")
+            if self.end < self.start:
+                raise ValueError("end must be >= start (DISCUS error -19)")
 
     def apply(self, m: Macro) -> None:
         m.command("remove", *([self.start] + ([self.end] if self.end is not None else [])))
@@ -231,10 +247,12 @@ class Wave(Step):
       optical wave reverses the displacement of atoms whose name contains '-' (``waves.f90``
       1019-1022). The density branch ignores it, so it must be None there.
     * ``select`` (``select``): displacement modes only: ``"all"`` (default) or names/type numbers.
-    * ``replace`` (``replace <from>,<to>[,viceversa]``): density modes only: atoms of type
-      ``from`` are replaced by ``to`` (``waves.f90`` 408-437). ``viceversa`` replaces the
-      complementary probability of the atoms of type ``to``.
-    * ``plow``, ``phigh``: density modes only, 0 <= plow <= phigh <= 1.
+    * ``replace`` (``replace <from>,<to>[,viceversa]``), ``plow``, ``phigh``: density modes
+      only, 0 <= plow <= phigh <= 1. The wave profile f runs between ``plow`` and ``phigh``
+      (``waves.f90`` 825-836), and an atom of type ``from`` is replaced by ``to`` when
+      ``ran1 > f`` (``waves.f90`` 960): its replacement probability is ``1 - f``, i.e. between
+      ``1 - phigh`` and ``1 - plow``. With ``viceversa`` an atom of type ``to`` becomes ``from``
+      with probability ``f`` (``waves.f90`` 981-984).
 
     Density runs overwrite ``amp`` and ``shift`` (``waves.f90`` 825-836), so they must be None
     there. The macro is ``waves``: optional ``reset`` (only when the menu has that command), the
@@ -249,6 +267,11 @@ class Wave(Step):
     kind: str
     vector: Sequence[float]
     length: float
+
+    @property
+    def uses_random_numbers(self) -> bool:
+        return self.kind == "density" or self.phase == "random"
+
     function: str = "sinus"
     box_width: float | None = None
     amplitude: float | None = None
@@ -410,6 +433,7 @@ class StructureJob:
     steps: Sequence[Step] = field(default_factory=tuple)
     seed: Seed | None = None
     title: str | None = None
+    allow_unseeded: bool = False
 
     def __post_init__(self):
         from .structure import Structure
@@ -425,6 +449,10 @@ class StructureJob:
         object.__setattr__(self, "steps", steps)
         if self.seed is not None and not isinstance(self.seed, Seed):
             raise TypeError("seed must be a Seed (8 values)")
+        random_steps = [s for s in steps if s.uses_random_numbers]
+        if random_steps and self.seed is None and not self.allow_unseeded:
+            raise ValueError(f"{type(random_steps[0]).__name__} draws random numbers; give seed=Seed(...) "
+                             "(without one DISCUS seeds from the clock), or allow_unseeded=True")
 
     @property
     def _source(self) -> StructureSource:
@@ -458,15 +486,20 @@ class StructureJob:
         from .discus_io import read_stru
 
         path = Path(dict(inputs)[src.file])
-        ncell = read_stru(path, check_order=False, min_separation=None).ncell
-        if ncell is None:
-            raise ValueError(f"{src.file} has no ncell line; give StructureSource.stru(..., crystal_cells)")
-        return tuple(int(n) for n in ncell[:3])
+        for line in path.read_text(errors="replace").splitlines():
+            words = line.replace(",", " ").split()
+            if words and words[0].lower() == "ncell" and len(words) >= 4:
+                return tuple(int(float(w)) for w in words[1:4])
+            if words and words[0].lower() == "atoms":
+                break
+        raise ValueError(f"{src.file} has no ncell line; give StructureSource.stru(..., crystal_cells=(n1, n2, n3))")
 
     def run(self, runner, inputs: Mapping[str, Path | str] | None = None, *,
-            engine: str | None = None) -> JobResult:
+            engine: str | None = None, check_order: bool = True) -> JobResult:
         """Run with a :class:`~discuspdf.suite_runner.SuiteRunner` and read ``result.stru`` back
-        (DISCUS ``save`` writes no ``ncell`` line, so the crystal size comes from the source)."""
+        (DISCUS ``save`` writes no ``ncell`` line, so the crystal size comes from the source).
+        ``check_order=False`` skips the cell-major order check, e.g. after displacements larger
+        than half a cell; the cell labels are then assigned by row and are not checked."""
         from .discus_io import read_stru, write_stru
         from .structure import Structure
 
@@ -483,9 +516,16 @@ class StructureJob:
         from .discus_io import DiscusFormatError
 
         try:
-            stru = read_stru(run.output(RESULT_NAME), supercell=cells, check_order=False, min_separation=None)
+            # read cell / read stru keep DISCUS's cell-major order, so the order check holds unless a
+            # purge shifted rows; vacancies make the Property column non-constant (do_remove clears
+            # PROP_NORMAL), which is the only column allowed to vary
+            stru = read_stru(run.output(RESULT_NAME), supercell=cells, check_order=check_order,
+                             min_separation=None, allow_loss=True)
         except DiscusFormatError as exc:
             raise ResultNotAStructure(f"DISCUS ran, but {RESULT_NAME} is not a {cells} crystal: {exc}", run) from exc
+        extra = [c for c in stru.dropped if c != "Property"]
+        if extra:
+            raise ResultNotAStructure(f"{RESULT_NAME} has non-constant {extra} columns the Structure cannot keep", run)
         return JobResult(stru.structure, run, stru)
 
 

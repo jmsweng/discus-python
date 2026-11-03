@@ -44,7 +44,7 @@ def cat():
 
 
 def _job(*steps):
-    return StructureJob(StructureSource.cell("cu.cll", (2, 2, 2)), list(steps))
+    return StructureJob(StructureSource.cell("cu.cll", (2, 2, 2)), list(steps), allow_unseeded=True)
 
 
 def _block(text: str) -> list[str]:

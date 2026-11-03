@@ -50,7 +50,7 @@ def test_job_macro_reads_seeds_applies_and_saves():
     (Raw(("show atom,1",)), "show atom,1"),
 ])
 def test_step_lines(step, line):
-    job = StructureJob(StructureSource.stru("x.stru", (2, 2, 2)), [step])
+    job = StructureJob(StructureSource.stru("x.stru", (2, 2, 2)), [step], allow_unseeded=True)
     assert lines(job)[4] == line  # after the comment, discus, read, stru
     assert load_catalogue().check(job.macro().render()) == []
 
@@ -65,6 +65,8 @@ def test_step_lines(step, line):
     lambda: Switch(1, True),
     lambda: Remove("first"),
     lambda: Remove(3, 0),
+    lambda: Remove(7, 5),
+    lambda: Remove("all", 5),
 ])
 def test_invalid_steps(make):
     with pytest.raises(ValueError):
@@ -99,6 +101,29 @@ def test_structure_source_is_written_as_input_stru(tmp_path):
     s = _cu_structure()
     job = StructureJob(s, [Thermal()], seed=SEED)
     assert lines(job)[3] == "structure input.stru"
+
+
+def test_random_steps_need_a_seed():
+    from discuspdf.discus_ops import Wave
+    src = StructureSource.cell("cu.cll", (2, 2, 2))
+    for step in (Thermal(), ReplaceRandom("CU", "AU", 0.5), Wave("longitudinal", (1, 0, 0), 10, amplitude=0.1,
+                                                                   phase="random"),
+                 Raw(("thermal",), random=True)):
+        with pytest.raises(ValueError, match="seed"):
+            StructureJob(src, [step])
+        StructureJob(src, [step], seed=SEED)
+        StructureJob(src, [step], allow_unseeded=True)
+    StructureJob(src, [Wave("longitudinal", (1, 0, 0), 10, amplitude=0.1), Switch(1, 2)])  # deterministic
+
+
+def test_crystal_cells_of_a_stru_source(tmp_path):
+    f = tmp_path / "x.stru"
+    f.write_text("title x\nspcgr P1\ncell 1,1,1,90,90,90\nncell 3, 4, 5, 1\natoms\n")
+    assert StructureJob(StructureSource.stru("x.stru")).crystal_cells({"x.stru": f}) == (3, 4, 5)
+    g = tmp_path / "y.stru"
+    g.write_text("title x\nspcgr P1\ncell 1,1,1,90,90,90\natoms\nCU 0 0 0 0.5\n")
+    with pytest.raises(ValueError, match="no ncell"):
+        StructureJob(StructureSource.stru("y.stru")).crystal_cells({"y.stru": g})
 
 
 FAKE = """
@@ -140,3 +165,21 @@ def test_result_that_is_not_a_whole_crystal_raises_with_the_run(tmp_path):
     with pytest.raises(ResultNotAStructure) as exc:
         StructureJob(_cu_structure(2), [Purge()]).run(runner)
     assert exc.value.run.output("result.stru").is_file()
+
+
+def test_vacancies_from_remove_are_read_back(tmp_path):
+    """do_remove clears PROP_NORMAL, so a saved vacancy has Property 0 (non-constant column)."""
+    script = tmp_path / "fake.py"
+    script.write_text(FAKE.replace(
+        'lines = [l for l in text.splitlines() if not l.lower().startswith("ncell")]',
+        'lines = [l for l in text.splitlines() if not l.lower().startswith("ncell")]\n'
+        'i = next(k for k, l in enumerate(lines) if l.lower().startswith("atoms")) + 1\n'
+        'name, rest = lines[i].split(None, 1)\n'
+        'parts = rest.split(",")\n'
+        'parts[4] = " 0"\n'
+        'lines[i] = "VOID " + ",".join(parts)'))
+    runner = SuiteRunner(tmp_path / "runs", Engine((sys.executable, str(script))))
+    from discuspdf.discus_ops import Remove
+    result = StructureJob(_cu_structure(2), [Remove(1)]).run(runner)
+    assert str(result.structure.species[0]).upper() == "VOID"
+    assert result.stru.dropped == ("Property",)
