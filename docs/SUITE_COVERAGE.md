@@ -7,13 +7,13 @@ Catalogue: DISCUS_SUITE 6.23.01 (`19a214a`), 44 menus.
 - **Generated**: emitted by a discuspdf macro generator (reachable through a typed API).
 - **In evidence**: used in at least one committed macro that ran on DISCUS (probes, gates, fixtures).
 
-Totals: 659 commands, 41 generated, 45 in evidence (commands of one routine shown under several menus are counted once).
+Totals: 659 commands, 64 generated, 46 in evidence (commands of one routine shown under several menus are counted once).
 
 | Menu | Commands | Generated | In evidence | Generated commands |
 |---|---:|---:|---:|---|
 | `common` | 29 | 2 | 2 | `seed`, `set` |
 | `diffev` | 29 | 0 | 0 | — |
-| `discus` | 64 | 6 | 7 | `fourier`, `output`, `powder`, `read`, `mmc`, `save` |
+| `discus` | 64 | 12 | 7 | `fourier`, `output`, `powder`, `purge`, `read`, `remove`, `replace`, `mmc`, `save`, `switch`, `thermal`, `waves` |
 | `discus/3dpdf` | 2 | 0 | 0 | — |
 | `discus/chem` | 19 | 0 | 3 | — |
 | `discus/common` | 3 | 0 | 0 | — |
@@ -23,7 +23,7 @@ Totals: 659 commands, 41 generated, 45 in evidence (commands of one routine show
 | `discus/diff-four` | 32 | 0 | 0 | — |
 | `discus/domain` | 9 | 0 | 0 | — |
 | `discus/exp2pdf` | 12 | 0 | 0 | — |
-| `discus/fourier` | 27 | 19 | 19 | `abscissa`, `dispersion`, `ll`, `lr`, `ul`, `tl`, `lots`, `nabs`, `neutron`, `nord`, `ntop`, `ordinate`, `run`, `set`, `show`, `temp`, `top`, `wvlength`, `xray` |
+| `discus/fourier` | 27 | 19 | 20 | `abscissa`, `dispersion`, `ll`, `lr`, `ul`, `tl`, `lots`, `nabs`, `neutron`, `nord`, `ntop`, `ordinate`, `run`, `set`, `show`, `temp`, `top`, `wvlength`, `xray` |
 | `discus/insert` | 21 | 0 | 0 | — |
 | `discus/inverse` | 32 | 0 | 0 | — |
 | `discus/mmc` | 6 | 3 | 3 | `run`, `set`, `show` |
@@ -45,7 +45,7 @@ Totals: 659 commands, 41 generated, 45 in evidence (commands of one routine show
 | `discus/symm` | 22 | 0 | 0 | — |
 | `discus/tran` | 32 | 0 | 0 | — |
 | `discus/trans` | 2 | 0 | 0 | — |
-| `discus/wave` | 25 | 0 | 0 | — |
+| `discus/wave` | 25 | 17 | 0 | `accoustic`, `amplitude`, `density`, `select`, `function`, `length`, `long`, `optical`, `osci`, `phase`, `phigh`, `plow`, `replace`, `run`, `shift`, `transverse`, `vector` |
 | `kuplot` | 93 | 0 | 0 | — |
 | `kuplot/2dm` | 7 | 0 | 0 | — |
 | `kuplot/adt` | 5 | 0 | 0 | — |
