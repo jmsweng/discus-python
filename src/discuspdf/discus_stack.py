@@ -56,7 +56,7 @@ def _layer_name(value) -> str:
                          f"paths), got {value!r}")
     if value.lower().startswith("internal"):
         raise ValueError(f"layer {value!r}: a name starting with 'internal' is DISCUS internal storage, "
-                         "not a file (stack.f90:376)")
+                         "not a file (structur.f90:778)")
     return value
 
 
@@ -123,7 +123,7 @@ class Stacking(CrystalBuilder):
     * ``average``: ``None`` takes the average translation the DISCUS way, from the matrix
       (``set trans:average``); a vector sets it with ``aver`` and ``set trans:fixed``. Must be non-zero.
     * ``modulus_on``: ``set modulus:on|off``. On, origins are wrapped into the modulo cell around the
-      average, which keeps random in-plane offsets from accumulating (``stack.f90:1445-1452``).
+      average, which keeps random in-plane offsets from accumulating (``stack.f90:1445-1451``).
     * ``sigmas``: ``None`` or ``sigmas[i][j] = (sx, sy, sz)``, Gaussian spread of each translation
       (``sigma``, non-negative). Pairs with all zeros are not written.
     * ``random_probability``: probability of a random stacking fault per layer (``random prob``).
@@ -290,7 +290,7 @@ class Stacking(CrystalBuilder):
         DISCUS writes no ``ncell`` line (``discus_save.f90:910``; ``sav_w_ncell`` is off by default,
         ``discus_save_mod.f90:29``), so the cell count is DISCUS's own estimate: ``cr_icc`` from
         ``estimate_ncells`` (``stack.f90:2245-2247``), which is ``floor(max - min) + 1`` of the atom
-        coordinates along each axis (``discus_estimate.f90:52-63``). The file is then read with
+        coordinates along each axis (``discus_estimate.f90:57-63``). The file is then read with
         :func:`~discuspdf.discus_io.read_stru` for that supercell. A stack whose atoms are not a
         whole number of cells in cell-major order (typical: layers that do not wrap into the cell)
         is refused with ``DiscusFormatError``; the file is still available from the run.
