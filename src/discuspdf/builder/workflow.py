@@ -27,6 +27,18 @@ from .model import VOID, ModelError, export_formats, load_model
 ENGINE_VERSION = "2.0"   # 1.0 was the builder's self-contained engine.py
 
 
+def _console(msg: str) -> None:
+    """Print a progress line; characters the console cannot encode (Å, Δ, λ, → on a Windows cp1252 console)
+    are replaced instead of raising UnicodeEncodeError. run_log.txt keeps the exact text (UTF-8)."""
+    stream = sys.stdout
+    enc = getattr(stream, "encoding", None) or "utf-8"
+    try:
+        msg.encode(enc)
+    except (UnicodeEncodeError, LookupError):
+        msg = msg.encode(enc, errors="replace").decode(enc, errors="replace") if enc else msg.encode("ascii", "replace").decode()
+    print(msg, file=stream, flush=True)
+
+
 def run(model, *, out=None, seed=None, launcher=None, dry_run=False, structure_only=False,
         numpy_preview=False, overwrite=False, log=None) -> dict:
     """Build the model's structure and run every enabled calculation. Returns a summary dict
@@ -47,7 +59,7 @@ def run(model, *, out=None, seed=None, launcher=None, dry_run=False, structure_o
 
     def say(msg):
         log_lines.append(msg)
-        (log or (lambda m: print(m, flush=True)))(msg)
+        (log or _console)(msg)
 
     calc = cfg.get("calc", {})
     if launcher is None:

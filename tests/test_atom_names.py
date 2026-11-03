@@ -75,6 +75,7 @@ def test_isotope_label():
     assert not is_isotope_label("D") and not is_isotope_label("Ni") and not is_isotope_label("C1")
 
 
-def test_long_names_truncated_and_spaces_refused():
-    assert discus_atom_name("Ni62x").name == "NI62"      # DISCUS keeps 4 characters
-    assert discus_atom_name("N i") is None
+def test_long_names_are_guessed_like_the_page():
+    # not truncated (same as the page's discusInfo); writers refuse names longer than 4 characters
+    i = discus_atom_name("Au197")
+    assert (i.name, i.read_as, i.element) == ("AU197", "AU", "Au") and mass_number("Au197") == 197

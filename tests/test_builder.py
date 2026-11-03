@@ -217,3 +217,18 @@ def test_main_reports_model_errors_without_traceback(tmp_path):
     cfg["sites"][0]["occupants"][0]["p"] = 0.1          # probabilities no longer sum to 1
     with pytest.raises(SystemExit, match="ModelError: site .* sum to"):
         main(["--dry-run", "--out", str(tmp_path / "x")], model=cfg)
+
+
+def test_runs_on_a_cp1252_console(tmp_path, monkeypatch):
+    """Windows consoles default to cp1252: the progress lines (Å, Δ, λ, →) must not crash the run (task 004)."""
+    import io
+    raw = io.BytesIO()
+    console = io.TextIOWrapper(raw, encoding="cp1252", errors="strict", write_through=True)
+    monkeypatch.setattr(sys, "stdout", console)
+    cfg = load_model(FIX / "nh4cl_neutron.json")                  # its log has "→" and "Å"
+    assert main(["--dry-run", "--out", str(tmp_path / "o")], model=cfg) == 0
+    console.flush()
+    text = raw.getvalue().decode("cp1252")
+    assert "Results in" in text and "?" in text                    # unencodable characters replaced
+    log = (tmp_path / "o" / "run_log.txt").read_text(encoding="utf-8")
+    assert "→" in log or "Å" in log                                # the log file keeps the exact text
