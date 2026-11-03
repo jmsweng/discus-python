@@ -1,0 +1,159 @@
+{
+ "engine": "DISCUS_SUITE 6.23.01",
+ "lattice_a": 3.52,
+ "cells": [
+  4,
+  4,
+  4
+ ],
+ "b_discus": {
+  "NI": 10.3,
+  "CU": 7.718
+ },
+ "pdf": {
+  "rmax": 10.0,
+  "dr": 0.02,
+  "qmin": 0.5,
+  "qmax": 7.0,
+  "dq": 0.01
+ },
+ "grid": {
+  "schema": "discuspdf.ReciprocalGrid",
+  "version": 1,
+  "lattice_matrix": [
+   [
+    3.52,
+    0.0,
+    0.0
+   ],
+   [
+    2.1553783664993416e-16,
+    3.52,
+    0.0
+   ],
+   [
+    2.1553783664993416e-16,
+    2.1553783664993416e-16,
+    3.52
+   ]
+  ],
+  "corner": [
+   -2.0,
+   -2.0,
+   -2.0
+  ],
+  "axis_vectors": [
+   [
+    0.25,
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.25,
+    0.0
+   ],
+   [
+    0.0,
+    0.0,
+    0.25
+   ]
+  ],
+  "shape": [
+   17,
+   17,
+   17
+  ],
+  "units": {
+   "corner": "r.l.u.",
+   "axis_vectors": "r.l.u. per index",
+   "lattice_matrix": "angstrom, rows a b c"
+  }
+ },
+ "runs": [
+  {
+   "id": "f_mix",
+   "type": "fourier",
+   "structure": "mix",
+   "scat": {}
+  },
+  {
+   "id": "f_relabel_scat",
+   "type": "fourier",
+   "structure": "relabel",
+   "scat": {
+    "NI63": 7.718
+   }
+  },
+  {
+   "id": "f_relabel_noscat",
+   "type": "fourier",
+   "structure": "relabel",
+   "scat": {}
+  },
+  {
+   "id": "f_void",
+   "type": "fourier",
+   "structure": "void",
+   "scat": {}
+  },
+  {
+   "id": "p_mix",
+   "type": "pdf",
+   "structure": "mix",
+   "radiation": "neutron",
+   "scat": {}
+  },
+  {
+   "id": "p_relabel_scat",
+   "type": "pdf",
+   "structure": "relabel",
+   "radiation": "neutron",
+   "scat": {
+    "NI63": 7.718
+   }
+  },
+  {
+   "id": "p_relabel_noscat",
+   "type": "pdf",
+   "structure": "relabel",
+   "radiation": "neutron",
+   "scat": {}
+  },
+  {
+   "id": "p_void",
+   "type": "pdf",
+   "structure": "void",
+   "radiation": "neutron",
+   "scat": {}
+  },
+  {
+   "id": "p_ni_stru_n",
+   "type": "pdf",
+   "structure": "ni",
+   "radiation": "neutron",
+   "scat": {}
+  },
+  {
+   "id": "p_ni_stru_x",
+   "type": "pdf",
+   "structure": "ni",
+   "radiation": "xray",
+   "scat": {}
+  },
+  {
+   "id": "p_ni_cll_n",
+   "type": "pdf",
+   "structure": "ni_cll",
+   "radiation": "neutron",
+   "scat": {}
+  },
+  {
+   "id": "p_ni_cll_x",
+   "type": "pdf",
+   "structure": "ni_cll",
+   "radiation": "xray",
+   "scat": {}
+  }
+ ]
+}

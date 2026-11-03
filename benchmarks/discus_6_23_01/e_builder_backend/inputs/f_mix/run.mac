@@ -1,0 +1,37 @@
+# e_builder_backend f_mix
+discus
+seed 20261,1103,4242,777,31415,2718,1618,99
+read
+  stru mix.stru
+eval n[1]
+eval n[2]
+eval n[3]
+fourier
+  neut
+  wvle moa1
+  ll -2,-2,-2
+  lr 2,-2,-2
+  ul -2,2,-2
+  tl -2,-2,2
+  na 17
+  no 17
+  nt 17
+  abs h
+  ord k
+  top l
+  temp ignore
+  disp off
+  lots off
+  set technique:turbo
+  set aver,100.0
+  show
+  run
+exit
+output
+  value int
+  form nexus
+  outf f_mix.h5
+  run
+exit
+exit
+exit
