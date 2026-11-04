@@ -136,3 +136,17 @@ one 21 × 31 plane hk0:
   accepts no uphill move, never raises χ², keeps the Au count and ends with a first-neighbour
   Warren–Cowley α < −0.15 (perfect L1_2: −1/3);
 - R3: the same seed gives the same fitted file.
+
+## Phase 2c part B: powder patterns and the real-space `pdf` menu
+
+| API | DISCUS | Notes |
+|---|---|---|
+| `discus_powder.PowderPattern(outputs, qmin, qmax, dq, radiation, wavelength \| energy, stepr, temperature, polarisation)` | `powder` (`set calc, debye`) then `output` `form powd,q,…`, `value inte\|S(Q)\|F(Q)\|I(Q)` | Debye sum over the crystal as one cluster (no periodic images). Always writes `set profile, off` (reset restores a pseudo-Voigt), `set stepr`, `set temp`, `set disp`, `set period` (not restored by reset). Values at label Q are computed at Q − dq (`read_powder_file(..., shift_labels=True)`). qmax ≤ 18 (DISCUS rescales S above 18 Å⁻¹). Facts: [`DISCUS_POWDER_FACTS.md`](DISCUS_POWDER_FACTS.md). |
+| `discus_pdfmenu.PdfCalc(output, rmax, dr, radiation, weight_q, qmax, periodic, exact, sphere, density, thermal, delta, gamma, qalpha)` | `pdf` … `calc`, `save pdf` | G(r) = H/(N dr r) − 4πrρ0 from the weighted pair histogram. Always writes `set radiation` (without it DISCUS weights X-rays by the constant c of the form factor only) and a three-parameter `set boundary`. `set qsig` is not offered (no effect without Gaussian peaks except zeroing G). Facts: [`DISCUS_PDFMENU_EXP2PDF_FACTS.md`](DISCUS_PDFMENU_EXP2PDF_FACTS.md). |
+
+Live checks (`tests/test_powder_pdfmenu_live.py`, pre-registered): Debye S(Q) and F(Q) of a 108-atom Cu
+cluster against a Python emulation (DISCUS's binning and sine table) within 1e-5 / 1e-4; `pdf` menu G(r)
+for Cu (neutron) and Cu3Au (X-ray, f(0) weights) against a periodic Python pair histogram within 1e-6.
+Probes for the two `pdf`-menu defects: `tools/probes/pdf_menu_probes.py`.
+
+Not yet wrapped: the `pdf` menu fit (`data`, `run`), `exp2pdf`, partial PDFs.
