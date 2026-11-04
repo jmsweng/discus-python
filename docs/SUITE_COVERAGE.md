@@ -7,7 +7,7 @@ Catalogue: DISCUS_SUITE 6.23.01 (`19a214a`), 44 menus.
 - **Generated**: emitted by a discuspdf macro generator (reachable through a typed API).
 - **In evidence**: used in at least one committed macro that ran on DISCUS (probes, gates, fixtures).
 
-Totals: 659 commands, 92 generated, 46 in evidence (commands of one routine shown under several menus are counted once).
+Totals: 659 commands, 95 generated, 46 in evidence (commands of one routine shown under several menus are counted once).
 
 | Menu | Commands | Generated | In evidence | Generated commands |
 |---|---:|---:|---:|---|
@@ -23,7 +23,7 @@ Totals: 659 commands, 92 generated, 46 in evidence (commands of one routine show
 | `discus/diff-four` | 32 | 0 | 0 | — |
 | `discus/domain` | 9 | 4 | 0 | `assign`, `inputfile`, `mode`, `run` |
 | `discus/exp2pdf` | 12 | 0 | 0 | — |
-| `discus/fourier` | 27 | 19 | 20 | `abscissa`, `dispersion`, `ll`, `lr`, `ul`, `tl`, `lots`, `nabs`, `neutron`, `nord`, `ntop`, `ordinate`, `run`, `set`, `show`, `temp`, `top`, `wvlength`, `xray` |
+| `discus/fourier` | 27 | 22 | 20 | `abscissa`, `delf`, `dispersion`, `energy`, `electron`, `ll`, `lr`, `ul`, `tl`, `lots`, `nabs`, `neutron`, `nord`, `ntop`, `ordinate`, `run`, `set`, `show`, `temp`, `top`, `wvlength`, `xray` |
 | `discus/insert` | 21 | 0 | 0 | — |
 | `discus/inverse` | 32 | 0 | 0 | — |
 | `discus/mmc` | 6 | 3 | 3 | `run`, `set`, `show` |

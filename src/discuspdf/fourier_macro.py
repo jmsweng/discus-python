@@ -40,8 +40,14 @@ SCHEMA_NAME = "discuspdf.FourierConfig"
 SCHEMA_VERSION = 2          # v2 added 'radiation' and numeric wavelengths; v1 descriptions still read
 OUTPUT_VALUES = ("int", "real", "imag", "3DPDF")
 SYMMETRY = ("friedel", "ignore", "apply")
-RADIATIONS = ("xray", "neutron")
-_RADIATION_KEYWORD = {"xray": "xray", "neutron": "neut"}   # the keywords run in the probes
+RADIATIONS = ("xray", "neutron", "electron")
+_RADIATION_KEYWORD = {"xray": "xray", "neutron": "neut", "electron": "electron"}   # the keywords run in the probes
+# Internal f', f'' exist only for these K-alpha1 symbols (lib_f90/element_data_mod.f90 get_scat_ano, :3309-3355);
+# any other wavelength (number, energy, a2 or b line) gives f' = f'' = 0 without a message.
+ANOMALOUS_SYMBOLS = ("tia1", "cra1", "fea1", "coa1", "cua1", "moa1", "aga1", "taa1", "wa1", "aua1")
+ENERGY_UNITS = {"xray": "keV", "electron": "keV", "neutron": "meV"}  # get_wave, element_data_mod.f90:3027-3036
+# 'value 3DPDF, qmax:/dsmax:/hklmax:' is not offered: output_limit (graphic.f90:2861-2889) tests |h| inside the
+# loop over the components of h and zeroes dsi(i,j,k) with the component index k, i.e. only layers 1-3.
 # DISCUS 6.23.01 wavelength symbols (lib_f90/element_data_mod.f90, per_symwl): K-alpha1, K-alpha2 and
 # K-beta of the usual anodes. 'moa1' is the default and the one run in all probes.
 _ANODES = ("ti", "cr", "fe", "co", "cu", "mo", "ag", "ta", "w", "au")
@@ -212,6 +218,24 @@ def normalize_scattering_lengths(value) -> tuple[tuple[str, float], ...]:
     return tuple(sorted(out.items()))
 
 
+def _normalize_delf(value) -> tuple[tuple[str, tuple[float, float]], ...]:
+    items = value.items() if isinstance(value, dict) else tuple(value)
+    out = []
+    for item in items:
+        name, fv = item
+        if not isinstance(name, str) or not _ATOM_NAME_RE.match(name.strip().upper()):
+            raise ValueError(f"delf atom name {name!r} is not a DISCUS atom name")
+        fv = tuple(fv)
+        if len(fv) != 2 or any(isinstance(x, (bool, np.bool_)) or not isinstance(x, (int, float, np.integer, np.floating))
+                               or not np.isfinite(x) for x in fv):
+            raise ValueError(f"delf for {name!r} must be (f', f'') numbers")
+        out.append((name.strip().upper(), (float(fv[0]), float(fv[1]))))
+    names = [n for n, _ in out]
+    if len(set(names)) != len(names):
+        raise ValueError("delf names one atom twice")
+    return tuple(out)
+
+
 def scat_commands(scattering_lengths) -> list[str]:
     """``scat NAME, 0,0,0,0,0,0,0,0, b`` lines (fourier menu). The eight form-factor coefficients are zero
     and the constant term is b; for neutrons DISCUS 6.23.01 uses only that term (fourier_sup.f90 ``form``),
@@ -251,6 +275,13 @@ class FourierConfig:
     radiation: ``'xray'`` (default) or ``'neutron'``.
     wavelength: a DISCUS symbol from :data:`WAVELENGTHS` (default ``'moa1'``, 0.70926 Å in DISCUS) or a
         number in Å (> 0). With ``disp off`` it changes only the file metadata, not the intensities.
+    energy: the beam energy instead of a wavelength (``energy`` command): keV for X-rays and electrons
+        (relativistic for electrons), meV for neutrons (``get_wave``). Leave ``wavelength`` at its default.
+        Intensities on an hkl grid do not depend on the wavelength except through anomalous dispersion.
+    dispersion: anomalous dispersion for X-rays (``disp anom``). DISCUS has internal f′, f″ only for the
+        Kα1 symbols in :data:`ANOMALOUS_SYMBOLS`; for any other wavelength or an energy, every species needs
+        its own values in ``delf``, otherwise it silently gets f′ = f″ = 0.
+    delf: ``{atom name: (f′, f″)}`` (electrons), written as ``delf NAME,f′,f″``; needs ``dispersion=True``.
     scattering_lengths: own coherent neutron scattering lengths (fm) by DISCUS atom name, e.g.
         ``{"NI62": 10.3}`` for an isotope label; neutron runs only. Each becomes a
         ``scat NAME, 0,0,0,0,0,0,0,0, b`` line before ``show``. Give only names that occur in the
@@ -268,6 +299,9 @@ class FourierConfig:
     radiation: str = "xray"
     labels: tuple[str, str, str] | None = field(default=None)
     scattering_lengths: Any = ()
+    energy: float | None = None
+    dispersion: bool = False
+    delf: Any = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.grid, ReciprocalGrid):
@@ -291,6 +325,25 @@ class FourierConfig:
         if self.radiation not in RADIATIONS:
             raise ValueError(f"radiation must be one of {RADIATIONS}")
         object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
+        if self.energy is not None:
+            e = self.energy
+            if isinstance(e, (bool, np.bool_)) or not isinstance(e, (int, float, np.integer, np.floating)) \
+                    or not np.isfinite(e) or e <= 0:
+                raise ValueError(f"energy must be a positive number ({ENERGY_UNITS[self.radiation]}), got {e!r}")
+            if self.wavelength != "moa1":
+                raise ValueError("give either wavelength or energy, not both")
+            object.__setattr__(self, "energy", float(e))
+        if not isinstance(self.dispersion, bool):
+            raise TypeError("dispersion must be True or False")
+        delf = _normalize_delf(self.delf)
+        if self.dispersion and self.radiation != "xray":
+            raise ValueError("anomalous dispersion applies to X-rays only (DISCUS sets f' = f'' = 0 otherwise)")
+        if delf and not self.dispersion:
+            raise ValueError("delf values are used only with dispersion=True")
+        if self.dispersion and not delf and (self.energy is not None or self.wavelength not in ANOMALOUS_SYMBOLS):
+            raise ValueError("DISCUS 6.23.01 has internal f', f'' only for the K-alpha1 symbols "
+                             f"{ANOMALOUS_SYMBOLS}; give delf for every species (any species without one gets 0)")
+        object.__setattr__(self, "delf", delf)
         scat = normalize_scattering_lengths(self.scattering_lengths)
         if scat and self.radiation != "neutron":
             raise ValueError("scattering_lengths are neutron scattering lengths; use radiation='neutron' "
@@ -313,6 +366,10 @@ class FourierConfig:
             names.add(name)
             if self.lots is not None and value != "int":
                 raise ValueError(f"with lots DISCUS writes only 'int' (6.23.01 refused {value!r}, error -60)")
+        values = [o[0] for o in outs]
+        if values.count("3DPDF") > 1 or ("3DPDF" in values and values[-1] != "3DPDF"):
+            raise ValueError("write at most one 3DPDF output and write it last: the 3D-PDF replaces the intensity "
+                             "in memory (dsi = dsi3d, then dsi3d is freed, graphic.f90:520-545)")
         object.__setattr__(self, "outputs", outs)
         labels = axis_labels(self.grid) if self.labels is None else tuple(self.labels)
         if sorted(labels) != sorted(_LABELS):
@@ -351,16 +408,18 @@ class FourierConfig:
 
     def fourier_lines(self) -> list[str]:
         c = self.grid.discus_corners()
-        lines = ["fourier", f"  {_RADIATION_KEYWORD[self.radiation]}", f"  wvle {self.wvle_argument}",
+        wave = f"  energy {self.energy:.12g}" if self.energy is not None else f"  wvle {self.wvle_argument}"
+        lines = ["fourier", f"  {_RADIATION_KEYWORD[self.radiation]}", wave,
                  f"  ll {_fmt(c['ll'])}", f"  lr {_fmt(c['lr'])}", f"  ul {_fmt(c['ul'])}", f"  tl {_fmt(c['tl'])}",
                  f"  na {c['na']}", f"  no {c['no']}", f"  nt {c['nt']}",
                  f"  abs {self.labels[0]}", f"  ord {self.labels[1]}", f"  top {self.labels[2]}",
-                 f"  temp {self.temperature}", "  disp off",
+                 f"  temp {self.temperature}", f"  disp {'anom' if self.dispersion else 'off'}",
                  f"  {self.lots.command() if self.lots else 'lots off'}",
                  "  set technique:turbo", f"  set aver,{self.aver_percent:.1f}"]
         if self.symmetry is not None:
             lines.append(f"  set symm:{self.symmetry}")
         lines += scat_commands(self.scattering_lengths)
+        lines += [f"  delf {name},{fp:.12g},{fpp:.12g}" for name, (fp, fpp) in self.delf]
         lines += ["  show", "  run", "exit"]
         return lines
 
@@ -402,7 +461,10 @@ class FourierConfig:
                 "bragg": self.bragg, "labels_verified": self.labels_verified,
                 # only written when used, so descriptions of existing runs stay unchanged
                 **({"scattering_lengths": {n: b for n, b in self.scattering_lengths}}
-                   if self.scattering_lengths else {})}
+                   if self.scattering_lengths else {}),
+                **({"energy": self.energy} if self.energy is not None else {}),
+                **({"dispersion": True} if self.dispersion else {}),
+                **({"delf": {n: list(v) for n, v in self.delf}} if self.delf else {})}
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "FourierConfig":
@@ -417,7 +479,9 @@ class FourierConfig:
                    seed=None if d["seed"] is None else Seed(tuple(d["seed"])),
                    temperature=d["temperature"], symmetry=d["symmetry"], wavelength=d["wavelength"],
                    radiation=radiation, labels=tuple(d["labels"]),
-                   scattering_lengths=d.get("scattering_lengths") or ())
+                   scattering_lengths=d.get("scattering_lengths") or (), energy=d.get("energy"),
+                   dispersion=bool(d.get("dispersion", False)),
+                   delf={n: tuple(v) for n, v in (d.get("delf") or {}).items()})
 
 
 def prepare_fourier_run(runner, config: FourierConfig, structure: StructureSource, structure_path,

@@ -127,7 +127,7 @@ def test_seed_rules():
     (dict(wavelength="cuka"), "wavelength"),
     (dict(wavelength=0.0), "wavelength"),
     (dict(wavelength=True), "wavelength"),
-    (dict(radiation="electron"), "radiation"),
+    (dict(radiation="gamma"), "radiation"),
     (dict(labels=("h", "h", "l")), "permutation"),
     (dict(outputs=()), "at least one"),
 ])
@@ -315,3 +315,58 @@ def test_round_trip_and_bragg_label():
     assert cfg.bragg == "bragg_subtracted" and FourierConfig(G32, outs("x")).bragg == "bragg_present"
     with pytest.raises(ValueError):
         FourierConfig.from_dict({**cfg.to_dict(), "version": 3})
+
+
+# --------------------------------------------------------------------------- phase 2c-A options
+def _lines(cfg):
+    text = cfg.render(BLOCK)
+    from discuspdf.suite_catalogue import load_catalogue
+    assert load_catalogue().check(text) == []
+    return [l.strip() for l in text.splitlines()]
+
+
+def test_electron_energy_dispersion_delf_and_3dpdf_limit_lines():
+    from discuspdf.engine import fork_reasons
+    e = _lines(FourierConfig(G32, outs("e", ("int",)), radiation="electron", energy=200.0))
+    assert e[e.index("fourier") + 1:e.index("fourier") + 3] == ["electron", "energy 200"]
+    assert not any(l.startswith("wvle") for l in e)
+    x = _lines(FourierConfig(G32, outs("x", ("int",)), dispersion=True))
+    assert "disp anom" in x and "wvle moa1" in x
+    d = _lines(FourierConfig(G32, outs("d", ("int",)), wavelength=0.7093, dispersion=True,
+                             delf={"Cu": (0.26, 1.6), "au": (-2.0, 8.5)}))
+    assert d.index("delf CU,0.26,1.6") < d.index("show") and "delf AU,-2,8.5" in d
+    assert fork_reasons("\n".join(d)) == [] and fork_reasons("\n".join(e)) == []
+
+
+@pytest.mark.parametrize("kwargs, match", [
+    (dict(energy=0.0), "energy"),
+    (dict(energy=17.0, wavelength="cua1"), "either"),
+    (dict(dispersion=True, radiation="neutron"), "X-rays only"),
+    (dict(dispersion=True, wavelength=0.71), "K-alpha1"),
+    (dict(dispersion=True, wavelength="moa2"), "K-alpha1"),
+    (dict(dispersion=True, energy=17.4), "K-alpha1"),
+    (dict(delf={"CU": (0.1, 0.2)}), "dispersion=True"),
+    (dict(dispersion=True, delf={"CU": (0.1,)}), "f'"),
+    (dict(dispersion=True, delf={"CU": (0, 1), "cu": (0, 1)}), "twice"),
+])
+def test_phase2c_refusals(kwargs, match):
+    with pytest.raises((ValueError, TypeError), match=match):
+        FourierConfig(G32, outs("r", ("int",)), **kwargs)
+
+
+def test_3dpdf_must_be_the_single_last_output():
+    with pytest.raises(ValueError, match="last"):
+        FourierConfig(G32, (("3DPDF", "a.h5"), ("int", "b.h5")), aver_percent=100)
+    with pytest.raises(ValueError, match="last"):
+        FourierConfig(G32, (("3DPDF", "a.h5"), ("3DPDF", "b.h5")), aver_percent=100)
+
+
+def test_phase2c_round_trip():
+    cfg = FourierConfig(G32, outs("j", ("int",)) + (("3DPDF", "j_3dpdf.h5"),), aver_percent=100, wavelength=0.7093,
+                        dispersion=True, delf={"CU": (0.26, 1.6)})
+    back = FourierConfig.from_dict(json.loads(json.dumps(cfg.to_dict())))
+    assert back.render(BLOCK) == cfg.render(BLOCK)
+    e = FourierConfig(G32, outs("e", ("int",)), radiation="electron", energy=300.0)
+    assert FourierConfig.from_dict(json.loads(json.dumps(e.to_dict()))).render(BLOCK) == e.render(BLOCK)
+    plain = FourierConfig(G32, outs("q", ("int",)))
+    assert not {"energy", "dispersion", "delf"} & set(plain.to_dict())
