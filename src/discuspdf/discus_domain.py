@@ -57,14 +57,13 @@ distribution ``sigma`` of ``assign shape``, the ``set`` menu (removal modes), an
 
 from __future__ import annotations
 
-import math
-import numbers
 import re
 from dataclasses import dataclass
 from typing import Sequence
 
 from .discus_ops import Step
 from .macro import Macro
+from ._validate import real as _real
 
 CHARACTERS = ("cube", "cylinder", "sphere", "fuzzy")  # domain.f90 389-399; irregular is out of scope
 MODES = ("pseudoatoms",)  # domain.f90 227-236; 'domain' and 'irregular' are out of scope
@@ -93,12 +92,6 @@ def _name(v) -> str:
     if not isinstance(v, str) or not _NAME.fullmatch(v):
         raise ValueError(f"pseudo-atom name must be 1 to 4 letters, digits or underscores, got {v!r}")
     return v.upper()  # DISCUS upper-cases names (domain.f90 2894, 2896)
-
-
-def _real(label: str, v) -> float:
-    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(float(v)):
-        raise ValueError(f"{label} must be a finite number, got {v!r}")
-    return float(v)
 
 
 def _matrix(label: str, v, cols: int) -> tuple[tuple[float, ...], ...]:

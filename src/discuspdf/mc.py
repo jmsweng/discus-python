@@ -26,7 +26,7 @@ from typing import Any
 
 import numpy as np
 
-from .engine import current_engine, Engine, as_engine
+from .engine import _ANSI, as_engine, current_engine, Engine
 from .fourier_macro import Seed
 from .structure import Structure
 
@@ -1147,7 +1147,7 @@ class MCRunner:
         if not text:
             problems.append("no run.log")
         log = parse_mmc_log(text)
-        err = _ENGINE_ERROR.search(re.sub(r"\x1b\[[0-9;]*m", "", text))
+        err = _ENGINE_ERROR.search(_ANSI.sub("", text))
         if err:
             problems.append(f"engine error: {err.group(0).strip()}")
         cyc = staged["counts"][0] if staged else None

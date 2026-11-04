@@ -88,3 +88,7 @@ Check that the structure's composition matches `expected` (species → count).
 - Directional displacement by bond
 - Correlated disorder
 - Anything on `DiscusVolume`
+
+## See also
+
+`discuspdf.discus_ops` ([DISCUS_OPS](DISCUS_OPS.md)) runs the DISCUS-side counterparts (`replace`, `thermal`, `remove`, …). The semantics differ: `substitute` draws an exact count with numpy, DISCUS `replace` is a per-atom Bernoulli draw with its own generator; `displace` uses one σ, DISCUS `thermal` each type's B.

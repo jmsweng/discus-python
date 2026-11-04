@@ -183,3 +183,7 @@ projected covariance.
 Molecules; magnetic moments; correlations between different neighbor sets (three-body);
 ensemble averages over several configurations (average the returned counts/covariances
 yourself, weighted by `n_pairs`).
+
+## See also
+
+`discuspdf.discus_chem` ([DISCUS_OPS](DISCUS_OPS.md), phase 2b) parses DISCUS's own `chem corr` values; its module docstring maps each one to the function here, which is the independent reference.

@@ -27,14 +27,16 @@ _ELEMENTS: dict[str, int] = {
     "Fm": 100,
 }
 
-# Strip charge suffixes like "O2-", "Na+", "Cl-" and number suffixes like "Fe1".
-_SUFFIX_RE = re.compile(r"^(.+?)(?:[+-]\d+|\d+)?$")
+# Strip charge suffixes like "O2-", "Fe3+", "Na+", "Cl-" (also the "O-2" order) and number suffixes like "Fe1".
+_SUFFIX_RE = re.compile(r"^(.+?)(?:\d*[+-]|[+-]\d+|\d+)?$")
+# Hydrogen isotopes used as atom names (DISCUS reads D as hydrogen, atom_names.element_of).
+_ISOTOPES = {"D": 1, "T": 1}
 
 
 def _strip_suffix(label: str) -> str:
     """Strip charge or number suffixes from a species label.
 
-    Examples: "O2-" -> "O", "Na+" -> "Na", "Fe1" -> "Fe", "GA" -> "GA".
+    Examples: "O2-" -> "O", "Fe3+" -> "Fe", "Na+" -> "Na", "Fe1" -> "Fe", "GA" -> "GA".
     """
     m = _SUFFIX_RE.match(label)
     if m:
@@ -46,11 +48,14 @@ def atomic_number(species: str) -> int:
     """Return the atomic number for a species label.
 
     The label is matched case-insensitively after stripping any charge or
-    number suffix.  Unknown labels raise ``ValueError``.
+    number suffix; ``D`` and ``T`` (hydrogen isotopes) give 1. Unknown labels raise ``ValueError``.
+    (:func:`discuspdf.atom_names.atomic_number` instead follows DISCUS's own name rules, e.g. prefix matching.)
     """
     if not isinstance(species, str) or not species:
         raise ValueError(f"species label must be a non-empty string, got {species!r}")
     stripped = _strip_suffix(species)
+    if stripped.upper() in _ISOTOPES:
+        return _ISOTOPES[stripped.upper()]
     # Try exact match first, then case-insensitive.
     if stripped in _ELEMENTS:
         return _ELEMENTS[stripped]

@@ -53,18 +53,18 @@ Facts from the 6.23.01 source (``docs/DISCUS_RMC_FACTS.md`` has the details):
 """
 from __future__ import annotations
 
-import math
-import numbers
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Mapping
 
 import numpy as np
 
 from .discus_ops import JobResult, Step, StructureJob
 from .fourier_macro import _RADIATION_KEYWORD, _check_wavelength
 from .macro import Macro
+from .atom_names import check_discus_name
+from ._validate import integer as _int, plain_file_name as _file, real as _real, vec3 as _vec3
 
 # 'rmc data' reads only X-ray or neutron data (first letter X / N, rmc_sup_mod.f90:1300-1309), so RMC keeps
 # its own list: the Fourier menu's list also has electrons, which this module would write as neutron data.
@@ -82,38 +82,10 @@ PAIRINGS = ("all", "local", "slocal", "site")
 # 'log' is left out: rmc_dowic gives negative weights for 0 < I < 1. Every scheme gives weight 0 for I <= 0.
 WEIGHTS = {"one": "one", "sqrt": "sqrt", "linear": "lin", "square": "squa",
            "inverse": "inv", "inverse_sqrt": "isq"}
-_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
-
-
-def _real(name: str, v) -> float:
-    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(float(v)):
-        raise ValueError(f"{name} must be a finite number, got {v!r}")
-    return float(v)
-
-
-def _int(name: str, v, minimum: int = 1) -> int:
-    if isinstance(v, bool) or not isinstance(v, numbers.Integral) or v < minimum:
-        raise ValueError(f"{name} must be an integer >= {minimum}, got {v!r}")
-    return int(v)
-
-
-def _vec3(name: str, v) -> tuple[float, float, float]:
-    t = tuple(v)
-    if len(t) != 3:
-        raise ValueError(f"{name} must have three components, got {v!r}")
-    return tuple(_real(name, x) for x in t)
 
 
 def _atom(name: str, v) -> str:
-    if not isinstance(v, str) or not v.strip() or any(c in v for c in " ,:#!()[]"):
-        raise ValueError(f"{name} must be a DISCUS atom name, got {v!r}")
-    return v.strip().upper()
-
-
-def _file(name: str, v) -> str:
-    if not isinstance(v, str) or not _NAME.match(v) or v in (".", ".."):
-        raise ValueError(f"{name} must be a plain file name (letters, digits, '_', '-', '.'), got {v!r}")
-    return v
+    return check_discus_name(name, v).upper()
 
 
 # ----------------------------------------------------------------------------------------- geometry

@@ -191,3 +191,7 @@ Two runs: the pre-registered probe v1.1 and its confirmation v2, in [`benchmarks
 | `set delta` | 0.02 / 0.03 / 0.05 / 0.10 | engine aborts on 5 of 6 grid/thread combinations | see below |
 
 **`set delta` (`qsig`) is not usable with 6.23.01.** Any value > 0 aborted DISCUS with `double free or corruption` in `powder_convolute` on 5 of 6 grid/thread combinations, including `OMP_NUM_THREADS=1`. On the sixth (qmin 0.5, qmax 7.0, ΔQ 0.02) it ran: G(r) changed by 2.8 % and F(Q) was smoothed roughly as a Gaussian of σ = δ/√2 in Q. The likely cause from the source is a write one point past the end of the pattern array (`powder_conv_res` runs to `xmax + xdel`). That would also make a run that does not crash unreliable. Write-up for the DiffuseCode maintainers: [issue #65](https://github.com/jmsweng/discus-python/issues/65). Until it is fixed, `PDFConfig(qsig > 0)` raises `SetDeltaError`. `allow_qsig=True` runs it anyway with a `SetDeltaWarning`, for use with a fixed DISCUS.
+
+## See also
+
+The macro above stays frozen (archived runs). Other routes through the same engine: `discus_powder.PowderPattern` (Debye S(Q)/F(Q)/I(Q); writes `set profile,off`, refuses qmax > 18 Å⁻¹ because DISCUS divides S(Q) by its mean above 18 Å⁻¹ when more than 50 points lie there) and `discus_pdfmenu.PdfCalc` (the `pdf` menu's pair-histogram G(r)); see [DISCUS_OPS](DISCUS_OPS.md). Whether that S(Q) rescaling affects `PDFRunner` runs with qmax > 18 has not been checked.

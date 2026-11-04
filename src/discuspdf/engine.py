@@ -47,6 +47,22 @@ ENGINE_ERROR_PATTERN = re.compile(
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
+def engine_error_in(log: str, pattern: re.Pattern = ENGINE_ERROR_PATTERN) -> str | None:
+    """The first engine-error match in a log (ANSI colours removed), line by line. DISCUS also tags
+    warnings (``***MAC *** Warning ...``); lines containing "warning" are not errors."""
+    for line in _ANSI.sub("", log).splitlines():
+        m = pattern.search(line)
+        if m and "warning" not in line.lower():
+            return m.group(0)
+    return None
+
+
+def engine_warnings_in(log: str, pattern: re.Pattern = ENGINE_ERROR_PATTERN) -> list[str]:
+    """Up to 20 tagged warning lines of a log."""
+    return [line.strip() for line in _ANSI.sub("", log).splitlines()
+            if pattern.search(line) and "warning" in line.lower()][:20]
+
+
 @dataclass(frozen=True)
 class EngineResult:
     """What one engine process did."""

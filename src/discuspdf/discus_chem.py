@@ -50,8 +50,6 @@ writes it) has not been tested.
 
 from __future__ import annotations
 
-import math
-import numbers
 import re
 from dataclasses import dataclass
 from typing import Sequence
@@ -61,6 +59,8 @@ from .engine import _ANSI
 from .fourier_macro import StructureSource
 from .macro import Macro
 from .suite_runner import SuiteRun
+from .atom_names import check_discus_name
+from ._validate import int3 as _triple_int, integer as _whole, real as _real, vec3 as _triple_real
 
 CRASH_SIGNATURE = "free(): invalid pointer"
 CRASH_RETURN_CODE = 134  # 128 + SIGABRT, as the shell reports it
@@ -72,50 +72,13 @@ class ChemIncomplete(RuntimeError):
 
 # ----------------------------------------------------------------------------- validation helpers
 
-def _whole(name: str, v, minimum: int = 1) -> int:
-    if isinstance(v, bool) or not isinstance(v, numbers.Integral) or v < minimum:
-        raise ValueError(f"{name} must be an integer >= {minimum}, got {v!r}")
-    return int(v)
-
-
-def _real(name: str, v) -> float:
-    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(float(v)):
-        raise ValueError(f"{name} must be a finite number, got {v!r}")
-    return float(v)
-
-
-def _triple_int(name: str, v) -> tuple[int, int, int]:
-    try:
-        items = tuple(v)
-    except TypeError:
-        raise ValueError(f"{name} must be three integers, got {v!r}") from None
-    if len(items) != 3 or any(isinstance(x, bool) or not isinstance(x, numbers.Integral) for x in items):
-        raise ValueError(f"{name} must be three integers, got {v!r}")
-    return tuple(int(x) for x in items)
-
-
-def _triple_real(name: str, v) -> tuple[float, float, float]:
-    try:
-        items = tuple(v)
-    except TypeError:
-        raise ValueError(f"{name} must be three numbers, got {v!r}") from None
-    if len(items) != 3:
-        raise ValueError(f"{name} must be three numbers, got {v!r}")
-    return tuple(_real(f"{name}[{i}]", x) for i, x in enumerate(items))
-
-
 def _species(name: str, v, allow_all: bool) -> str:
     """An atom type name, or a type number (written as its digits), or 'all' where DISCUS allows it."""
-    if isinstance(v, numbers.Integral) and not isinstance(v, bool):
-        return str(_whole(name, v))
-    if not isinstance(v, str):
-        raise ValueError(f"{name} must be an atom name, got {v!r}")
-    text = v.strip()
-    if not text or any(c in text for c in " ,:#!&'\""):
-        raise ValueError(f"{name} must be an atom name without spaces or punctuation, got {v!r}")
-    if text.lower() == "all" and not allow_all:
+    if allow_all is False and isinstance(v, str) and v.strip().lower() == "all":
         raise ValueError(f"{name}: 'all' is only allowed for displacement correlations")
-    return text
+    if isinstance(v, int) and not isinstance(v, bool):
+        return str(_whole(name, v))
+    return str(check_discus_name(name, v, allow_all=allow_all))
 
 
 # ------------------------------------------------------------------------------- the definitions

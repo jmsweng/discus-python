@@ -54,3 +54,11 @@ def test_read_and_shift(tmp_path):
     assert np.allclose(q2, [0.49, 0.50])
     with pytest.raises(ValueError):
         read_powder_file(f, shift_labels=True)
+
+
+def test_qmax_check_covers_every_wavelength_symbol():
+    from discuspdf.fourier_macro import WAVELENGTH_ANGSTROM, WAVELENGTHS
+    assert set(WAVELENGTH_ANGSTROM) == set(WAVELENGTHS)
+    with pytest.raises(ValueError, match="beyond"):
+        PowderPattern((("S(Q)", "s.dat"),), wavelength="cub", qmax=9.5)   # 4 pi / 1.39217 = 9.03
+    PowderPattern((("S(Q)", "s.dat"),), wavelength="cub", qmax=9.0)

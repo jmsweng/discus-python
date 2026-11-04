@@ -53,6 +53,19 @@ ENERGY_UNITS = {"xray": "keV", "electron": "keV", "neutron": "meV"}  # get_wave,
 # K-beta of the usual anodes. 'moa1' is the default and the one run in all probes.
 _ANODES = ("ti", "cr", "fe", "co", "cu", "mo", "ag", "ta", "w", "au")
 WAVELENGTHS = tuple(f"{a}{line}" for a in _ANODES for line in ("a1", "a2", "b"))
+# per_wavel of the same table (Angstrom), for every symbol in WAVELENGTHS
+WAVELENGTH_ANGSTROM = {
+    "tia1": 2.74841, "tia2": 2.75207, "tib": 2.51381,
+    "cra1": 2.28962, "cra2": 2.29351, "crb": 2.0848,
+    "fea1": 1.93597, "fea2": 1.93991, "feb": 1.75653,
+    "coa1": 1.78892, "coa2": 1.79278, "cob": 1.62075,
+    "cua1": 1.540592, "cua2": 1.544343, "cub": 1.39217,
+    "moa1": 0.70926, "moa2": 0.713543, "mob": 0.632253,
+    "aga1": 0.559363, "aga2": 0.563775, "agb": 0.49701,
+    "taa1": 0.215484, "taa2": 0.22029, "tab": 0.190076,
+    "wa1": 0.208992, "wa2": 0.213813, "wb": 0.184363,
+    "aua1": 0.180185, "aua2": 0.185064, "aub": 0.158971,
+}
 _NAME_RE = re.compile(r"^[A-Za-z0-9_.\-]+$")
 _LABELS = ("h", "k", "l")
 

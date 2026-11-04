@@ -22,6 +22,7 @@ from discuspdf.discus_io import read_stru
 from discuspdf.fourier_macro import Seed
 from discuspdf.mc import (DisplacementTarget, LennardJonesTarget, MCConfig, MCRunner, Neighborhood, OccupationalTarget, Shift,
                           SpringTarget, Swap, SwapDisplacement, Vector, parse_mmc_log)
+from tests.live_engine import live_launcher
 
 pytestmark = pytest.mark.discus_live
 if os.environ.get("DISCUS_LIVE") != "1":
@@ -37,10 +38,7 @@ TITLES = {"cuau.stru": "D MMC probe Cu0.5Au0.5 sc 16^3", "cu_disp.stru": "D MMC 
 
 
 def launcher():
-    if platform.system() == "Windows":
-        return ("wsl.exe", "-d", os.environ.get("DISCUS_WSL_DISTRO", "Ubuntu-22.04"), "--",
-                "discus_suite", "-noautorun", "-macro")
-    return ("discus_suite", "-noautorun", "-macro")
+    return live_launcher()
 
 
 CASES = {
