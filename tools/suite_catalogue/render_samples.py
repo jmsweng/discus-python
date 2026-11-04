@@ -102,6 +102,12 @@ def _fourier_samples() -> list[tuple[str, str]]:
     for sym in SYMMETRY:
         add(f"fourier_symmetry_{sym}", g_hkl, [("int", f"sym_{sym}.h5")], s_cuau,
             symmetry=sym, aver_percent=100)
+    # phase 2c-A
+    add("fourier_electron_energy", g_hkl, [("int", "elec_int.h5")], s_cuau, radiation="electron", energy=200.0)
+    add("fourier_xray_energy_delf", g_hk0, [("int", "xe_int.h5")], s_cell, energy=17.48, dispersion=True,
+        delf={"CU": (0.26, 1.6), "AU": (-2.0, 8.5)})
+    add("fourier_xray_internal_anomalous", g_hkl, [("int", "xa_int.h5")], s_cuau, wavelength="cua1",
+        dispersion=True)
     return out
 
 
