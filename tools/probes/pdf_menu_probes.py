@@ -43,14 +43,14 @@ def engine() -> Engine:
 
 
 def macro(drop=(), add_before_calc=()):
-    job = StructureJob(SRC, [ReplaceRandom("CU", "AU", 1.0, site=1), PdfCalc("g.dat", rmax=6.0, dr=0.01)],
+    job = StructureJob(SRC, [ReplaceRandom("CU", "AU", 1.0, site=1), PdfCalc("g.dat", rmax=6.0, dr=0.001)],
                        seed=SEED, readback="none")
     lines = [l for l in job.macro().render().splitlines() if not any(l.startswith(d) for d in drop)]
     i = lines.index("calc")
     return "\n".join(lines[:i] + list(add_before_calc) + lines[i:]) + "\n"
 
 
-def predicted_g(f, rmax=6.0, dr=0.01, a=3.615, nc=3):
+def predicted_g(f, rmax=6.0, dr=0.001, a=3.615, nc=3):
     """Periodic weighted pair histogram -> G, as in tests/test_powder_pdfmenu_live.py (Au on site 0)."""
     import itertools
     basis = np.array([[0, 0, 0], [0, .5, .5], [.5, 0, .5], [.5, .5, 0]])
@@ -82,14 +82,14 @@ def main(work: str) -> None:
     r, gx = out["xray"]
     _, gd = out["default"]
     sel = (r > 0.5) & (r < 5.9)
-    idx = np.rint(r[sel] / 0.01).astype(int)
+    idx = np.rint(r[sel] / 0.001).astype(int)
     rp, g_c = predicted_g(C)
     _, g_f = predicted_g(F0)
     print(f"Q1: max |G(default) - G(c-only weights)| = {np.max(np.abs(gd[sel] - g_c[idx])):.3e} (predicted < 1e-6); "
           f"max |G(xray) - G(f(0) weights)| = {np.max(np.abs(gx[sel] - g_f[idx])):.3e} (predicted < 1e-6); "
           f"max |G(default) - G(xray)| = {np.max(np.abs(gd[sel] - gx[sel])):.3e} (predicted > 0.01)")
     _, gq = out["qsig"]
-    print(f"Q2: max |G| with qsig and therm off = {np.max(np.abs(gq[r > 0.011])):.3e} (predicted 0)")
+    print(f"Q2: max |G| with qsig and therm off = {np.max(np.abs(gq[r > 0.0011])):.3e} (predicted 0)")
 
 
 if __name__ == "__main__":

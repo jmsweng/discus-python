@@ -3,16 +3,19 @@
 Model: Cu fcc 3x3x3 cells (108 atoms) from ``tests/fixtures/discus_ops/cu_b05.cll``; for the two-species check
 the same crystal with Au on site 1 (L1_2, 27 Au + 81 Cu).
 
-Registered before any run (2026-11-03):
+Registered before any run (2026-11-03; stepr and dr changed from 0.01 to 0.001 after the independent
+review, before any run: at 0.01 the a and 3a shells sit exactly on a bin edge, and the pdf menu bins at 0.001
+internally):
 
-* D1 (powder, neutron, Debye): the S(Q) DISCUS writes at label L equals, for every label but the first,
+* D1 (powder, neutron, Debye, stepr 0.001): the S(Q) DISCUS writes at label L equals, for every label but the first,
   S(L - dq) = 1 + (2/N) sum_{i<j} sinetab(r~ (L - dq)) / ((L - dq) r~) with r~ = round(r/stepr) stepr and
   DISCUS's 65536-entry sine table (floor of the argument), within 1e-5; and the textbook sinc version within 2e-3.
 * D2: F(Q) at label L equals L (S(L - dq) - 1) from the same emulation, within 1e-4.
-* G1 (pdf menu, neutron, periodic, qmax 0): G(r_k) = H_k / (N dr r_k) - 4 pi r_k rho0 with H_k the ordered pair
-  count over periodic images in bin k = int((d + dr/2)/dr), rho0 = N/V, within 1e-6 for r_k <= rmax - 0.1.
-* G2 (pdf menu, X-ray, Cu3Au): the same with weights f_i f_j / <f>^2, f = Waasmaier f(0) = c + sum a_i of
-  lib_f90/element_data_mod.f90, within 1e-6.
+* G1 (pdf menu, neutron, periodic, qmax 0, dr 0.001): G(r_k) = H_k / (N dr r_k) - 4 pi r_k rho0 with H_k the
+  ordered pair count over periodic images in bin k = int((d + dr/2)/dr), rho0 = N/V, within 1e-6 for
+  0.5 < r_k <= rmax - 0.1.
+* G2 (pdf menu, X-ray, Cu3Au): the same with weights f_i f_j / <f>^2, f = Waasmaier f(0) = c + sum_1^5 a_i of
+  lib_f90/element_data_mod.f90 (the pdf menu uses the 5-Gaussian Waasmaier table), within 1e-6.
 
 Environment: DISCUS_LIVE=1; DISCUS_LIVE_WORK (default C:\\tmp\\powpdflive or /tmp/powpdflive);
 DISCUS_WSL_DISTRO (default Ubuntu-22.04).
@@ -69,7 +72,7 @@ def fcc_positions():
 
 
 # ----------------------------------------------------------------------------------------------- powder
-DQ, QMIN, QMAX, STEPR = 0.01, 0.5, 15.0, 0.01
+DQ, QMIN, QMAX, STEPR = 0.01, 0.5, 15.0, 0.001  # stepr 0.01 puts the a and 3a shells on bin edges
 
 
 def emulated_s(q, exact=False):
@@ -113,7 +116,7 @@ def test_d2_f_of_q(powder):
 
 
 # ----------------------------------------------------------------------------------------------- pdf menu
-RMAX, DR = 8.0, 0.01
+RMAX, DR = 8.0, 0.001  # DISCUS's internal step; a coarser dr is a sampled 0.001 histogram
 
 
 def periodic_g(weights):
