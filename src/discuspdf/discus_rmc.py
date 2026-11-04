@@ -63,8 +63,12 @@ from typing import Mapping, Sequence
 import numpy as np
 
 from .discus_ops import JobResult, Step, StructureJob
-from .fourier_macro import _RADIATION_KEYWORD, RADIATIONS, _check_wavelength
+from .fourier_macro import _RADIATION_KEYWORD, _check_wavelength
 from .macro import Macro
+
+# 'rmc data' reads only X-ray or neutron data (first letter X / N, rmc_sup_mod.f90:1300-1309), so RMC keeps
+# its own list: the Fourier menu's list also has electrons, which this module would write as neutron data.
+RMC_RADIATIONS = ("xray", "neutron")
 
 __all__ = [
     "PAIRINGS", "WEIGHTS", "PlaneGrid", "RmcPlane", "RmcShift", "RmcSwap", "RmcLots",
@@ -205,8 +209,8 @@ class RmcPlane:
         _file("file", self.file)
         if not isinstance(self.grid, PlaneGrid):
             raise TypeError("grid must be a PlaneGrid")
-        if self.radiation not in RADIATIONS:
-            raise ValueError(f"radiation must be one of {RADIATIONS}")
+        if self.radiation not in RMC_RADIATIONS:
+            raise ValueError(f"radiation must be one of {RMC_RADIATIONS} (RMC data are X-ray or neutron)")
         object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
         if self.weights not in WEIGHTS:
             raise ValueError(f"weights must be one of {tuple(WEIGHTS)} (weight files are not offered)")
@@ -456,8 +460,8 @@ class FourierPlane(Step):
         if not isinstance(self.grid, PlaneGrid):
             raise TypeError("grid must be a PlaneGrid")
         _file("output", self.output)
-        if self.radiation not in RADIATIONS:
-            raise ValueError(f"radiation must be one of {RADIATIONS}")
+        if self.radiation not in RMC_RADIATIONS:
+            raise ValueError(f"radiation must be one of {RMC_RADIATIONS} (RMC data are X-ray or neutron)")
         object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
         if not isinstance(self.debye_waller, bool):
             raise TypeError("debye_waller must be True or False")
