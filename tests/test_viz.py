@@ -180,6 +180,32 @@ def test_signed_data_symmetric_colour_scale():
     plt.close("all")
 
 
+def test_set_aver_plane_is_unsigned_and_takes_a_log_scale():
+    """DISCUS 'set aver' data are |F - <F>|^2 >= 0: labelled bragg_subtracted, but not signed."""
+    g = ReciprocalGrid.centered(ORTHO, (5, 5, 1), (0.25, 0.25, 1))
+    I = np.linspace(0, 4, 25).reshape(5, 5, 1)                 # includes an exact 0 (a removed Bragg point)
+    vol = SampledVolume.from_scattering_volume(ScatteringVolume(g, I, "a", bragg="bragg_subtracted"))
+    assert not vol.signed
+    ax = plot_slice(vol, axis=2, index=0, log=True)
+    norm = ax.collections[0].norm
+    assert norm.vmin == pytest.approx(np.sort(I.ravel())[1]) and norm.vmax == pytest.approx(4)
+    assert np.ma.getmaskarray(ax.collections[0].get_array()).sum() == 1      # the zero is left out
+    plt.close("all")
+
+
+def test_signed_follows_the_data_and_can_be_forced():
+    g = ReciprocalGrid.centered(ORTHO, (3, 3, 3), (0.25, 0.25, 0.25))
+    pos = np.full((3, 3, 3), 2.0)
+    assert not SampledVolume.from_scattering_volume(ScatteringVolume(g, pos, "a", bragg="bragg_present")).signed
+    neg = pos.copy(); neg[0, 0, 0] = -1.0
+    assert SampledVolume.from_scattering_volume(ScatteringVolume(g, neg, "a", bragg="bragg_present")).signed
+    forced = SampledVolume.from_scattering_volume(ScatteringVolume(g, pos, "a", bragg="bragg_subtracted"), signed=True)
+    assert forced.signed
+    with pytest.raises(ValueError, match="signed"):
+        plot_slice(forced, log=True)
+    plt.close("all")
+
+
 # --------------------------------------------------------------------------- isosurfaces
 @pytest.mark.parametrize("steps", [np.diag([0.1, 0.1, 0.1]),
                                    np.array([[0.1, 0.02, 0], [0, 0.09, 0.01], [0.015, 0, 0.11]])])
