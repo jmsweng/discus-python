@@ -239,6 +239,20 @@ def _ops_samples() -> list[tuple[str, str]]:
         planes=(RmcPlane("plane.nipl", grid, radiation="neutron", wavelength=1.5),), moves=(RmcSwap(),),
         select="all", tries=1000, fit_scale=False, scale=2.0, average_percent=10.0,
         lots=RmcLots((2, 2, 2), 10, "ellipsoid", False))], seed=SEED_A)
+    from discuspdf.discus_pdfmenu import PdfCalc
+    from discuspdf.discus_powder import PowderPattern
+
+    jobs["ops_powder_sq_fq_inte"] = StructureJob(cell, [PowderPattern(
+        (("S(Q)", "s.dat"), ("F(Q)", "f.dat"), ("I(Q)", "iq.dat"), ("inte", "i.dat")), radiation="neutron",
+        wavelength=0.5, temperature="use", polarisation="bragg")], readback="none")
+    jobs["ops_powder_xray_energy"] = StructureJob(cell, [PowderPattern((("S(Q)", "s.dat"),), energy=17.48)],
+                                                  readback="none")
+    jobs["ops_pdfmenu_calc"] = StructureJob(cell, [PdfCalc("g.dat", rmax=10, qmax=25, sphere=40.0, density=0.05,
+                                                           thermal=True, delta=1.0, gamma=0.5, qalpha=0.01)],
+                                            readback="none")
+    jobs["ops_pdfmenu_crystal_exact_neutron"] = StructureJob(cell, [PdfCalc("g.dat", radiation="neutron",
+                                                                            periodic=False, exact=True)],
+                                                             readback="none")
     return [(label, job.macro().render()) for label, job in jobs.items()]
 
 
