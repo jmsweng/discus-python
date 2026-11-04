@@ -243,16 +243,21 @@ restores the same values, with these exceptions noted:
   - Neutron (`lxray=F`): `f = scat(1)`.
   - `power = pdf_power = 4` (PM:87).
 - The coefficient table `cr_scat` is filled by `dlink(pdf_radiation, ...)` (P:447-448):
-  - Neutron: `cr_scat(:,i)=0` then `cr_scat(1,i) = b_coh` (FS, `dlink` neutron case).
-  - X-ray: `cr_scat(:,i) = temp_scat` from the X-ray table (FS, `dlink` X-ray case).
-  - The comment in `dlink` labels `temp_scat` as "a1,b1,---a4,b4,c" (FS:2986), which
-    does not obviously match the index layout `form` expects. UNCONFIRMED.
+  - Neutron: `cr_scat(:,i)=0` then `cr_scat(1,i) = temp_bcoh` (FS:3045-3046).
+  - X-ray: `cr_scat(:,i) = temp_scat` from `get_scat_xray` (FS:3069-3074). That
+    routine fills `temp_scat(1) = per_fc` (the constant c), then `per_fa1, per_fb1, ...,
+    per_fa4, per_fb4` at indices 2-9 (`lib_f90/element_data_mod.f90:3244-3262`).
+    So index 1 of the X-ray table is the constant term, not a coherent b value.
+    The comment at FS:3013 ("a1,b1,---a4,b4,c") lists c last and is inconsistent with
+    the fill order.
 - **Default weights (code-read defect; see pitfall 1).** `pdf_radiation` defaults to
   X-ray (PM:86), so `dlink` loads the X-ray table, but `pdf_lxray` defaults to
   `.false.` (PM:90; reset P:3634). Only `set radiation xray|electron` sets
   `pdf_lxray=T` (P:1483, P:1494). Without that call, `form` takes the neutron branch
-  on the X-ray table. `show` reports "X-Rays" by default (P:602-612), so the displayed
-  and used radiation disagree. Numerical effect UNCONFIRMED.
+  and returns `scat(1)` = `per_fc` alone (FS:2947-2971). The X-ray term sum
+  `sum scat(2i)*exp(...)` is dropped, so the weight is not f(0) = c + sum a_i.
+  `show` reports "X-Rays" by default (P:602-612), so the displayed and used radiation
+  disagree. Runtime size of the error UNCONFIRMED.
 
 ### 2.4 Normalisation and baseline (`pdf_convert`, P:2628-2759)
 
@@ -682,9 +687,9 @@ values are not expected to match (empirical scale, pitfall 7).
 
 1. **Default `calc` uses the neutron branch on the X-ray table.** `pdf_radiation`
    defaults to X-ray (PM:86) and `dlink` loads the X-ray table (P:447-448), but
-   `pdf_lxray` defaults to `.false.` (PM:90; P:3634), so `form()` returns `scat(1)`
+   `pdf_lxray` defaults to `.false.` (PM:90; P:3634), so `form()` returns `scat(1)` (= `per_fc`, element_data_mod.f90:3244)
    (FS:2947-2971). Always set `set radiation xray` or `neutron` explicitly before
-   `calc` or `run`. UNCONFIRMED numerically; `show` says X-Rays (P:602-612).
+   `calc` or `run`. The code-level error is confirmed; runtime size UNCONFIRMED. `show` says X-Rays (P:602-612).
 2. **`set qsig` alone zeroes G(r).** `pdf_exp` is initialised only under Gaussian or
    `qalp` (P:552-562), but the damping reads it (P:2723-2731). UNCONFIRMED at runtime.
 3. **`run` without `set mode` may hit an unimplemented move.** `rmc_move_cprob` is
@@ -780,7 +785,7 @@ values are not expected to match (empirical scale, pitfall 7).
 Each item is in the body with its citation. This index lists them together.
 
 - Default-weight numerics on the X-ray table with `pdf_lxray = F` (pitfall 1; P:90, P:447-448, FS:2947-2971).
-- `dlink` X-ray table index layout versus `form()` (FS:2986 comment vs FS:2947-2971).
+- Runtime size of the X-ray/neutron mismatch in `form()` (confirmed in code at FS:2947-2971 and element_data_mod.f90:3244; magnitude not run).
 - `pdf_exp` zeroing with `set qsig` only (pitfall 2; P:552-562, P:2723-2731).
 - `set mode` requirement before `run` (pitfall 3; RS:639-642, RS:3300-3303).
 - Missing-data `run` behaviour (pitfall 4; P:1781, P:1848).
