@@ -85,6 +85,7 @@ def test_aver_and_lots_go_to_the_fork():
     lambda: fit(fit_scale=1),
     lambda: RmcPlane("t.nipl", GRID, weights="file.dat"),
     lambda: RmcPlane("t.nipl", GRID, radiation="electron"),
+    lambda: FourierPlane(GRID, "t.nipl", radiation="electron"),  # a target plane must match RMC data (X / N)
     lambda: RmcPlane("t.nipl", GRID, wavelength="xx"),
     lambda: RmcPlane("../t.nipl", GRID),
     lambda: PlaneGrid((0, 0, 0), (1, 0, 0), (2, 0, 0), 5, 5),  # degenerate
@@ -210,3 +211,9 @@ def test_fourier_plane_file_is_a_declared_output(tmp_path):
     with pytest.raises(ValueError, match="twice"):
         StructureJob(SRC, [FourierPlane(GRID, "t.nipl"), FourierPlane(GRID, "t.nipl")], readback="none").run(
             runner, {"cu.cll": cell})
+
+
+def test_rmc_data_line_keeps_the_radiation():
+    """'rmc data' takes X-ray or neutron; each must reach the macro as itself (never another radiation)."""
+    for radiation in ("xray", "neutron"):
+        assert RmcPlane("t.nipl", GRID, radiation=radiation).params()[0] == radiation
