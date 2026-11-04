@@ -43,7 +43,9 @@ def engine() -> Engine:
 
 def macro(output_block: list[str]) -> str:
     """The FourierConfig macro with its output block replaced (values FourierConfig does not offer)."""
-    text = FourierConfig(GRID, (("int", "x.h5"),), aver_percent=100).render(SRC)
+    # aver 0: with Bragg subtraction a perfect crystal scatters ~0 everywhere on this grid, and P2 could not
+    # tell the bug from correct behaviour. four_weight's scalef = 64 * 0.25^3 = 1 here, so dsi3d = dsi.
+    text = FourierConfig(GRID, (("int", "x.h5"),)).render(SRC)
     lines = text.splitlines()
     start = lines.index("output")
     end = start + lines[start:].index("exit")

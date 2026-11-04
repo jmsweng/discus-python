@@ -59,10 +59,10 @@ Phase 2c options (source facts: `docs/DISCUS_FOURIER_EXTRA_FACTS.md`, checked it
 
 | Option | DISCUS command | Notes |
 |---|---|---|
-| `radiation="electron"` | `electron` | DISCUS's 5-Gaussian electron table (`get_scat_elec`); no dispersion. |
+| `radiation="electron"` | `electron` | DISCUS's 5-Gaussian electron table (`get_scat_elec`); no dispersion. Needs `energy=` or a wavelength in Å (a tube symbol would be recorded as the electron wavelength). |
 | `energy=E` (instead of `wavelength`) | `energy E` | keV for X-rays and electrons (relativistic), meV for neutrons (`get_wave`). On an hkl grid the wavelength changes no intensity except through dispersion. |
 | `dispersion=True` | `disp anom` | X-rays only. Internal f′, f″ exist only for the Kα1 symbols (`ANOMALOUS_SYMBOLS`); any other wavelength gives 0 silently, so it then needs `delf`. |
-| `delf={"CU": (f′, f″)}` | `delf CU,f′,f″` | Your own f′, f″ (electrons), for any wavelength. |
+| `delf={"CU": (f′, f″)}` | `delf CU,f′,f″` | Your own X-ray f′, f″ (in e), for any wavelength. Every name must be in the structure (error -27); a species without an entry keeps the internal values (0 for a non-Kα1 wavelength); only atoms with DISCUS's internal form factors use them. |
 | outputs with `"3DPDF"` | `value 3DPDF` | At most one, and last: it replaces the intensity in memory (`dsi = dsi3d`, then `dsi3d` is freed). |
 
 Not offered, because the 6.23.01 code is wrong (both kept for issue #73 with live probes in

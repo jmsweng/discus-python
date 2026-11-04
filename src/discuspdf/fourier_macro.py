@@ -12,12 +12,13 @@ commands whose behaviour was observed on DISCUS_SUITE 6.23.01
 * ``set technique:nufft`` is **not offered**: in 6.23.01 it wrote all-zero files with exit code 0
   (FINUFFT ``setpts error``). Only ``turbo`` is generated.
 * ``set symm:{friedel|ignore|apply}``; ``friedel`` is the engine default.
-* Radiation ``xray`` or ``neutron`` (macro keywords ``xray`` / ``neut``, both run in the D reference
-  probe, ``benchmarks/discus_6_23_01/d_reference``). The radiation line is written **before** ``wvle``:
-  ``neut`` clears a previously set wavelength symbol.
-* ``wvle`` takes a DISCUS tube symbol (``moa1``, ``cua1``, …) or a number in Å. Because the macro
-  always writes ``disp off`` (no anomalous dispersion), DISCUS 6.23.01 uses the wavelength only for
-  metadata in that case: X-ray f₀(sinθ/λ) and neutron b do not depend on it.
+* Radiation ``xray``, ``neutron`` or ``electron`` (macro keywords ``xray`` / ``neut`` / ``electron``). The
+  radiation line is written **before** ``wvle`` / ``energy``: ``neut`` and ``electron`` clear a previously
+  set wavelength symbol.
+* ``wvle`` takes a DISCUS tube symbol (``moa1``, ``cua1``, …) or a number in Å; ``energy`` an energy (keV
+  for X-rays and electrons, meV for neutrons). Without anomalous dispersion (``disp off``, the default)
+  DISCUS 6.23.01 uses the wavelength only for metadata: f₀(sinθ/λ) and neutron b do not depend on it.
+  With ``dispersion=True`` (``disp anom``) the internal f′, f″ exist only for the Kα1 symbols.
 
 The macro is plain text you can read before running it (``render``). Nothing here runs DISCUS;
 :func:`prepare_fourier_run` stages the macro for :class:`~discuspdf.diffuse3d.Diffuse3DRunner`.
@@ -281,7 +282,10 @@ class FourierConfig:
     dispersion: anomalous dispersion for X-rays (``disp anom``). DISCUS has internal f′, f″ only for the
         Kα1 symbols in :data:`ANOMALOUS_SYMBOLS`; for any other wavelength or an energy, every species needs
         its own values in ``delf``, otherwise it silently gets f′ = f″ = 0.
-    delf: ``{atom name: (f′, f″)}`` (electrons), written as ``delf NAME,f′,f″``; needs ``dispersion=True``.
+    delf: ``{atom name: (f′, f″)}`` X-ray anomalous terms in units of e, written as ``delf NAME,f′,f″``;
+        needs ``dispersion=True``. Every name must be in the structure (DISCUS error -27 otherwise); species
+        without an entry keep the internal values (0 for a non-Kα1 wavelength). Only atoms with DISCUS's
+        internal form factors use them.
     scattering_lengths: own coherent neutron scattering lengths (fm) by DISCUS atom name, e.g.
         ``{"NI62": 10.3}`` for an isotope label; neutron runs only. Each becomes a
         ``scat NAME, 0,0,0,0,0,0,0,0, b`` line before ``show``. Give only names that occur in the
@@ -324,15 +328,20 @@ class FourierConfig:
             raise ValueError(f"symmetry must be one of {SYMMETRY} or None")
         if self.radiation not in RADIATIONS:
             raise ValueError(f"radiation must be one of {RADIATIONS}")
-        object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
+        if self.wavelength is None and self.energy is None:
+            raise ValueError("wavelength=None needs energy=")
+        object.__setattr__(self, "wavelength", "moa1" if self.wavelength is None else _check_wavelength(self.wavelength))
         if self.energy is not None:
             e = self.energy
             if isinstance(e, (bool, np.bool_)) or not isinstance(e, (int, float, np.integer, np.floating)) \
                     or not np.isfinite(e) or e <= 0:
                 raise ValueError(f"energy must be a positive number ({ENERGY_UNITS[self.radiation]}), got {e!r}")
-            if self.wavelength != "moa1":
+            if self.wavelength not in ("moa1", None):
                 raise ValueError("give either wavelength or energy, not both")
             object.__setattr__(self, "energy", float(e))
+        if self.radiation == "electron" and self.energy is None and isinstance(self.wavelength, str):
+            raise ValueError("electrons need energy= (keV) or a wavelength in Å; an X-ray tube symbol would "
+                             "be recorded as the electron wavelength")
         if not isinstance(self.dispersion, bool):
             raise TypeError("dispersion must be True or False")
         delf = _normalize_delf(self.delf)
@@ -456,7 +465,7 @@ class FourierConfig:
                 "lots": None if self.lots is None else {"shape": self.lots.shape, "size": list(self.lots.size),
                                                        "count": self.lots.count, "periodic": self.lots.periodic},
                 "seed": None if self.seed is None else list(self.seed.values),
-                "temperature": self.temperature, "symmetry": self.symmetry, "wavelength": self.wavelength,
+                "temperature": self.temperature, "symmetry": self.symmetry, "wavelength": None if self.energy is not None else self.wavelength,
                 "radiation": self.radiation, "labels": list(self.labels), "technique": "turbo", "engine": "DISCUS_SUITE 6.23.01",
                 "bragg": self.bragg, "labels_verified": self.labels_verified,
                 # only written when used, so descriptions of existing runs stay unchanged

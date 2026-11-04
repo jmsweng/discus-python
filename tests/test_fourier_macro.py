@@ -346,6 +346,8 @@ def test_electron_energy_dispersion_delf_and_3dpdf_limit_lines():
     (dict(dispersion=True, wavelength="moa2"), "K-alpha1"),
     (dict(dispersion=True, energy=17.4), "K-alpha1"),
     (dict(delf={"CU": (0.1, 0.2)}), "dispersion=True"),
+    (dict(radiation="electron"), "electrons need"),
+    (dict(wavelength=None), "needs energy"),
     (dict(dispersion=True, delf={"CU": (0.1,)}), "f'"),
     (dict(dispersion=True, delf={"CU": (0, 1), "cu": (0, 1)}), "twice"),
 ])
@@ -370,3 +372,9 @@ def test_phase2c_round_trip():
     assert FourierConfig.from_dict(json.loads(json.dumps(e.to_dict()))).render(BLOCK) == e.render(BLOCK)
     plain = FourierConfig(G32, outs("q", ("int",)))
     assert not {"energy", "dispersion", "delf"} & set(plain.to_dict())
+
+
+def test_energy_runs_record_no_wavelength():
+    d = FourierConfig(G32, outs("e", ("int",)), radiation="electron", energy=200.0).to_dict()
+    assert d["wavelength"] is None and d["energy"] == 200.0
+    assert FourierConfig(G32, outs("n", ("int",)), radiation="electron", wavelength=0.0251).render(BLOCK)
