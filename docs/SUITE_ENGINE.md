@@ -58,6 +58,7 @@ only the fork computes correctly. `fork_reasons(macro)` lists those uses:
 | REFINE `run` | MPI derivative steps, `MAX(dP/sig)` criterion, seed restore with Gaussian noise, MPI result transfer |
 | REFINE `newparam …,points:2` | exists only on the fork |
 | RMC `set lots,…` (not `off`) | lot moves, updates and averages |
+| RMC `set aver,…` (not 0, or not a plain number) | the average-structure subtraction loops over nx rows instead of ny (`rmc_sup_mod.f90:2300`) |
 | Fourier `set technique:nufft` | coordinate scaling on non-integer grids |
 | a second Fourier `run` after `temp use` in one session | Debye–Waller cache key; a single run is correct on stock (Gate 0 v2.1) |
 

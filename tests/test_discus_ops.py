@@ -183,3 +183,32 @@ def test_vacancies_from_remove_are_read_back(tmp_path):
     result = StructureJob(_cu_structure(2), [Remove(1)]).run(runner)
     assert str(result.structure.species[0]).upper() == "VOID"
     assert result.stru.dropped == ("Property",)
+
+
+def test_box_readback_keeps_any_atom_count(tmp_path):
+    from discuspdf.discus_ops import Purge
+    script = tmp_path / "fake.py"
+    script.write_text(FAKE.replace('lines = [l for l in text.splitlines() if not l.lower().startswith("ncell")]',
+                                   'lines = [l for l in text.splitlines() if not l.lower().startswith("ncell")][:-3]'))
+    runner = SuiteRunner(tmp_path / "runs", Engine((sys.executable, str(script))))
+    src = _cu_structure(2)
+    result = StructureJob(src, [Purge()], readback="box").run(runner)
+    s = result.structure
+    assert s.n_atoms == 61 and tuple(s.supercell) == (1, 1, 1)
+    assert np.allclose(s.lattice.parameters[:3], np.array(src.lattice.parameters[:3]))  # whole crystal box
+    assert np.allclose(s.cartesian, src.cartesian[:61], atol=1e-5)  # same atoms, same place
+    none = StructureJob(src, [Purge()], readback="none").run(runner)
+    assert none.structure is None and none.run.output("result.stru").is_file()
+    with pytest.raises(ValueError):
+        StructureJob(src, readback="cell")
+
+
+def test_read_box_estimates_cells_and_refuses_negative_b(tmp_path):
+    from discuspdf.discus_io import DiscusFormatError
+    from discuspdf.discus_ops import estimate_cells, read_box
+    assert estimate_cells(np.array([[-1.0, 0, 0], [1.5, 0.2, 0]])) == (3, 1, 1)
+    f = tmp_path / "x.stru"
+    f.write_text("title x\nspcgr P1\ncell 2,2,2,90,90,90\natoms\n"
+                 "CU 0, 0, 0, -0.5, 1, 0, 0, 1, _, 0, 0, 0\n")
+    with pytest.raises(DiscusFormatError):
+        read_box(f)

@@ -55,6 +55,21 @@ fourier
 | `temperature="use"` | `temp use` | apply the structure's B values (DISCUS replaces B < 0.001 Å² by 1.0) |
 | `outputs=(("int", f), ("real", f2), ("imag", f3), ("3DPDF", f4))` | `value …`, `form nexus` | one NeXus file per entry; `real`/`imag` are of F − ⟨F⟩, in single precision |
 
+Phase 2c options (source facts: `docs/DISCUS_FOURIER_EXTRA_FACTS.md`, checked items listed there first):
+
+| Option | DISCUS command | Notes |
+|---|---|---|
+| `radiation="electron"` | `electron` | DISCUS's 5-Gaussian electron table (`get_scat_elec`); no dispersion. Needs `energy=` or a wavelength in Å (a tube symbol would be recorded as the electron wavelength). |
+| `energy=E` (instead of `wavelength`) | `energy E` | keV for X-rays and electrons (relativistic), meV for neutrons (`get_wave`). On an hkl grid the wavelength changes no intensity except through dispersion. |
+| `dispersion=True` | `disp anom` | X-rays only. Internal f′, f″ exist only for the Kα1 symbols (`ANOMALOUS_SYMBOLS`); any other wavelength gives 0 silently, so it then needs `delf`. |
+| `delf={"CU": (f′, f″)}` | `delf CU,f′,f″` | Your own X-ray f′, f″ (in e), for any wavelength. Every name must be in the structure (error -27); a species without an entry keeps the internal values (0 for a non-Kα1 wavelength); only atoms with DISCUS's internal form factors use them. |
+| outputs with `"3DPDF"` | `value 3DPDF` | At most one, and last: it replaces the intensity in memory (`dsi = dsi3d`, then `dsi3d` is freed). |
+
+Not offered, because the 6.23.01 code is wrong (both kept for issue #73 with live probes in
+`tools/probes/fourier_output_probes.py`): `value 3DPDF, qmax:/dsmax:/hklmax:` (`output_limit` zeroes
+only layers 1-3) and the ⟨f⟩-type values and `type:sharp` on 3D grids (`qval` takes the form factor at
+`istl(i,j,1)`, the first layer's |Q|, for every layer).
+
 `cfg.bragg` tells you how the result will be labelled: `bragg_subtracted` when `aver_percent > 0`,
 otherwise `bragg_present`. That is what was requested. Whether subtraction is appropriate for your
 model is a scientific judgement (see "Not covered" below).
@@ -123,9 +138,9 @@ The measurements behind every row above are in
 - Models with atomic displacements or nonzero B values (Bragg subtraction then also changes the
   scattering away from Bragg points), and cells with several sites.
 - `set aver` on grids that do not fit the crystal (an earlier test left a 1.8 % residual).
-- `set mode:accumulate`, `value 3DPDF` together with LOTS, `nufft`, electron radiation, anomalous
-  dispersion. A numeric `wvle` has not yet been run in DISCUS (the source accepts it; the symbol `moa1`
-  has, for X-rays and neutrons).
+- `set mode:accumulate`, `value 3DPDF` together with LOTS, `nufft`, `zone`, `hkl`, `calculate`, `layer`,
+  own X-ray form factors (`scat` with Gaussians), the `3dpdf` menu (an undocumented 3D-PDF
+  interpretation tool).
 
 <details>
 <summary>How this was checked</summary>

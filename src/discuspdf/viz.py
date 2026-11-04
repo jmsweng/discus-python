@@ -98,11 +98,17 @@ class SampledVolume:
 
     # -- constructors -------------------------------------------------------------
     @classmethod
-    def from_scattering_volume(cls, sv) -> "SampledVolume":
-        """Q (Å⁻¹, 2π convention) of a :class:`~discuspdf.scattering_data.ScatteringVolume`."""
+    def from_scattering_volume(cls, sv, *, signed: bool | None = None) -> "SampledVolume":
+        """Q (Å⁻¹, 2π convention) of a :class:`~discuspdf.scattering_data.ScatteringVolume`.
+
+        ``signed`` (diverging colour map, no log scale) follows the data by default: True when any
+        unmasked value is negative. A ``bragg_subtracted`` volume from DISCUS ``set aver`` is
+        |F − ⟨F⟩|² ≥ 0, so it is unsigned and can be drawn on a log scale; an intensity difference
+        computed elsewhere has negative values and is signed. Pass ``signed=`` to choose explicitly."""
         g = sv.grid
-        signed = sv.bragg in ("bragg_subtracted",) or (
-            np.nanmin(np.where(sv.mask, np.nan, sv.intensity) if sv.mask is not None else sv.intensity) < 0)
+        if signed is None:
+            values = np.where(sv.mask, np.nan, sv.intensity) if sv.mask is not None else sv.intensity
+            signed = bool(np.isfinite(values).any() and np.nanmin(values) < 0)
         extra = {} if sv.variance is None else {"variance": np.nan_to_num(sv.variance, nan=0.0)}
         return cls(sv.intensity, g.q_corner(), g.q_step_vectors(), "reciprocal", "intensity",
                    signed=bool(signed), mask=sv.mask, index_vectors=g.axis_vectors, extra=extra,

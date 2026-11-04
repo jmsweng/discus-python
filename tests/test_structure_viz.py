@@ -224,3 +224,62 @@ def test_export_nonperiodic_xsf_message(tmp_path):
                    pbc=(False, False, False))
     with pytest.raises(ValueError, match="drops the cell"):
         export_structure(st, tmp_path / "m.xsf", format="xsf")
+
+
+def _frame_range(ax):
+    pts = np.vstack([np.array(l.get_data_3d()).T for l in ax.lines])
+    return pts.min(axis=0), pts.max(axis=0)
+
+
+def test_supercell_frame_starts_at_origin_for_a_python_supercell():
+    st = _mono(3)
+    lo, hi = _frame_range(plot_structure(st))
+    corners = np.array([[i, j, k] for i in (0, 1) for j in (0, 1) for k in (0, 1)], float) @ st.lattice.matrix
+    np.testing.assert_allclose(lo, corners.min(axis=0), atol=1e-12)
+    np.testing.assert_allclose(hi, corners.max(axis=0), atol=1e-12)
+
+
+def test_supercell_frame_follows_a_discus_crystal_centred_on_the_origin():
+    from pathlib import Path
+    from discuspdf.discus_io import read_stru
+    path = Path(__file__).parent / "fixtures" / "discus_6_23_01" / "gaas_222.stru"
+    st = read_stru(path, supercell=(2, 2, 2)).structure        # DISCUS: unit-cell x from -1 to 0.75
+    assert st.frac.min() == pytest.approx(-0.5)
+    lo, hi = _frame_range(plot_structure(st))
+    a = st.lattice.matrix[0, 0]                                # cubic supercell, 11.3 Å
+    np.testing.assert_allclose(lo, [-a / 2] * 3, atol=1e-9)
+    np.testing.assert_allclose(hi, [a / 2] * 3, atol=1e-9)
+    xyz = st.cartesian
+    assert np.all(xyz >= lo - 1e-9) and np.all(xyz <= hi + 1e-9)
+
+
+def test_supercell_frame_ignores_atoms_displaced_just_below_a_boundary():
+    lat = Lattice.from_parameters(4.1, 5.3, 3.7, 90, 103, 90)
+    cell = Structure(lat, ["Ga", "As"], [[0, 0, 0], [0.5, 0.5, 0.5]], model="configuration", site_label=["s1", "s2"])
+    st = repeat(cell, (3, 3, 3)).structure
+    shifted = st.with_frac(st.frac - 0.5, min_separation=None)    # centred like DISCUS, atoms on -0.5
+    noisy = _displaced(shifted, sigma=0.05, seed=3)                # some atoms now below -0.5
+    assert noisy.frac[:, 0].min() < -0.5
+    lo_c, hi_c = _frame_range(plot_structure(shifted))
+    lo_n, hi_n = _frame_range(plot_structure(noisy))
+    box = np.array([[i, j, k] for i in (0, 1) for j in (0, 1) for k in (0, 1)], float) - 0.5
+    np.testing.assert_allclose(lo_c, (box @ st.lattice.matrix).min(axis=0), atol=1e-12)    # exactly -0.5 … 0.5
+    np.testing.assert_allclose(hi_c, (box @ st.lattice.matrix).max(axis=0), atol=1e-12)
+    np.testing.assert_allclose(lo_n, lo_c, atol=1e-12)
+    np.testing.assert_allclose(hi_n, hi_c, atol=1e-12)
+
+
+def test_supercell_frame_stays_at_origin_when_no_atom_touches_it():
+    lat = Lattice.from_parameters(4.0, 4.0, 4.0, 90, 90, 90)
+    cell = Structure(lat, ["X"], [[0.8, 0.8, 0.8]], model="configuration")
+    st = repeat(cell, (3, 3, 3)).structure                      # atoms from 0.27 to 0.93 of the crystal
+    lo, _ = _frame_range(plot_structure(st))
+    np.testing.assert_allclose(lo, 0.0, atol=1e-12)
+
+
+def test_parent_frame_stays_at_the_origin():
+    st = _mono(3)
+    lo, _ = _frame_range(plot_structure(st.with_frac(st.frac - 0.5, min_separation=None), cell="parent"))
+    corners = np.array([[i, j, k] for i in (0, 1) for j in (0, 1) for k in (0, 1)], float) \
+        @ (st.lattice.matrix / st.supercell[:, None])
+    np.testing.assert_allclose(lo, corners.min(axis=0), atol=1e-12)

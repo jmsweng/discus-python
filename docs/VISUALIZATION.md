@@ -46,8 +46,11 @@ plot_slice(vol, axis=2, ax=my_axes, title="...", vmax=1e5)
 
 - Axis labels name the crystal direction, e.g. `Q ∥ [1 0 0]* (Å⁻¹)`; the title gives the layer's
   offset from the origin.
-- Data that can be negative (Bragg-subtracted intensity, ΔPDF, Patterson) get a red–blue scale
-  that is symmetric about zero. Other data use `viridis`.
+- Data with negative values (an intensity difference, ΔPDF, Patterson) get a red–blue scale that is
+  symmetric about zero and cannot use a log scale. Other data use `viridis`. For a `ScatteringVolume`
+  this follows the values, not the Bragg label: DISCUS `set aver` output is |F − ⟨F⟩|² ≥ 0, so a
+  `bragg_subtracted` plane from DISCUS can be drawn with `log=True` (its exact zeros are left out).
+  `SampledVolume.from_scattering_volume(sv, signed=True)` forces the diverging scale.
 - Masked points are grey; they are never filled in.
 
 ## Isosurfaces
