@@ -17,7 +17,7 @@ export_structure(configuration, "model.xyz", format="extxyz")      # VESTA, OVIT
 
 | Function | What it shows |
 |---|---|
-| `plot_structure` | atoms coloured by species or site label (fixed Okabe–Ito colours per label), marker area × occupancy, supercell or parent-cell frame |
+| `plot_structure` | atoms coloured by species or site label (fixed Okabe–Ito colours per label), marker area × occupancy, supercell or parent-cell frame; the supercell frame is placed around the atoms (from the origin for a Python supercell, centred for a crystal DISCUS saved centred on the origin) |
 | `plot_displacements` | arrows from each reference site to its atom; atoms matched by `(site_label, cell_index)` (so the reference needs one atom per site), true minimum image in the supercell (`Lattice.minimum_image`) with all pbc True, plain difference with none; mixed pbc refused |
 | `displacement_vectors` | the numbers behind those arrows: reference positions and Cartesian displacements |
 | `plot_bonds` | one segment per directed pair of a `NeighborList` selection, from the origin atom to the periodic image that forms the pair; distances grouped into colours where they jump by more than `shell_tol` (0.05 Å), legend (distance range, pair count) for up to 8 groups |

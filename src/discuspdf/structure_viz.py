@@ -64,6 +64,35 @@ def _cell_edges(matrix: np.ndarray, origin=np.zeros(3)) -> list[np.ndarray]:
     return edges
 
 
+def _supercell_frame_origin(structure: Structure) -> np.ndarray:
+    """Fractional (supercell) origin of the supercell frame that leaves the fewest atoms outside.
+
+    A configuration built in Python runs from 0, while DISCUS saves a crystal centred on the origin (from
+    -n/2 to n/2 cells). On each axis the frame stays at 0 unless a start on the half-cell grid next to the
+    lowest atom leaves fewer atoms more than a quarter cell outside; ties keep 0, then the start closest to
+    the lowest atom. Atoms displaced a little below a boundary therefore do not move the frame. Only the
+    drawn frame moves; atoms stay where they are."""
+    n = np.asarray(structure.supercell, float)
+    f = np.asarray(structure.frac, float)
+    origin = np.zeros(3)
+    if f.size == 0:
+        return origin
+    for k in range(3):
+        step = 0.5 / n[k]
+        first = np.floor(f[:, k].min() / step)
+        candidates = [(first + j) * step for j in (-1, 0, 1, 2)]   # includes 0 whenever the first cell is occupied
+
+        margin = 0.25 / n[k]                         # a quarter cell: thermal noise stays "inside"
+
+        def outside(o):
+            return int(np.count_nonzero((f[:, k] < o - margin) | (f[:, k] > o + 1.0 + margin)))
+
+        low = f[:, k].min()
+        # fewest atoms outside; then the origin itself; then the start closest to the lowest atom
+        origin[k] = min(candidates, key=lambda o: (outside(o), o != 0.0, abs(o - low)))
+    return origin
+
+
 def _equal_aspect(ax, points: np.ndarray) -> None:
     lo, hi = points.min(axis=0), points.max(axis=0)
     span = max(float((hi - lo).max()), 1e-9)
@@ -83,7 +112,9 @@ def plot_structure(structure: Structure, *, ax=None, color_by: str = "species", 
     """Scatter the atoms in Cartesian Å, coloured by ``"species"`` or ``"site"`` (site label).
 
     ``select``: boolean mask or ``atom_id`` values to draw (others are skipped). ``cell``: draw the
-    ``"supercell"`` frame, the ``"parent"`` cell at the origin, or ``None``. Marker area is scaled by
+    ``"supercell"`` frame, the ``"parent"`` cell at the origin, or ``None``. The supercell frame starts
+    at the origin unless a start on the half-cell grid holds more of the atoms, so a DISCUS crystal
+    centred on the origin gets a centred frame. Marker area is scaled by
     occupancy, so partially occupied sites of an average model look lighter. Returns the 3D axes."""
     if not isinstance(structure, Structure):
         raise TypeError("structure must be a Structure")
@@ -107,7 +138,8 @@ def plot_structure(structure: Structure, *, ax=None, color_by: str = "species", 
     pts = [xyz[m]] if m.any() else [np.zeros((1, 3))]
     if cell is not None:
         A = structure.lattice.matrix if cell == "supercell" else structure.lattice.matrix / structure.supercell[:, None]
-        for e in _cell_edges(A):
+        origin = _supercell_frame_origin(structure) @ structure.lattice.matrix if cell == "supercell" else np.zeros(3)
+        for e in _cell_edges(A, origin):
             ax.plot(*e.T, color="0.5", lw=0.8)
             pts.append(e)
     _equal_aspect(ax, np.vstack(pts))
