@@ -154,6 +154,7 @@ Goal: every DISCUS_SUITE program (DISCUS, KUPLOT, REFINE, DIFFEV, MIXSCAT, the s
 - ⬜ **S3 — REFINE** (fork engine): parameters, data, user macro, parsed cycle results.
 - ⬜ **S4 — KUPLOT:** data I/O, fit, processing (plots stay in matplotlib).
 - ⬜ **S5 — DIFFEV**, **S6 — MIXSCAT**, **S7 — notebooks and docs per program.**
+  - ✅ S7 for phases 0–2a: [`notebooks/11_suite_catalogue_macros_and_runner.ipynb`](../notebooks/11_suite_catalogue_macros_and_runner.ipynb) (catalogue, macros, `SuiteRunner`) and [`notebooks/12_discus_structure_operations.ipynb`](../notebooks/12_discus_structure_operations.ipynb) (`discus_ops` steps), executed on DISCUS 6.23.01.
 
 ## Maintenance rules
 
