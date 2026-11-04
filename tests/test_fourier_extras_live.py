@@ -32,7 +32,6 @@ import numpy as np
 import pytest
 
 from discuspdf import Lattice, ReciprocalGrid
-from discuspdf.discus_output import read_discus_volume
 from discuspdf.engine import Engine
 from discuspdf.fourier_macro import FourierConfig, StructureSource
 from discuspdf.suite_runner import SuiteRunner
@@ -75,12 +74,18 @@ def bragg(**options) -> dict:
     """f = sqrt(I)/N at each reflection, from one DISCUS run."""
     cfg = FourierConfig(GRID, (("int", "plane.h5"),), **options)
     run = runner().run(cfg.render(SRC), {"cu_b05.cll": CU}, ["plane.h5"])
-    vol = read_discus_volume(run.output("plane.h5"))
-    h, k, _ = vol.hkl_axes()
+    # a 2D plane has a zero third increment, which read_discus_volume refuses; read the values directly.
+    # Grid points are 0, 0.5, ..., 4 on both axes, so (h, k) is at index (2h, 2k) on one axis order or the
+    # other; the fcc intensities are symmetric in h and k, and both orders are checked to agree.
+    import h5py
+    with h5py.File(run.output("plane.h5"), "r") as f:
+        values = np.squeeze(np.asarray(f["entry/data/data_values"], dtype=float))
+    assert values.shape == (9, 9)
     out = {}
     for hh, kk in REFLECTIONS:
-        i, j = int(np.argmin(abs(h - hh))), int(np.argmin(abs(k - kk)))
-        out[(hh, kk)] = math.sqrt(vol.values[i, j, 0]) / N
+        a, b = values[2 * hh, 2 * kk], values[2 * kk, 2 * hh]
+        assert abs(a / b - 1) < 1e-12, (hh, kk, a, b)
+        out[(hh, kk)] = math.sqrt(a) / N
     return out
 
 
