@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 
 from .lattice import Lattice
-from ._elements import atomic_number
+from .atom_names import atomic_number
 
 
 def _validate_species(species: np.ndarray) -> None:

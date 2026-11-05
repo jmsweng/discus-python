@@ -9,7 +9,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
-import hashlib
 import json
 import math
 import re
@@ -20,6 +19,7 @@ import warnings
 
 import numpy as np
 
+from ._runrecord import changed_inputs, sha256_file, write_status
 from .engine import current_engine, Engine, as_engine
 from .fourier_macro import normalize_scattering_lengths, scat_commands
 
@@ -390,13 +390,13 @@ class PDFRunner:
         else:
             params["scattering_lengths"] = [list(p) for p in params["scattering_lengths"]]
         params["structure"] = str(source)
-        params["input_sha256"] = hashlib.sha256(staged.read_bytes()).hexdigest()
+        params["input_sha256"] = sha256_file(staged)
         # The exact staged macro is the exact executed macro: record its hash.
-        params["macro_sha256"] = hashlib.sha256((run_dir / "run.mac").read_bytes()).hexdigest()
+        params["macro_sha256"] = sha256_file(run_dir / "run.mac")
         params["generated_utc"] = datetime.now(timezone.utc).isoformat()
         params["launcher"] = [*self.launcher, "run.mac"]
         (run_dir / "config.json").write_text(json.dumps(params, indent=2), encoding="utf-8")
-        (run_dir / "status.json").write_text('{"status": "prepared"}\n', encoding="utf-8")
+        write_status(run_dir, "prepared", indent=None)
         return PDFRun(run_dir)
 
     def execute(self, prepared: PDFRun) -> PDFRun:
@@ -413,9 +413,7 @@ class PDFRunner:
                        "radiation", "qmin", "dq", "wavelength", "allow_qsig", "scattering_lengths")
 
         def status(state: str, **details: object) -> None:
-            (prepared.directory / "status.json").write_text(
-                json.dumps({"status": state, **details}, indent=2), encoding="utf-8"
-            )
+            write_status(prepared.directory, state, details, newline=False)
 
         def preflight_fail(exc: Exception) -> None:
             status("failed", reason=f"Preflight check failed: {exc}", engine_started=False)
@@ -425,13 +423,12 @@ class PDFRunner:
             warnings.simplefilter("ignore", QmaxLimitWarning)
             warnings.simplefilter("ignore", SetDeltaWarning)
             config = PDFConfig(**{key: params[key] for key in config_keys if key in params})
-        staged = prepared.directory / config.staged_name
-        if not staged.is_file() or hashlib.sha256(staged.read_bytes()).hexdigest() != params["input_sha256"]:
+        if changed_inputs(prepared.directory, {config.staged_name: params["input_sha256"]}):
             preflight_fail(ValueError("Staged structure is missing or differs from the recorded hash"))
         macro = prepared.directory / "run.mac"
         if not macro.is_file():
             preflight_fail(FileNotFoundError("Missing prepared macro"))
-        if "macro_sha256" in params and hashlib.sha256(macro.read_bytes()).hexdigest() != params["macro_sha256"]:
+        if "macro_sha256" in params and changed_inputs(prepared.directory, {"run.mac": params["macro_sha256"]}):
             preflight_fail(ValueError("Staged macro differs from the recorded hash; the inspected macro is not the executed macro"))
         for existing in (prepared.raw_output, prepared.output):
             if existing.exists():

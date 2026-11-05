@@ -6,14 +6,13 @@ definitions and the correlations of a probe macro, :func:`parse_chem_log` reads 
 the log prints, and :func:`run_chem` runs a :class:`~discuspdf.discus_ops.StructureJob` and returns
 the numbers together with the kept run::
 
-    from discuspdf.discus_chem import (ChemAnalysis, ChemOccupational, CorrelationVector,
-                                       Neighbourhood, VectorNeighbourhood, run_chem)
+    from discuspdf.discus_chem import ChemAnalysis, ChemOccupational, Neighbourhood, run_chem
+    from discuspdf.mc import Neighborhood, Vector
     from discuspdf.discus_ops import StructureJob
     from discuspdf.fourier_macro import StructureSource
 
     analysis = ChemAnalysis(
-        vectors=(CorrelationVector(1, 1, 2, (0, 0, 0)),),
-        neighbourhoods=(Neighbourhood(VectorNeighbourhood(1)),),
+        neighbourhoods=(Neighbourhood(Neighborhood((Vector(1, 2, (0, 0, 0)),), symmetric=False)),),
         calculations=(ChemOccupational("Au", "Cu"),),
     )
     job = StructureJob(StructureSource.stru("occ_bcc.stru"), [analysis], readback="none")
@@ -22,7 +21,7 @@ the numbers together with the kept run::
     outcome.engine_crashed_at_exit    # True when DISCUS aborted after printing everything
 
 Commands are those of the probe macros (``inputs/*.mac``), in the same order: ``set mode, quick,
-period``; ``set vec`` for each correlation vector; ``set neig, rese``; per neighbourhood
+period``; ``set vec`` for each vector of the vector neighbourhoods (numbered 1, 2, ... in order); ``set neig, rese``; per neighbourhood
 ``set neig, vec`` or ``set neig, dis`` (and ``set neig, dir`` for a displacement direction); ``show``;
 then per calculation ``corr occ`` or ``corr disp`` followed by ``eval res[k]`` for k = 0..N
 (``res[0]`` is the number of neighbourhoods, ``res[k]`` the value of neighbourhood k). The menu is
@@ -60,7 +59,8 @@ from .fourier_macro import StructureSource
 from .macro import Macro
 from .suite_runner import SuiteRun
 from .atom_names import check_discus_name
-from ._validate import int3 as _triple_int, integer as _whole, real as _real, vec3 as _triple_real
+from .mc import Neighborhood, Vector
+from ._validate import integer as _whole, real as _real, vec3 as _triple_real
 
 CRASH_SIGNATURE = "free(): invalid pointer"
 CRASH_RETURN_CODE = 134  # 128 + SIGABRT, as the shell reports it
@@ -84,34 +84,6 @@ def _species(name: str, v, allow_all: bool) -> str:
 # ------------------------------------------------------------------------------- the definitions
 
 @dataclass(frozen=True)
-class CorrelationVector:
-    """``set vec, <number>, <site_from>, <site_to>, <u>, <v>, <w>``: the pair is an atom of
-    ``site_from`` in the origin cell and an atom of ``site_to`` in the cell translated by (u, v, w)
-    (integer lattice translations, as in the probes)."""
-
-    number: int
-    site_from: int
-    site_to: int
-    translation: tuple[int, int, int]
-
-    def __post_init__(self):
-        object.__setattr__(self, "number", _whole("number", self.number))
-        object.__setattr__(self, "site_from", _whole("site_from", self.site_from))
-        object.__setattr__(self, "site_to", _whole("site_to", self.site_to))
-        object.__setattr__(self, "translation", _triple_int("translation", self.translation))
-
-
-@dataclass(frozen=True)
-class VectorNeighbourhood:
-    """``set neig, vec, <vector>``: the neighbourhood is the pairs of a correlation vector."""
-
-    vector: int
-
-    def __post_init__(self):
-        object.__setattr__(self, "vector", _whole("vector", self.vector))
-
-
-@dataclass(frozen=True)
 class DistanceNeighbourhood:
     """``set neig, dis, <x>, <y>, <z>, <sigma>``: the pairs whose distance lies within
     ``sigma`` of the length of the lattice vector (x, y, z) (DISCUS ``fsig``; the probes use 0.1)."""
@@ -131,19 +103,27 @@ class DistanceNeighbourhood:
 class Neighbourhood:
     """One numbered neighbourhood (``number:k`` is its 1-based position in the analysis).
 
-    ``direction`` is the displacement direction pair ``(a, b)`` of ``set neig, dir, a..., b...``
-    used by displacement correlations; it is only written for a :class:`VectorNeighbourhood`,
-    the only form the probes use with it. ``None`` leaves DISCUS's default ("all directions")."""
+    ``definition`` is either a :class:`discuspdf.mc.Neighborhood` (the same vectors the ``mmc`` menu
+    uses; written as one ``set vec`` per vector and ``set neig, vec, <ids>``, numbered as
+    :meth:`discuspdf.mc.MCConfig.mmc_lines` numbers them) or a :class:`DistanceNeighbourhood`.
+    ``mc.Neighborhood`` adds the reversed vectors by default (``symmetric=True``); the probe macros
+    use one direction only, so pass ``symmetric=False`` to reproduce them. In a periodic crystal the
+    reversed vector gives the same pairs the other way round, so an occupational value does not change;
+    the pair count doubles.
 
-    definition: VectorNeighbourhood | DistanceNeighbourhood
+    ``direction`` is the displacement direction pair ``(a, b)`` of ``set neig, dir, a..., b...``
+    used by displacement correlations; it is only written for a vector neighbourhood, the only form
+    the probes use with it. ``None`` leaves DISCUS's default ("all directions")."""
+
+    definition: Neighborhood | DistanceNeighbourhood
     direction: tuple[tuple[float, float, float], tuple[float, float, float]] | None = None
 
     def __post_init__(self):
-        if not isinstance(self.definition, (VectorNeighbourhood, DistanceNeighbourhood)):
-            raise TypeError("definition must be a VectorNeighbourhood or a DistanceNeighbourhood")
+        if not isinstance(self.definition, (Neighborhood, DistanceNeighbourhood)):
+            raise TypeError("definition must be a discuspdf.mc.Neighborhood or a DistanceNeighbourhood")
         if self.direction is not None:
-            if not isinstance(self.definition, VectorNeighbourhood):
-                raise ValueError("a displacement direction is only written for a VectorNeighbourhood")
+            if not isinstance(self.definition, Neighborhood):
+                raise ValueError("a displacement direction is only written for a vector neighbourhood")
             pair = tuple(self.direction)
             if len(pair) != 2:
                 raise ValueError(f"direction must be (a, b), got {self.direction!r}")
@@ -185,29 +165,19 @@ class ChemDisplacement:
 
 @dataclass(frozen=True)
 class ChemAnalysis(Step):
-    """The ``chem`` analysis of a crystal: correlation vectors, numbered neighbourhoods and the
-    correlations to calculate. It writes the lines into the DISCUS main menu (``chem`` ... ``exit``)
-    and does not change the crystal, so it can sit between the crystal steps and ``save``."""
+    """The ``chem`` analysis of a crystal: numbered neighbourhoods and the correlations to calculate.
+    It writes the lines into the DISCUS main menu (``chem`` ... ``exit``) and does not change the
+    crystal, so it can sit between the crystal steps and ``save``. The correlation vectors are numbered
+    1, 2, ... in the order the vector neighbourhoods list them."""
 
-    vectors: Sequence[CorrelationVector] = ()
     neighbourhoods: Sequence[Neighbourhood] = ()
     calculations: Sequence[ChemOccupational | ChemDisplacement] = ()
 
     def __post_init__(self):
-        vectors = tuple(self.vectors)
-        for v in vectors:
-            if not isinstance(v, CorrelationVector):
-                raise TypeError(f"not a CorrelationVector: {v!r}")
-        numbers_ = [v.number for v in vectors]
-        if len(set(numbers_)) != len(numbers_):
-            raise ValueError(f"correlation vector numbers must be unique, got {numbers_}")
         nbs = tuple(self.neighbourhoods)
         for nb in nbs:
             if not isinstance(nb, Neighbourhood):
                 raise TypeError(f"not a Neighbourhood: {nb!r}")
-            d = nb.definition
-            if isinstance(d, VectorNeighbourhood) and d.vector not in numbers_:
-                raise ValueError(f"neighbourhood uses correlation vector {d.vector}, which is not defined")
         calcs = tuple(self.calculations)
         for c in calcs:
             if not isinstance(c, (ChemOccupational, ChemDisplacement)):
@@ -216,20 +186,34 @@ class ChemAnalysis(Step):
             raise ValueError("ChemAnalysis needs at least one calculation (ChemOccupational or ChemDisplacement)")
         if not nbs:
             raise ValueError("a correlation needs at least one neighbourhood")
-        object.__setattr__(self, "vectors", vectors)
         object.__setattr__(self, "neighbourhoods", nbs)
         object.__setattr__(self, "calculations", calcs)
 
+    def vector_numbers(self) -> list[tuple[int, ...]]:
+        """The ``set vec`` numbers of each neighbourhood (empty for a distance neighbourhood)."""
+        out, iv = [], 0
+        for nb in self.neighbourhoods:
+            if isinstance(nb.definition, Neighborhood):
+                n = len(nb.definition.vectors)
+                out.append(tuple(range(iv + 1, iv + n + 1)))
+                iv += n
+            else:
+                out.append(())
+        return out
+
     def apply(self, m: Macro) -> None:
+        numbers = self.vector_numbers()
         with m.menu("chem"):
             m.command("set", "mode", "quick", "period")
-            for v in self.vectors:
-                m.command("set", "vec", v.number, v.site_from, v.site_to, *v.translation)
+            for nb, ids in zip(self.neighbourhoods, numbers):
+                if isinstance(nb.definition, Neighborhood):
+                    for i, v in zip(ids, nb.definition.vectors):
+                        m.command("set", "vec", i, v.origin_site, v.target_site, *v.translation)
             m.command("set", "neig", "rese")
-            for k, nb in enumerate(self.neighbourhoods, start=1):
+            for k, (nb, ids) in enumerate(zip(self.neighbourhoods, numbers), start=1):
                 d = nb.definition
-                if isinstance(d, VectorNeighbourhood):
-                    m.command("set", "neig", "vec", d.vector, number=k)
+                if isinstance(d, Neighborhood):
+                    m.command("set", "neig", "vec", *ids, number=k)
                 else:
                     m.command("set", "neig", "dis", *d.direction, d.sigma, number=k)
                 if nb.direction is not None:
@@ -476,6 +460,6 @@ def run_chem(job: StructureJob, runner, inputs=(), *, engine: str | None = None)
 
 __all__ = [
     "CRASH_RETURN_CODE", "CRASH_SIGNATURE", "ChemAnalysis", "ChemDisplacement", "ChemIncomplete",
-    "ChemOccupational", "ChemOutcome", "ChemResult", "CorrelationVector", "DistanceNeighbourhood",
-    "Neighbourhood", "VectorNeighbourhood", "parse_chem_log", "run_chem",
+    "ChemOccupational", "ChemOutcome", "ChemResult", "DistanceNeighbourhood", "Neighborhood",
+    "Neighbourhood", "Vector", "parse_chem_log", "run_chem",
 ]

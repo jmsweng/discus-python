@@ -97,7 +97,7 @@ compute scattering.
 |---|---|---|
 | `discus_stack.Stacking(layers, correlation, translations, modulus, number, first, average, …)` | `stack` … `create`, `run` | A `CrystalBuilder`: the job builds the crystal instead of reading one. Layer types are `.stru` files. Row i of `correlation` is P(next layer type \| previous i). `create` makes the layer origins and `run` the atoms, so the result is read back as one box. For close packing, give the straight average `(0, 0, 1/3)`. [`DISCUS_STACK_FACTS.md`](DISCUS_STACK_FACTS.md) |
 | `discus_domain.Domains(content, inputfile, name, character, shape, orient, fuzzy=2.55)` | `domain` (pseudo-atom mode) | Inserts content atoms inside a shape around each pseudo atom. Host atoms within `fuzzy` Å of an inserted atom become vacancies. The result is not whole unit cells, so use `StructureJob(..., readback="box")`. [`DISCUS_DOMAIN_FACTS.md`](DISCUS_DOMAIN_FACTS.md) |
-| `discus_chem.ChemAnalysis(vectors, neighbourhoods, calculations)`, `run_chem(job, runner, inputs)` | `chem` … `corr occ` / `corr disp` | Returns DISCUS's own correlation values, parsed from the log. The parser is checked on the committed Package C probe logs. DISCUS 6.23.01 aborts at exit (code 134) after `corr occ`; `run_chem` keeps the printed results and sets `engine_crashed_at_exit`. |
+| `discus_chem.ChemAnalysis(neighbourhoods, calculations)`, `run_chem(job, runner, inputs)` | `chem` … `corr occ` / `corr disp` | A neighbourhood is an `mc.Neighborhood` (the same vectors as `mmc`, numbered the same way) or a `DistanceNeighbourhood`. Returns DISCUS's own correlation values, parsed from the log. The parser is checked on the committed Package C probe logs. DISCUS 6.23.01 aborts at exit (code 134) after `corr occ`; `run_chem` keeps the printed results and sets `engine_crashed_at_exit`. |
 
 `StructureJob(readback=…)`:
 
@@ -119,7 +119,7 @@ Live checks: `tests/test_discus_stack_domain_chem_live.py` (opt-in, `DISCUS_LIVE
 
 | API | DISCUS | Notes ([`DISCUS_RMC_FACTS.md`](DISCUS_RMC_FACTS.md)) |
 |---|---|---|
-| `discus_rmc.PlaneGrid(ll, lr, ul, nx, ny)` | `fourier` `ll/lr/ul/na/no`, `rmc data` corners | Point (i, j) = ll + i·(lr−ll)/(nx−1) + j·(ul−ll)/(ny−1); `hkl()` gives every point. nx ≤ ny (stock RMC loops over nx rows). |
+| `discus_rmc.PlaneGrid(ll, lr, ul, nx, ny)` | `fourier` `ll/lr/ul/na/no`, `rmc data` corners | Point (i, j) = ll + i·(lr−ll)/(nx−1) + j·(ul−ll)/(ny−1); `hkl()` gives every point. nx ≤ ny (stock RMC loops over nx rows). `from_reciprocal_grid` / `to_reciprocal_grid(lattice)` convert to and from a `ReciprocalGrid` of shape (nx, ny, 1); `FourierPlane` and `RmcPlane` take either. |
 | `discus_rmc.FourierPlane(grid, output, radiation, wavelength, debye_waller)` | `fourier` … `run`; `output` `value int`, `form stan` | Writes a NIPL plane in the orientation `rmc data` reads. Use with `StructureJob(..., readback="none")`. |
 | `discus_rmc.RmcFit(planes, moves, select, tries, sigma, …)` | `rmc` … `run` | One plane (DISCUS 6.23.01 mixes up the tables of several). Moves `RmcSwap`, `RmcShift` (a sigma for every selected type). Starts with `reset` and always writes `set mode`, `dese all`/`sele`. `set aver` > 0 and lots run on the fork. |
 | `discus_rmc.run_rmc(job, runner, inputs)` | — | Checks each plane file against its grid, runs the job, parses every log block (`RmcLog.progress`, `.final`). |

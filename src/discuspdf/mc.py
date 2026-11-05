@@ -13,7 +13,6 @@ units of kT.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import shutil
@@ -26,6 +25,8 @@ from typing import Any
 
 import numpy as np
 
+from .atom_names import check_discus_name
+from ._runrecord import changed_inputs, sha256_bytes, sha256_file, write_status
 from .engine import _ANSI, as_engine, current_engine, Engine
 from .fourier_macro import Seed
 from .structure import Structure
@@ -37,14 +38,11 @@ __all__ = [
     "parse_mmc_log", "match_row", "replica_summary",
 ]
 
-_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,3}$")
 _PAIRING = ("all", "local", "slocal", "site")
 
 
 def _species(name, what: str) -> str:
-    if not isinstance(name, str) or not _NAME.match(name):
-        raise ValueError(f"{what} must be a DISCUS atom name (letter + up to 3 letters/digits), got {name!r}")
-    return name
+    return check_discus_name(what, name)
 
 
 def _finite(x, what: str) -> float:
@@ -1086,24 +1084,24 @@ class MCRunner:
         hashes = {}
         for name, text in files.items():
             (directory / name).write_bytes(text.encode("utf-8"))
-            hashes[name] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            hashes[name] = sha256_bytes(text.encode("utf-8"))
         (directory / "inputs.json").write_text(json.dumps(hashes, indent=1) + "\n")
-        (directory / "status.json").write_text(json.dumps({"status": "prepared"}) + "\n")
+        write_status(directory, "prepared", indent=None)
         return MCRun(directory, config, structure.n_atoms)
 
     def _status(self, run: MCRun, state: str, **kw) -> None:
-        (run.directory / "status.json").write_text(json.dumps({"status": state, **kw}, indent=1) + "\n")
+        write_status(run.directory, state, kw, indent=1)
 
     def execute(self, run: MCRun) -> MCResult:
         """Run DISCUS on the staged macro; raise ``RuntimeError`` (status ``failed``) on any engine error,
         missing output or incomplete move count."""
         hashes = json.loads((run.directory / "inputs.json").read_text())
-        for name, digest in hashes.items():
-            if hashlib.sha256((run.directory / name).read_bytes()).hexdigest() != digest:
-                self._status(run, "failed", reason=f"staged {name} was modified", engine_started=False)
-                raise RuntimeError(f"staged {name} was modified after preparation")
+        for name, problem in changed_inputs(run.directory, hashes):
+            self._status(run, "failed", reason=f"staged {name} was {problem}", engine_started=False)
+            raise RuntimeError(f"staged {name} was {problem} after preparation")
         out = run.directory / run.config.output_file
         if out.exists():
+            self._status(run, "failed", reason=f"{out.name} exists already", engine_started=False)
             raise FileExistsError(f"{out} exists; prepare a new run")
         try:
             engine = current_engine(self)
@@ -1126,9 +1124,8 @@ class MCRunner:
         problems = []
         try:
             hashes = json.loads((run.directory / "inputs.json").read_text())
-            for name, digest in hashes.items():
-                if hashlib.sha256((run.directory / name).read_bytes()).hexdigest() != digest:
-                    problems.append(f"staged {name} was modified")
+            for name, problem in changed_inputs(run.directory, hashes):
+                problems.append(f"staged {name} was {problem}")
             staged = json.loads((run.directory / "mc_config.json").read_text())
         except (OSError, json.JSONDecodeError) as exc:
             problems.append(f"run directory incomplete: {exc}")
@@ -1184,5 +1181,5 @@ class MCRunner:
             raise RuntimeError("DISCUS MC run failed: " + "; ".join(problems) + f" (see {run.directory})")
         self._status(run, "complete", returncode=returncode, moves=moves_done, moves_requested=cyc,
                      converged=converged,
-                     output_sha256=hashlib.sha256(out.read_bytes()).hexdigest())
+                     output_sha256=sha256_file(out))
         return MCResult(run.directory, run.config, structure, log, "complete", run.n_atoms)

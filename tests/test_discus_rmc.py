@@ -217,3 +217,29 @@ def test_rmc_data_line_keeps_the_radiation():
     """'rmc data' takes X-ray or neutron; each must reach the macro as itself (never another radiation)."""
     for radiation in ("xray", "neutron"):
         assert RmcPlane("t.nipl", GRID, radiation=radiation).params()[0] == radiation
+
+
+# --- PlaneGrid <-> ReciprocalGrid -----------------------------------------------------------------
+
+def test_plane_grid_round_trips_through_reciprocal_grid():
+    from discuspdf import Lattice, ReciprocalGrid
+    lat = Lattice.from_parameters(3.615, 3.615, 3.615, 90, 90, 90)
+    g = PlaneGrid(ll=(0, -1, 0), lr=(0, 1, 0), ul=(3, -1, 0), nx=21, ny=31)
+    rg = g.to_reciprocal_grid(lat)
+    assert rg.shape == (21, 31, 1)
+    assert np.allclose(rg.hkl()[:, :, 0].transpose(1, 0, 2), g.hkl())
+    assert PlaneGrid.from_reciprocal_grid(rg) == g
+    same = ReciprocalGrid.from_corners(lat, (0, -1, 0), (0, 1, 0), (3, -1, 0), (0, -1, 0), (21, 31, 1))
+    assert FourierPlane(same, "p.nipl").grid == g
+    assert RmcPlane("p.nipl", same).grid == g
+
+
+def test_plane_grid_refuses_a_volume_or_a_line():
+    from discuspdf import Lattice, ReciprocalGrid
+    lat = Lattice.from_parameters(4, 4, 4, 90, 90, 90)
+    with pytest.raises(ValueError, match=r"shape \(nx, ny, 1\)"):
+        PlaneGrid.from_reciprocal_grid(ReciprocalGrid.from_ranges(lat, (0, 1, 3), (0, 1, 3), (0, 1, 3)))
+    with pytest.raises(ValueError, match=r"shape \(nx, ny, 1\)"):
+        PlaneGrid.from_reciprocal_grid(ReciprocalGrid.from_ranges(lat, (0, 1, 3), (0, 0, 1), (0, 0, 1)))
+    with pytest.raises(TypeError, match="PlaneGrid or a ReciprocalGrid"):
+        RmcPlane("p.nipl", ((0, 0, 0), (1, 0, 0), (0, 1, 0)))

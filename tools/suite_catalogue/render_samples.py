@@ -206,8 +206,8 @@ def _ops_samples() -> list[tuple[str, str]]:
                                                               replace=("GA", "IN"), viceversa=True, plow=0.1,
                                                               phigh=0.9)], seed=SEED_B),
     }
-    from discuspdf.discus_chem import (ChemAnalysis, ChemDisplacement, ChemOccupational, CorrelationVector,
-                                       DistanceNeighbourhood, Neighbourhood, VectorNeighbourhood)
+    from discuspdf.discus_chem import ChemAnalysis, ChemDisplacement, ChemOccupational, DistanceNeighbourhood, Neighbourhood
+    from discuspdf.mc import Neighborhood, Vector
     from discuspdf.discus_domain import Domains
     from discuspdf.discus_stack import Stacking
 
@@ -222,8 +222,8 @@ def _ops_samples() -> list[tuple[str, str]]:
                                                      shape=((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0)))],
                                       seed=SEED_A, readback="box")
     jobs["ops_chem"] = StructureJob(cell, [ChemAnalysis(
-        vectors=(CorrelationVector(1, 1, 2, (0, 0, 0)),),
-        neighbourhoods=(Neighbourhood(VectorNeighbourhood(1), direction=((1, 0, 0), (1, 0, 0))),
+        neighbourhoods=(Neighbourhood(Neighborhood((Vector(1, 2, (0, 0, 0)),), symmetric=False),
+                                      direction=((1, 0, 0), (1, 0, 0))),
                         Neighbourhood(DistanceNeighbourhood((0.25, 0.25, 0.25), 0.1))),
         calculations=(ChemOccupational("GA", "AS"), ChemDisplacement("GA", "all")))], readback="none")
     from discuspdf.discus_rmc import FourierPlane, PlaneGrid, RmcFit, RmcLots, RmcPlane, RmcShift, RmcSwap
