@@ -229,8 +229,8 @@ def round2(work: str) -> None:
         chi = [p.chi2 for p in log.progress]
         print(f"    F2b: {len(log.progress)} blocks, final {log.final}, uphill {[p.accepted_uphill for p in log.progress]}")
         print(f"    F2b: chi2 {chi}; never rises: {all(b <= a for a, b in zip(chi, chi[1:]))}; delta {log.delta_chi2}")
-        print("    F2b log lines: " + " || ".join(l.strip() for l in text.splitlines()
-                                                 if any(k in l for k in ("Gen:", "Final", "Delta", "Data", "data"))][:30])
+        keep = [l.strip() for l in text.splitlines() if any(k in l for k in ("Gen:", "Final", "Delta", "Data", "data"))]
+        print("    F2b log lines: " + " || ".join(keep[:30]))
         rf, gf = read_cols(fit.run.output("fit.dat"))
         rc, gc = read_cols(fit.run.output("recalc.dat"))
         n = min(len(gf), len(gc))
