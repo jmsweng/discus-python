@@ -1,6 +1,6 @@
 """Probes of the DISCUS 6.23.01 ``exp2pdf`` menu before wrapping it. Predictions written before running (2026-11-05).
 
-The input is a computed powder pattern: DISCUS ``powder`` I(Q) of Cu fcc 5x5x5 cells (500 atoms, X-ray, Debye,
+The input is a computed powder pattern: DISCUS ``powder`` I(Q) of Cu fcc 5x5x5 cells (500 atoms, X-ray at 0.5 A, Debye,
 Q 0.5..17.9, dq 0.01). Every probe runs ``exp2pdf`` on that pattern (``discus_exp2pdf_*.f90``; XS = _supp,
 XL = _load, XR = _run).
 
@@ -82,7 +82,8 @@ def base(data="i.xy", back=None, comp="Cu", rad="radiation xray, lambda:0.1", gr
 def main(work: str) -> None:
     work = Path(work)
     runner = SuiteRunner(work, live_engine(600))
-    step = PowderPattern((("I(Q)", "i.dat"),), qmin=0.5, qmax=17.9, dq=0.01, radiation="xray", stepr=0.001)
+    step = PowderPattern((("I(Q)", "i.dat"),), qmin=0.5, qmax=17.9, dq=0.01, radiation="xray",
+                         wavelength=0.5, stepr=0.001)  # Mo Ka reaches only 17.7
     pr = StructureJob(SRC, [step], readback="none").run(runner, {"cu_b05.cll": CU})
     q, i = read_powder_file(pr.run.output("i.dat"))
     files = work / "inputs"
