@@ -75,3 +75,17 @@ def test_e3_repulsive_and_buckingham_rows():
     _, res = run("e3_rep_buck", cfg, "cu_disp.stru", "D MMC probe Cu sc 12^3 displaced")
     kinds = {r["kind"] for r in res.log["final"]["rows"]}
     assert {"repulsive", "buckingham"} <= kinds, kinds
+
+
+def test_e4_ion_name_is_accepted_by_mmc():
+    """dedupe-2: mc now takes any DISCUS atom name (atom_names.check_discus_name), ions included."""
+    structure = read_stru(EV / "work" / "cuau.stru").structure
+    sp = np.array(["O2-" if str(s).upper() == "AU" else s for s in structure.species], dtype=object)
+    structure = structure.replace(species=sp, min_separation=None)
+    cfg = MCConfig((SIX,), (OccupationalTarget(0, "Cu", "O2-", correlation=-0.2),), (Swap(),), SEED,
+                   moves_per_atom=2, feedback_per_atom=1)
+    runner = MCRunner(WORK / "e4_ion", launcher=launcher(), timeout_seconds=900)
+    res = runner.execute(runner.prepare(cfg, structure, title="dedupe-2 ion name"))
+    assert res.status == "complete"
+    assert sorted(set(map(str, res.structure.species))) == ["Cu", "O2-"]
+    assert len(res.log["final"]["rows"]) >= 1

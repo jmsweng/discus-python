@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 
 from discuspdf.discus_chem import (ChemAnalysis, ChemDisplacement, ChemIncomplete, ChemOccupational,
-                                   CorrelationVector, DistanceNeighbourhood, Neighbourhood,
-                                   VectorNeighbourhood, parse_chem_log, run_chem)
+                                   DistanceNeighbourhood, Neighbourhood, parse_chem_log, run_chem)
+from discuspdf.mc import Neighborhood, Vector
 from discuspdf.discus_ops import StructureJob
 from discuspdf.engine import Engine
 from discuspdf.fourier_macro import StructureSource
@@ -27,14 +27,17 @@ PROBE = Path(__file__).resolve().parents[1] / "benchmarks" / "discus_6_23_01" / 
 INPUTS = PROBE / "inputs"
 EVIDENCE = sorted((PROBE / "evidence").iterdir())[-1]
 PREDICTIONS = json.loads((PROBE / "predictions.json").read_text(encoding="ascii"))
-V = CorrelationVector
+
+
+def V(a, b, t, direction=None) -> Neighbourhood:
+    """One single-vector neighbourhood, one direction only, as in the probe macros."""
+    return Neighbourhood(Neighborhood((Vector(a, b, t),), symmetric=False), direction)
 
 
 def _analysis_occ() -> ChemAnalysis:
     return ChemAnalysis(
-        vectors=(V(1, 1, 2, (0, 0, 0)), V(2, 1, 2, (-1, -1, -1)), V(3, 1, 1, (1, 0, 0)),
-                 V(4, 2, 2, (0, 1, 0)), V(5, 2, 1, (1, 0, 1))),
-        neighbourhoods=tuple(Neighbourhood(VectorNeighbourhood(i)) for i in range(1, 6))
+        neighbourhoods=(V(1, 2, (0, 0, 0)), V(1, 2, (-1, -1, -1)), V(1, 1, (1, 0, 0)),
+                        V(2, 2, (0, 1, 0)), V(2, 1, (1, 0, 1)))
         + (Neighbourhood(DistanceNeighbourhood((0.5, 0.5, 0.5), 0.1)),
            Neighbourhood(DistanceNeighbourhood((1.0, 0.0, 0.0), 0.1))),
         calculations=(ChemOccupational("Au", "Cu"), ChemOccupational("Cu", "Au")),
@@ -45,19 +48,17 @@ def _analysis_disp_sc() -> ChemAnalysis:
     dirs = [((1, 0, 0), (1, 0, 0)), ((1, 0, 0), (1, 0, 0)), ((1, 0, 0), (1, 0, 0)),
             ((1, 0, 0), (1, 0, 0)), ((1, 0, 0), (0, 1, 0)), ((0, 1, 0), (0, 1, 0))]
     return ChemAnalysis(
-        vectors=(V(1, 1, 1, (1, 0, 0)), V(2, 1, 1, (2, 0, 0)), V(3, 1, 1, (3, 0, 0)),
-                 V(4, 1, 1, (0, 1, 0)), V(5, 1, 1, (1, 0, 0)), V(6, 1, 1, (1, 0, 0))),
-        neighbourhoods=tuple(Neighbourhood(VectorNeighbourhood(k), d) for k, d in enumerate(dirs, start=1)),
+        neighbourhoods=tuple(V(1, 1, t, d) for t, d in zip(
+            [(1, 0, 0), (2, 0, 0), (3, 0, 0), (0, 1, 0), (1, 0, 0), (1, 0, 0)], dirs)),
         calculations=(ChemDisplacement("Cu", "Cu"),),
     )
 
 
 def _analysis_mixed_bcc() -> ChemAnalysis:
     return ChemAnalysis(
-        vectors=(V(1, 1, 2, (0, 0, 0)), V(2, 1, 1, (0, 0, 1)), V(3, 1, 2, (0, 0, 0))),
-        neighbourhoods=(Neighbourhood(VectorNeighbourhood(1), ((0, 0, 1), (0, 0, 1))),
-                        Neighbourhood(VectorNeighbourhood(2), ((0, 0, 1), (0, 0, 1))),
-                        Neighbourhood(VectorNeighbourhood(3), ((1, 1, 0), (1, 1, 0)))),
+        neighbourhoods=(V(1, 2, (0, 0, 0), ((0, 0, 1), (0, 0, 1))),
+                        V(1, 1, (0, 0, 1), ((0, 0, 1), (0, 0, 1))),
+                        V(1, 2, (0, 0, 0), ((1, 1, 0), (1, 1, 0)))),
         calculations=(ChemDisplacement("Au", "Cu"), ChemDisplacement("Cu", "Cu"),
                       ChemDisplacement("all", "all")),
     )
@@ -124,18 +125,27 @@ def test_occupational_and_displacement_lines_use_the_probe_commands():
     assert sum(1 for x in lines if x.startswith("eval res[")) == 7  # res[0..6] for 6 neighbourhoods
 
 
+def test_vectors_are_numbered_in_order_like_mmc_and_symmetric_adds_the_reverse():
+    a = ChemAnalysis(neighbourhoods=(Neighbourhood(Neighborhood((Vector(1, 2, (0, 0, 0)),))),
+                                     Neighbourhood(DistanceNeighbourhood((1, 0, 0), 0.1)),
+                                     V(1, 1, (1, 0, 0))),
+                     calculations=(ChemOccupational("Au", "Cu"),))
+    assert a.vector_numbers() == [(1, 2), (), (3,)]
+    lines = _job("occ_bcc", a).macro().render().splitlines()
+    assert [x for x in lines if x.startswith("set vec")] == [
+        "set vec,1,1,2,0,0,0", "set vec,2,2,1,0,0,0", "set vec,3,1,1,1,0,0"]
+    assert "set neig,vec,1,2,number:1" in lines and "set neig,vec,3,number:3" in lines
+
+
 @pytest.mark.parametrize("make, message", [
     (lambda: ChemOccupational("Au", "Au"), "two different"),
     (lambda: ChemOccupational("all", "Cu"), "only allowed for displacement"),
     (lambda: DistanceNeighbourhood((0.5, 0.5, 0.5), 0.0), "sigma must be > 0"),
-    (lambda: Neighbourhood(DistanceNeighbourhood((1, 0, 0), 0.1), ((1, 0, 0), (1, 0, 0))), "only written for a VectorNeighbourhood"),
-    (lambda: ChemAnalysis(vectors=(V(1, 1, 2, (0, 0, 0)),), neighbourhoods=(Neighbourhood(VectorNeighbourhood(2)),),
-                          calculations=(ChemOccupational("Au", "Cu"),)), "not defined"),
-    (lambda: ChemAnalysis(vectors=(V(1, 1, 2, (0, 0, 0)), V(1, 2, 1, (0, 0, 0))), neighbourhoods=(Neighbourhood(VectorNeighbourhood(1)),),
-                          calculations=(ChemOccupational("Au", "Cu"),)), "unique"),
-    (lambda: ChemAnalysis(vectors=(V(1, 1, 2, (0, 0, 0)),), neighbourhoods=(Neighbourhood(VectorNeighbourhood(1)),),
+    (lambda: Neighbourhood(DistanceNeighbourhood((1, 0, 0), 0.1), ((1, 0, 0), (1, 0, 0))), "only written for a vector neighbourhood"),
+    (lambda: Neighbourhood((Vector(1, 2, (0, 0, 0)),)), "must be a discuspdf.mc.Neighborhood"),
+    (lambda: ChemAnalysis(neighbourhoods=(V(1, 2, (0, 0, 0)),),
                           calculations=()), "at least one calculation"),
-    (lambda: ChemAnalysis(vectors=(V(1, 1, 2, (0, 0, 0)),), neighbourhoods=(),
+    (lambda: ChemAnalysis(neighbourhoods=(),
                           calculations=(ChemOccupational("Au", "Cu"),)), "at least one neighbourhood"),
 ])
 def test_invalid_definitions_are_refused(make, message):

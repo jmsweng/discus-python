@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import hashlib
 import json
 import shutil
 import subprocess
@@ -26,6 +25,7 @@ import uuid
 
 import numpy as np
 
+from ._runrecord import changed_inputs, sha256_file, write_status
 from .engine import current_engine, ENGINE_ERROR_PATTERN, Engine, as_engine
 
 # Definitive engine-failure markers (shared with the other runners; see engine.py).
@@ -177,7 +177,7 @@ class Diffuse3DRunner:
         directory = self.runs_directory / uuid.uuid4().hex
         directory.mkdir()
         shutil.copy2(macro, directory / "run.mac")
-        hashes = {"run.mac": hashlib.sha256((directory / "run.mac").read_bytes()).hexdigest()}
+        hashes = {"run.mac": sha256_file(directory / "run.mac")}
         for asset in assets:
             source = Path(asset).expanduser().resolve()
             if not source.is_file() or source.name in ("run.mac", self.output_filename):
@@ -186,15 +186,13 @@ class Diffuse3DRunner:
                 raise ValueError(f"Duplicate input asset: {source.name}")
             dest = directory / source.name
             shutil.copy2(source, dest)
-            hashes[source.name] = hashlib.sha256(dest.read_bytes()).hexdigest()
+            hashes[source.name] = sha256_file(dest)
         (directory / "inputs.json").write_text(json.dumps(hashes, indent=2))
-        (directory / "status.json").write_text('{"status": "prepared"}\n')
+        write_status(directory, "prepared", indent=None)
         return Diffuse3DRun(directory, self.output_filename)
 
     def _status(self, run: Diffuse3DRun, state: str, **details: object) -> None:
-        (run.directory / "status.json").write_text(
-            json.dumps({"status": state, **details}, indent=2), encoding="utf-8"
-        )
+        write_status(run.directory, state, details, newline=False)
 
     def _preflight(self, run: Diffuse3DRun) -> None:
         """Verify staged inputs before launching DISCUS.
@@ -214,12 +212,9 @@ class Diffuse3DRunner:
             fail(ValueError(f"inputs.json is missing or unreadable: {exc}"))
         if "run.mac" not in hashes:
             fail(ValueError("run.mac hash missing from inputs.json"))
-        for name, digest in hashes.items():
-            path = run.directory / name
-            if not path.is_file():
-                fail(ValueError(f"Staged input is missing: {name}"))
-            if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-                fail(ValueError(f"Staged input was modified after preparation: {name}"))
+        for name, problem in changed_inputs(run.directory, hashes):
+            fail(ValueError(f"Staged input is missing: {name}" if problem == "missing"
+                            else f"Staged input was modified after preparation: {name}"))
         if not (run.directory / "run.mac").is_file():
             fail(FileNotFoundError("Prepared macro run.mac is missing"))
         output = run.output

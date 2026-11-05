@@ -63,6 +63,8 @@ import numpy as np
 from .discus_ops import JobResult, Step, StructureJob
 from .fourier_macro import _RADIATION_KEYWORD, _check_wavelength
 from .macro import Macro
+from .lattice import Lattice
+from .reciprocal_grid import ReciprocalGrid
 from .atom_names import check_discus_name
 from ._validate import integer as _int, plain_file_name as _file, real as _real, vec3 as _vec3
 
@@ -124,6 +126,35 @@ class PlaneGrid:
     def corner_values(self) -> list[float]:
         return [*self.ll, *self.lr, *self.ul]
 
+    @classmethod
+    def from_reciprocal_grid(cls, grid: ReciprocalGrid) -> "PlaneGrid":
+        """The plane of a :class:`~discuspdf.ReciprocalGrid` with shape ``(nx, ny, 1)``: array axis 0
+        runs along a row (``ll`` → ``lr``), axis 1 down the rows (``ll`` → ``ul``), as in
+        :meth:`ReciprocalGrid.from_corners`. The lattice is not kept: DISCUS uses the crystal's."""
+        if not isinstance(grid, ReciprocalGrid):
+            raise TypeError("grid must be a discuspdf.ReciprocalGrid")
+        nx, ny, nt = grid.shape
+        if nt != 1 or nx < 2 or ny < 2:
+            raise ValueError(f"a plane grid needs shape (nx, ny, 1) with nx, ny >= 2, got {grid.shape}")
+        ll, V = grid.corner, grid.axis_vectors
+
+        def clean(v):
+            return tuple(float(x) + 0.0 for x in np.round(v, 12))
+        return cls(clean(ll), clean(ll + (nx - 1) * V[0]), clean(ll + (ny - 1) * V[1]), nx, ny)
+
+    def to_reciprocal_grid(self, lattice: Lattice) -> ReciprocalGrid:
+        """The same points as a :class:`~discuspdf.ReciprocalGrid` of shape ``(nx, ny, 1)``;
+        ``to_reciprocal_grid(lat).hkl()[i, j, 0] == hkl()[j, i]``."""
+        return ReciprocalGrid.from_corners(lattice, self.ll, self.lr, self.ul, self.ll, (self.nx, self.ny, 1))
+
+
+def _plane_grid(grid) -> PlaneGrid:
+    if isinstance(grid, ReciprocalGrid):
+        return PlaneGrid.from_reciprocal_grid(grid)
+    if not isinstance(grid, PlaneGrid):
+        raise TypeError("grid must be a PlaneGrid or a ReciprocalGrid of shape (nx, ny, 1)")
+    return grid
+
 
 # ----------------------------------------------------------------------------------------- NIPL files
 def write_nipl(path, z, ranges=None) -> Path:
@@ -172,15 +203,14 @@ class RmcPlane:
     ``inverse_sqrt`` — DISCUS's ``rmc_dowic`` schemes applied to the observed intensity. Points with
     I ≤ 0 get weight 0 in every scheme."""
     file: str
-    grid: PlaneGrid
+    grid: PlaneGrid | ReciprocalGrid  # a ReciprocalGrid of shape (nx, ny, 1) is converted
     radiation: str = "xray"
     wavelength: str | float = "moa1"
     weights: str = "one"
 
     def __post_init__(self) -> None:
         _file("file", self.file)
-        if not isinstance(self.grid, PlaneGrid):
-            raise TypeError("grid must be a PlaneGrid")
+        object.__setattr__(self, "grid", _plane_grid(self.grid))
         if self.radiation not in RMC_RADIATIONS:
             raise ValueError(f"radiation must be one of {RMC_RADIATIONS} (RMC data are X-ray or neutron)")
         object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
@@ -422,15 +452,14 @@ class FourierPlane(Step):
     on a model to make a target plane; give the same radiation, wavelength and Debye–Waller choice
     to the :class:`RmcPlane` and :class:`RmcFit`. The plane is computed without average subtraction,
     so it matches a fit with ``average_percent=0``. The file holds 5 significant digits (E12.5)."""
-    grid: PlaneGrid
+    grid: PlaneGrid | ReciprocalGrid  # a ReciprocalGrid of shape (nx, ny, 1) is converted
     output: str
     radiation: str = "xray"
     wavelength: str | float = "moa1"
     debye_waller: bool = False
 
     def __post_init__(self) -> None:
-        if not isinstance(self.grid, PlaneGrid):
-            raise TypeError("grid must be a PlaneGrid")
+        object.__setattr__(self, "grid", _plane_grid(self.grid))
         _file("output", self.output)
         if self.radiation not in RMC_RADIATIONS:
             raise ValueError(f"radiation must be one of {RMC_RADIATIONS} (RMC data are X-ray or neutron)")

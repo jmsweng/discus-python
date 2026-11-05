@@ -164,14 +164,19 @@ def test_d3_same_result_with_other_seed_when_no_size_spread(domain_files):
 # --- chem ----------------------------------------------------------------------------------
 
 def test_c1_chem_occupational_correlation_matches_python():
-    from discuspdf.discus_chem import (ChemAnalysis, ChemOccupational, CorrelationVector, Neighbourhood,
-                                       VectorNeighbourhood, run_chem)
-    vec = CorrelationVector(1, 1, 1, (1, 0, 0))
-    analysis = ChemAnalysis(vectors=(vec,), neighbourhoods=(Neighbourhood(VectorNeighbourhood(1)),),
-                            calculations=(ChemOccupational("CU", "AU"),))
+    from discuspdf.discus_chem import ChemAnalysis, ChemOccupational, Neighbourhood, run_chem
+    from discuspdf.mc import Neighborhood, Vector
+    one_way = Neighbourhood(Neighborhood((Vector(1, 1, (1, 0, 0)),), symmetric=False))
+    both_ways = Neighbourhood(Neighborhood((Vector(1, 1, (1, 0, 0)),)))  # + the reversed vector
+    analysis = ChemAnalysis(neighbourhoods=(one_way, both_ways), calculations=(ChemOccupational("CU", "AU"),))
     job = StructureJob(StructureSource.cell("cu_b05.cll", (6, 6, 6)),
                        [ReplaceRandom("CU", "AU", 0.5), analysis], seed=SEED, readback="none")
     out = run_chem(job, runner(), {"cu_b05.cll": CU})
     assert out.results, "no correlation parsed from the log"
     value = out.results[0].value
     assert abs(value) < 0.2  # random alloy: near zero (864 atoms, one vector)
+    # Registered 2026-11-04 before the run (dedupe-2, two-vector neighbourhood): the vector and its reverse
+    # give the same unordered pairs twice in a periodic crystal, so the same value and twice the pairs.
+    two = out.results[1]
+    assert two.neighbour == 2 and two.pairs == 2 * out.results[0].pairs, (out.results[0], two)
+    assert abs(two.value - value) < 1e-9, (value, two.value)
