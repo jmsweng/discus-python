@@ -111,14 +111,15 @@ def discus_name_rows(*, scattering_only: bool = True) -> list[tuple[str, str, fl
     return [r for r in DISCUS_NAME_TABLE if not scattering_only or r[1] != "VOID"]
 
 
-_FORBIDDEN_IN_NAMES = frozenset(" ,:#!()[]&'\"")
+# One rule for every macro writer: a letter, then up to 3 letters, digits, '+' or '-' (ions such as O2-).
+_DISCUS_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+\-]{0,3}$")
 
 
 def check_discus_name(label: str, v, *, allow_number: bool = False, allow_all: bool = False):
-    """An atom name as a DISCUS macro command reads it, stripped: 1-4 characters (DISCUS keeps 4), no blanks,
-    commas, colons, comment characters, brackets or quotes. With ``allow_number`` a non-negative integer
+    """An atom name as a DISCUS macro command reads it, stripped: a letter, then up to 3 letters, digits, '+'
+    or '-' (DISCUS keeps 4 characters). With ``allow_number`` a non-negative integer
     (a scattering-type number) is returned as an ``int``; ``all`` is accepted only with ``allow_all``.
-    Shared by the suite-interface steps (``discus_ops``, ``discus_rmc``, ``discus_chem``)."""
+    Shared by every macro writer (``mc``, ``fourier_macro`` and the suite-interface steps)."""
     import numbers
 
     if allow_number and isinstance(v, numbers.Integral) and not isinstance(v, bool):
@@ -128,12 +129,13 @@ def check_discus_name(label: str, v, *, allow_number: bool = False, allow_all: b
     if not isinstance(v, str):
         raise ValueError(f"{label} must be an atom name{' or type number' if allow_number else ''}, got {v!r}")
     text = v.strip()
-    if not text or any(c in _FORBIDDEN_IN_NAMES or ord(c) < 32 for c in text):
-        raise ValueError(f"{label} must be an atom name without spaces or punctuation, got {v!r}")
     if text.lower() == "all":
         if not allow_all:
             raise ValueError(f"{label}: 'all' is not allowed here")
         return text
     if len(text) > 4:
-        raise ValueError(f"{label} {v!r} is longer than 4 characters (DISCUS keeps only 4)")
+        raise ValueError(f"{label} {v!r} is not a DISCUS atom name: longer than 4 characters (DISCUS keeps only 4)")
+    if not _DISCUS_NAME_RE.match(text):
+        raise ValueError(f"{label} must be a DISCUS atom name (a letter, then up to 3 letters, digits, '+' or '-'), "
+                         f"got {v!r}")
     return text

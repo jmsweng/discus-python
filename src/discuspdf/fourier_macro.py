@@ -35,6 +35,8 @@ import tempfile
 
 import numpy as np
 
+from .atom_names import check_discus_name
+
 from .reciprocal_grid import ReciprocalGrid
 
 SCHEMA_NAME = "discuspdf.FourierConfig"
@@ -197,8 +199,13 @@ def _check_wavelength(w) -> str | float:
     return w
 
 
-# DISCUS atom names: up to 4 characters (longer names break the .stru reader), compared upper case.
-_ATOM_NAME_RE = re.compile(r"^[A-Z][A-Z0-9+\-.]{0,3}$")
+# DISCUS atom names: the one shared rule (atom_names.check_discus_name), compared upper case.
+def _is_atom_name(name: str) -> bool:
+    try:
+        check_discus_name("name", name)
+        return True
+    except ValueError:
+        return False
 
 
 def normalize_scattering_lengths(value) -> tuple[tuple[str, float], ...]:
@@ -218,7 +225,7 @@ def normalize_scattering_lengths(value) -> tuple[tuple[str, float], ...]:
         if not isinstance(name, str):
             raise ValueError(f"scattering_lengths: atom name must be a string, got {name!r}")
         up = name.strip().upper()
-        if not _ATOM_NAME_RE.match(up):
+        if not _is_atom_name(up):
             raise ValueError(f"scattering_lengths: {name!r} is not a DISCUS atom name (1-4 characters, "
                              "starting with a letter)")
         if up == "VOID":
@@ -237,7 +244,7 @@ def _normalize_delf(value) -> tuple[tuple[str, tuple[float, float]], ...]:
     out = []
     for item in items:
         name, fv = item
-        if not isinstance(name, str) or not _ATOM_NAME_RE.match(name.strip().upper()):
+        if not isinstance(name, str) or not _is_atom_name(name.strip().upper()):
             raise ValueError(f"delf atom name {name!r} is not a DISCUS atom name")
         fv = tuple(fv)
         if len(fv) != 2 or any(isinstance(x, (bool, np.bool_)) or not isinstance(x, (int, float, np.integer, np.floating))

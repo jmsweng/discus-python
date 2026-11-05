@@ -26,6 +26,7 @@ from typing import Any
 
 import numpy as np
 
+from .atom_names import check_discus_name
 from .engine import _ANSI, as_engine, current_engine, Engine
 from .fourier_macro import Seed
 from .structure import Structure
@@ -37,14 +38,11 @@ __all__ = [
     "parse_mmc_log", "match_row", "replica_summary",
 ]
 
-_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,3}$")
 _PAIRING = ("all", "local", "slocal", "site")
 
 
 def _species(name, what: str) -> str:
-    if not isinstance(name, str) or not _NAME.match(name):
-        raise ValueError(f"{what} must be a DISCUS atom name (letter + up to 3 letters/digits), got {name!r}")
-    return name
+    return check_discus_name(what, name)
 
 
 def _finite(x, what: str) -> float:

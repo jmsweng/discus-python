@@ -42,32 +42,3 @@ def _strip_suffix(label: str) -> str:
     if m:
         return m.group(1)
     return label
-
-
-def atomic_number(species: str) -> int:
-    """Return the atomic number for a species label.
-
-    The label is matched case-insensitively after stripping any charge or
-    number suffix; ``D`` and ``T`` (hydrogen isotopes) give 1. Unknown labels raise ``ValueError``.
-    (:func:`discuspdf.atom_names.atomic_number` instead follows DISCUS's own name rules, e.g. prefix matching.)
-    """
-    if not isinstance(species, str) or not species:
-        raise ValueError(f"species label must be a non-empty string, got {species!r}")
-    stripped = _strip_suffix(species)
-    if stripped.upper() in _ISOTOPES:
-        return _ISOTOPES[stripped.upper()]
-    # Try exact match first, then case-insensitive.
-    if stripped in _ELEMENTS:
-        return _ELEMENTS[stripped]
-    upper = stripped.upper()
-    if upper in _ELEMENTS:
-        return _ELEMENTS[upper]
-    # Try with first letter upper, rest lower (standard element symbol form).
-    if len(stripped) >= 2:
-        canonical = stripped[0].upper() + stripped[1:].lower()
-        if canonical in _ELEMENTS:
-            return _ELEMENTS[canonical]
-    raise ValueError(
-        f"unknown element symbol {species!r} (stripped: {stripped!r}); "
-        "the element table covers the first 100 elements"
-    )
