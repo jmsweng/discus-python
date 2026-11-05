@@ -29,28 +29,17 @@ from __future__ import annotations
 
 import math
 import numbers
-import re
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 
 from .discus_ops import Step
+from .fourier_macro import RADIATIONS
 from .macro import Macro
+from ._validate import PLAIN_FILE_RE as _NAME, positive as _pos
 
 __all__ = ["PdfCalc", "read_pdf_menu_file"]
 
-_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
-RADIATIONS = ("xray", "neutron", "electron")
-
-
-def _pos(name, v, allow_zero=False) -> float:
-    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(float(v)):
-        raise ValueError(f"{name} must be a finite number, got {v!r}")
-    v = float(v)
-    if v < 0 or (v == 0 and not allow_zero):
-        raise ValueError(f"{name} must be {'>= 0' if allow_zero else '> 0'}, got {v!r}")
-    return v
 
 
 @dataclass(frozen=True)
@@ -145,7 +134,7 @@ class PdfCalc(Step):
 
 
 def read_pdf_menu_file(path) -> tuple[np.ndarray, np.ndarray]:
-    """(r, G) from a ``save pdf`` file (r, G and two constant columns per line)."""
-    rows = [line.split() for line in Path(path).read_text().splitlines() if line.strip()]
-    data = np.array([[float(x) for x in row[:2]] for row in rows])
-    return data[:, 0], data[:, 1]
+    """(r, G) from a ``save pdf`` file (r, G and two constant columns per line), via :func:`discuspdf.pdf.read_pdf`."""
+    from .pdf import read_pdf
+
+    return read_pdf(path)

@@ -23,7 +23,6 @@ documented with the source it comes from; the wrappers here are at the *engine-r
 
 from __future__ import annotations
 
-import math
 import numbers
 import tempfile
 from dataclasses import dataclass, field
@@ -32,6 +31,8 @@ from typing import Mapping, Sequence
 
 from .fourier_macro import Seed, StructureSource
 from .macro import Macro, MacroError, format_value
+from .atom_names import check_discus_name
+from ._validate import integer as _int, probability as _prob, real as _real, vec3
 
 RESULT_NAME = "result.stru"
 INPUT_NAME = "input.stru"
@@ -54,25 +55,9 @@ class Step:
         raise NotImplementedError
 
 
-def _int(name: str, v, minimum: int = 1) -> int:
-    if isinstance(v, bool) or not isinstance(v, numbers.Integral) or v < minimum:
-        raise ValueError(f"{name} must be an integer >= {minimum}, got {v!r}")
-    return int(v)
-
-
-def _prob(name: str, v) -> float:
-    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not 0.0 <= float(v) <= 1.0:
-        raise ValueError(f"{name} must be a probability in [0, 1], got {v!r}")
-    return float(v)
-
-
 def _atom(name: str, v) -> str | int:
     """An atom name (as DISCUS reads it) or a scattering-type number."""
-    if isinstance(v, numbers.Integral) and not isinstance(v, bool):
-        return _int(name, v, 0)
-    if not isinstance(v, str) or not v.strip() or any(c in v for c in " ,:#!"):
-        raise ValueError(f"{name} must be an atom name or type number, got {v!r}")
-    return v.strip()
+    return check_discus_name(name, v, allow_number=True, allow_all=True)
 
 
 @dataclass(frozen=True)
@@ -212,20 +197,8 @@ WAVE_FUNCTIONS = ("sinus", "box", "triangle")
 WAVE_BRANCHES = ("acoustic", "optical")
 
 
-def _real(name: str, v) -> float:
-    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(float(v)):
-        raise ValueError(f"{name} must be a finite number, got {v!r}")
-    return float(v)
-
-
 def _vec3(name: str, v) -> tuple[float, float, float]:
-    try:
-        items = tuple(v)
-    except TypeError:
-        raise ValueError(f"{name} must be three numbers, got {v!r}") from None
-    if len(items) != 3:
-        raise ValueError(f"{name} must be three numbers, got {v!r}")
-    vec = tuple(_real(f"{name}[{i}]", x) for i, x in enumerate(items))
+    vec = vec3(name, v)
     if all(x == 0.0 for x in vec):
         raise ValueError(f"{name} must not be the zero vector")
     return vec
@@ -575,8 +548,6 @@ class StructureJob:
         src = self._source
         if src.crystal_cells is not None:
             return src.crystal_cells
-        from .discus_io import read_stru
-
         path = Path(dict(inputs)[src.file])
         for line in path.read_text(errors="replace").splitlines():
             words = line.replace(",", " ").split()

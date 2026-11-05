@@ -29,26 +29,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Mapping
 
-from .engine import _ANSI, ENGINE_ERROR_PATTERN, Engine, EngineChoiceError, fork_reasons
+from .engine import Engine, EngineChoiceError, engine_error_in, engine_warnings_in, fork_reasons
 from .macro import Macro
 from .suite_catalogue import load_catalogue
 
 RUN_FORMAT = "discuspdf.suite_run"
 
 
-def engine_error_in(log: str) -> str | None:
-    """The first engine-error line of a log (ANSI colours removed). DISCUS also tags warnings
-    (``***MAC *** Warning ...``); those lines are not errors."""
-    for line in _ANSI.sub("", log).splitlines():
-        m = ENGINE_ERROR_PATTERN.search(line)
-        if m and "warning" not in line.lower():
-            return m.group(0)
-    return None
-
-
-def engine_warnings_in(log: str) -> list[str]:
-    return [line.strip() for line in _ANSI.sub("", log).splitlines()
-            if ENGINE_ERROR_PATTERN.search(line) and "warning" in line.lower()][:20]
 
 
 def _sha256(path: Path) -> str:

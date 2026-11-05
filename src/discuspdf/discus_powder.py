@@ -21,30 +21,17 @@ Facts from the 6.23.01 source (``docs/DISCUS_POWDER_FACTS.md``; the items used h
 from __future__ import annotations
 
 import math
-import numbers
-import re
 from dataclasses import dataclass
-from pathlib import Path
 
-import numpy as np
 
 from .discus_ops import Step
-from .fourier_macro import ENERGY_UNITS, _RADIATION_KEYWORD, RADIATIONS, WAVELENGTHS
+from .fourier_macro import ENERGY_UNITS, _RADIATION_KEYWORD, RADIATIONS, WAVELENGTH_ANGSTROM, WAVELENGTHS
 from .macro import Macro
+from ._validate import PLAIN_FILE_RE as _NAME, real as _num
 
 __all__ = ["POWDER_VALUES", "PowderPattern", "read_powder_file"]
 
 POWDER_VALUES = ("inte", "S(Q)", "F(Q)", "I(Q)")
-_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
-# per_symwl / per_wavel, lib_f90/element_data_mod.f90 (K-alpha1 values used for the Qmax check)
-_SYMBOL_LAMBDA = {"moa1": 0.709260, "cua1": 1.540560, "aga1": 0.559360}
-
-
-def _num(name, v) -> float:
-    if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(float(v)):
-        raise ValueError(f"{name} must be a finite number, got {v!r}")
-    return float(v)
-
 
 @dataclass(frozen=True)
 class PowderPattern(Step):
@@ -101,7 +88,7 @@ class PowderPattern(Step):
                 raise ValueError(f"unknown wavelength symbol {self.wavelength!r}")
             if self.radiation != "xray":
                 raise ValueError("give neutrons and electrons a wavelength in A or an energy")
-            lam = _SYMBOL_LAMBDA.get(self.wavelength.lower())
+            lam = WAVELENGTH_ANGSTROM[self.wavelength.lower()]
         else:
             lam = _num("wavelength", self.wavelength)
             if lam <= 0:
@@ -148,8 +135,9 @@ class PowderPattern(Step):
 def read_powder_file(path, *, dq: float | None = None, shift_labels: bool = False):
     """(Q, y) from a powder output file (two columns, no header). With ``shift_labels=True`` (and ``dq``)
     the labels are moved down by dq, to the Q at which DISCUS computed the values."""
-    data = np.loadtxt(path)
-    q, y = data[:, 0], data[:, 1]
+    from .pdf import read_pdf  # the same two-column reader (comments, D exponents, increasing x)
+
+    q, y = read_pdf(path)
     if shift_labels:
         if dq is None:
             raise ValueError("shift_labels needs dq")

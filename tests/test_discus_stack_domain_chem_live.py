@@ -17,9 +17,9 @@ import pytest
 from discuspdf.discus_domain import Domains
 from discuspdf.discus_ops import Purge, ReplaceRandom, StructureJob, read_box
 from discuspdf.discus_stack import Stacking
-from discuspdf.engine import Engine
 from discuspdf.fourier_macro import Seed, StructureSource
 from discuspdf.suite_runner import SuiteRunner
+from tests.live_engine import live_runner
 
 pytestmark = pytest.mark.discus_live
 if os.environ.get("DISCUS_LIVE") != "1":
@@ -35,14 +35,7 @@ SEED2 = Seed((12, 23, 34, 45, 56, 67, 78, 89))
 
 
 def runner() -> SuiteRunner:
-    if " " in str(WORK):
-        pytest.skip("DISCUS_LIVE_WORK must not contain spaces")
-    if platform.system() == "Windows":
-        engine = Engine(("wsl.exe", "-d", os.environ.get("DISCUS_WSL_DISTRO", "Ubuntu-22.04"), "--",
-                         "discus_suite", "-noautorun", "-macro"), timeout_seconds=600)
-    else:
-        engine = Engine(timeout_seconds=600)
-    return SuiteRunner(WORK, engine)
+    return live_runner(WORK, 600)
 
 
 def species(s):

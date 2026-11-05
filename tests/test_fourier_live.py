@@ -25,6 +25,7 @@ import pytest
 
 from discuspdf import Diffuse3DRunner, Lattice, ReciprocalGrid
 from discuspdf.fourier_macro import FourierConfig, StructureSource, prepare_fourier_run
+from tests.live_engine import live_launcher
 from tests.test_fourier_macro import EVIDENCE, probe_configs
 
 pytestmark = pytest.mark.discus_live
@@ -41,11 +42,7 @@ RESULTS: dict = {}
 
 
 def launcher():
-    if platform.system() == "Windows":
-        # wsl.exe translates the Windows working directory into /mnt/<drive>/... for the command.
-        return ("wsl.exe", "-d", os.environ.get("DISCUS_WSL_DISTRO", "Ubuntu-22.04"), "--",
-                "discus_suite", "-noautorun", "-macro")
-    return ("discus_suite", "-noautorun", "-macro")
+    return live_launcher()
 
 
 @pytest.fixture(scope="module", autouse=True)

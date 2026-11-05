@@ -18,9 +18,9 @@ import numpy as np
 import pytest
 
 from discuspdf.discus_ops import Purge, Remove, ReplaceAtom, ReplaceRandom, StructureJob, Switch, Thermal
-from discuspdf.engine import Engine
 from discuspdf.fourier_macro import Seed, StructureSource
 from discuspdf.suite_runner import SuiteRunner
+from tests.live_engine import live_runner
 
 pytestmark = pytest.mark.discus_live
 if os.environ.get("DISCUS_LIVE") != "1":
@@ -35,14 +35,7 @@ N = 6  # cells per edge; 4 atoms per cell -> 864 atoms
 
 
 def runner() -> SuiteRunner:
-    if " " in str(WORK):
-        pytest.skip("DISCUS_LIVE_WORK must not contain spaces")
-    if platform.system() == "Windows":
-        engine = Engine(("wsl.exe", "-d", os.environ.get("DISCUS_WSL_DISTRO", "Ubuntu-22.04"), "--",
-                         "discus_suite", "-noautorun", "-macro"), timeout_seconds=600)
-    else:
-        engine = Engine(timeout_seconds=600)
-    return SuiteRunner(WORK, engine)
+    return live_runner(WORK, 600)
 
 
 def job(steps, seed=SEED):

@@ -20,6 +20,7 @@ from discuspdf.discus_io import read_stru
 from discuspdf.engine import Engine
 from discuspdf.macro import Macro
 from discuspdf.suite_runner import SuiteRunner
+from tests.live_engine import live_engine
 
 pytestmark = pytest.mark.discus_live
 if os.environ.get("DISCUS_LIVE") != "1":
@@ -32,10 +33,7 @@ WORK = Path(os.environ.get("DISCUS_LIVE_WORK",
 
 
 def stock() -> Engine:
-    if platform.system() == "Windows":
-        return Engine(("wsl.exe", "-d", os.environ.get("DISCUS_WSL_DISTRO", "Ubuntu-22.04"), "--",
-                       "discus_suite", "-noautorun", "-macro"), "stock", timeout_seconds=600)
-    return Engine(timeout_seconds=600)
+    return live_engine(600, "stock")
 
 
 def runner(**kw) -> SuiteRunner:

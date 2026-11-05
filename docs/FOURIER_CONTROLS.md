@@ -158,3 +158,7 @@ The measurements behind every row above are in
   - a lot larger than the crystal ended with status `failed`.
 - On the 35 engine-test logs the error-line check flags exactly the 7 runs that failed.
 </details>
+
+## See also
+
+`discus_rmc.FourierPlane` writes one plane as a NIPL file (`form stan`) for `rmc data`; everything else uses `FourierConfig` here.

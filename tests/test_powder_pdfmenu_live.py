@@ -38,9 +38,9 @@ import pytest
 from discuspdf.discus_ops import ReplaceRandom, StructureJob
 from discuspdf.discus_pdfmenu import PdfCalc, read_pdf_menu_file
 from discuspdf.discus_powder import PowderPattern, read_powder_file
-from discuspdf.engine import Engine
 from discuspdf.fourier_macro import Seed, StructureSource
 from discuspdf.suite_runner import SuiteRunner
+from tests.live_engine import live_runner
 
 pytestmark = pytest.mark.discus_live
 if os.environ.get("DISCUS_LIVE") != "1":
@@ -59,14 +59,7 @@ F0 = {"CU": -3.254477 + 14.014192 + 4.784577 + 5.056806 + 1.457971 + 6.932996,  
 
 
 def runner() -> SuiteRunner:
-    if " " in str(WORK):
-        pytest.skip("DISCUS_LIVE_WORK must not contain spaces")
-    if platform.system() == "Windows":
-        engine = Engine(("wsl.exe", "-d", os.environ.get("DISCUS_WSL_DISTRO", "Ubuntu-22.04"), "--",
-                         "discus_suite", "-noautorun", "-macro"), timeout_seconds=600)
-    else:
-        engine = Engine(timeout_seconds=600)
-    return SuiteRunner(WORK, engine)
+    return live_runner(WORK, 600)
 
 
 def fcc_positions():

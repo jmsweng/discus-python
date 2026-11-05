@@ -940,3 +940,12 @@ def test_site_consistency_checks_the_right_rows():
                    model="average", occupancy=np.array([1.0, 0.5, 0.5, 0.6, 0.4]),
                    site_label=np.array(["S1", "S2", "S2", "S3", "S3"]))
     assert ok.n_atoms == 5
+
+
+@pytest.mark.parametrize("label, z", [("O2-", 8), ("Fe3+", 26), ("Na+", 11), ("Cl-", 17), ("O-2", 8), ("Fe1", 26),
+                                      ("D", 1), ("T", 1), ("CU", 29), ("Cu", 29), ("cu", 29)])
+def test_atomic_number_strips_charges_and_reads_isotopes(label, z):
+    from discuspdf._elements import _strip_suffix, atomic_number
+    assert atomic_number(label) == z
+    if label in ("O2-", "Na+", "Fe3+"):
+        assert _strip_suffix(label) == {"O2-": "O", "Na+": "Na", "Fe3+": "Fe"}[label]

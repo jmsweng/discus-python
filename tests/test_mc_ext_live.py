@@ -21,6 +21,7 @@ from discuspdf.discus_io import read_stru
 from discuspdf.fourier_macro import Seed
 from discuspdf.mc import (BuckinghamTarget, Convergence, MCConfig, MCRunner, Neighborhood, OccupationalTarget,
                           RepulsiveTarget, Shift, SpringTarget, Swap, Vector)
+from tests.live_engine import live_launcher
 
 pytestmark = pytest.mark.discus_live
 if os.environ.get("DISCUS_LIVE") != "1":
@@ -35,10 +36,7 @@ SIX = Neighborhood(tuple(Vector(1, 1, t) for t in [(1, 0, 0), (-1, 0, 0), (0, 1,
 
 
 def launcher():
-    if platform.system() == "Windows":
-        return ("wsl.exe", "-d", os.environ.get("DISCUS_WSL_DISTRO", "Ubuntu-22.04"), "--",
-                "discus_suite", "-noautorun", "-macro")
-    return ("discus_suite", "-noautorun", "-macro")
+    return live_launcher()
 
 
 def run(name, cfg, stru, title):
