@@ -21,6 +21,10 @@ Q4 diff-four with ``format stan`` (CODE-READ: set_patt_value has no INV_DIFF bra
    is all zero (uncertain: the value may be left from an earlier reflection instead).
 Q5 ``sign`` has no effect (CODE-READ, patters.f90:1840 sets patt_sign = 1): Q1 with ``sign -1`` gives the same file.
 
+Attempt 1 (2026-11-05, 4a2e33d): every ``run`` failed with "Error reading file" (-3): the stan reader (patters.f90:1689-1723)
+reads the ``nx ny`` line first and does not skip the ``#`` header lines that DISCUS's own ``output`` writes at the top
+of a NIPL file. Attempt 2 gives the menus copies without the ``#`` lines; the predictions are unchanged.
+
 Usage: python tools/probes/patterson_probes.py WORKDIR
 """
 from __future__ import annotations
@@ -123,6 +127,13 @@ def main(work: str) -> None:
                               Lines(fourier_value("real", "re.nipl") + fourier_value("imag", "im.nipl"),
                                     ("re.nipl", "im.nipl"))], seed=SEED, readback="none").run(runner, cu)
     f = {k: data.run.output(f"{k}.nipl") for k in ("i", "re", "im")}
+    clean = Path(work) / "clean_inputs"
+    clean.mkdir(parents=True, exist_ok=True)
+    for k, path in list(f.items()):
+        lines = path.read_text().splitlines()
+        print(f"    {path.name}: {sum(l.startswith('#') for l in lines)} '#' lines at the top")
+        (clean / path.name).write_text("\n".join(l for l in lines if not l.startswith("#")) + "\n")
+        f[k] = clean / path.name
     zi, _ = read_nipl(f["i"])
     zr, _ = read_nipl(f["re"])
     zm, _ = read_nipl(f["im"])
