@@ -477,10 +477,13 @@ class FourierPlane(Step):
     radiation: str = "xray"
     wavelength: str | float = "moa1"
     debye_waller: bool = False
+    value: str = "int"  # "int", "real" or "imag" (``value``); real/imag are inputs of discus_patterson.InverseMap
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "grid", _plane_grid(self.grid))
         _file("output", self.output)
+        if self.value not in ("int", "real", "imag"):
+            raise ValueError("value must be 'int', 'real' or 'imag'")
         if self.radiation not in RMC_RADIATIONS:
             raise ValueError(f"radiation must be one of {RMC_RADIATIONS} (RMC data are X-ray or neutron)")
         object.__setattr__(self, "wavelength", _check_wavelength(self.wavelength))
@@ -508,7 +511,7 @@ class FourierPlane(Step):
             m.command("set", "aver", 0.0)
             m.command("run")
         with m.menu("output"):
-            m.command("value", "int")
+            m.command("value", self.value)
             m.command("form", "stan")
             m.command("outf", self.output)
             m.command("run")
