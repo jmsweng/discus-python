@@ -467,6 +467,10 @@ Main loop (P:1867-1999):
 - `save pdf` after `run` and `calc` + `save pdf` on the fitted crystal differ by 8e-4 of max |G| for r ≤ 7.5
   (pitfall 18: two accumulation paths). Near rmax every Gaussian lacks its partners beyond rmax, so a model on a
   range ending at rmax falls off within ~0.5 Å of it (0.2–0.6 of max |G| at 7.8–8.0 Å for B = 0.5).
+- **`set frange` cannot lower the upper end** of the fit window (code, found in review): pdf_setup takes
+  `pdf_rfmax = MAX(pdf_rfmaxu, pdf_rfmaxf)` (P:393-394), so any user rmax ≤ the file's becomes the file's, and one
+  above it is error -10. The lower end works (MAX with the file's first r). 0.01 is the "unset" sentinel (P:379-380).
+- `run` keeps the fitted scale: `rmc_skal(1) = 1/pdf_skal` (P:2015) is used by the next `calc` (P:187).
 - **Partials** (neutron, periodic, no Gaussian; binary Cu3Au and ternary Cu2AuAg; residuals ~1e-8):
   - (a, a): G = w_aa P_aa/(N dr r) − c_a² w_aa 4πrρ0 (P over both orders);
   - `isele a; jsele b`, a ≠ b: G = w_ab P_ab/(2 N dr r) − 2 c_a c_b w_ab 4πrρ0, half the pairs its baseline assumes,

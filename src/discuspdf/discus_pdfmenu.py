@@ -169,8 +169,9 @@ class PdfPartials(Step):
     * selecting {a, b} on both sides counts the cross pairs in full, so the step writes that and the two same-type
       partials, and :func:`read_pdf_partials` returns G_ab = G_{a,b} - G_aa - G_bb (exact for the ternary probe).
 
-    The selections are reset to all atoms at the end (``isele all``, ``jsele all``). Files: ``{prefix}_{A}_{B}.dat``
-    for each selection written (see :meth:`files`)."""
+    The selections are reset to all atoms at the end (``isele all``, ``jsele all``). Files: ``{prefix}_{A}_{A}.dat`` for a
+    same-type selection and ``{prefix}_{A}_{B}_union.dat`` for {A, B} on both sides (the union, not G_AB; see
+    :meth:`output_names`)."""
 
     model: PdfCalc
     pairs: tuple
@@ -203,7 +204,7 @@ class PdfPartials(Step):
         return out
 
     def file_of(self, sel: tuple[str, ...]) -> str:
-        return f"{self.prefix}_{'_'.join(sel if len(sel) == 2 else sel * 2)}.dat"
+        return f"{self.prefix}_{sel[0]}_{sel[0]}.dat" if len(sel) == 1 else f"{self.prefix}_{sel[0]}_{sel[1]}_union.dat"
 
     def output_names(self) -> tuple[str, ...]:
         return tuple(self.file_of(sel) for sel in self.selections())
@@ -240,7 +241,8 @@ def read_pdf_partials(step: PdfPartials, run) -> dict:
 class PdfData:
     """A G(r) data file for ``pdf data``: four columns r, G, 0, sigma on a uniform grid r = dr, 2 dr, ..., rmax
     (``pdf_readdata``, pdf.f90:889-1047: the first r must equal the step, column 4 is the error, weight 1/sigma^2,
-    sigma 0 means weight 1). Write one with :meth:`write`, or check an existing one with :meth:`from_file`."""
+    sigma 0 means weight 1). Write one with :meth:`write` (which can also exclude the top of the range from the fit),
+    or check an existing one with :meth:`from_file`."""
 
     file: str
     dr: float
@@ -248,7 +250,11 @@ class PdfData:
     points: int
 
     @classmethod
-    def write(cls, path, r, g, sigma=None) -> "PdfData":
+    def write(cls, path, r, g, sigma=None, *, fit_rmax: float | None = None) -> "PdfData":
+        """Write r, G, 0, sigma. ``fit_rmax`` leaves the points above it in the file (DISCUS's model range ends at
+        the data's rmax) but gives them sigma 1e6, i.e. weight 1e-12: ``set frange`` cannot lower the upper end of
+        the fit window (pdf.f90:393-394 takes the larger of the user's and the file's rmax), so this is how the
+        window is shortened. Recommended: rmax - 0.5 with Gaussian peaks (see :class:`PdfFit`)."""
         r = np.asarray(r, dtype=float)
         g = np.asarray(g, dtype=float)
         sig = np.zeros_like(r) if sigma is None else np.broadcast_to(np.asarray(sigma, dtype=float), r.shape)
@@ -260,6 +266,11 @@ class PdfData:
         if dr <= 0 or np.max(np.abs(np.diff(r) - dr)) > 1e-6 * max(1.0, dr) or abs(r[0] - dr) > 1e-6:
             raise ValueError("r must be the uniform grid dr, 2 dr, ..., rmax (pdf data needs the first r = dr); "
                              "interpolate the data onto it first")
+        if fit_rmax is not None:
+            fr = float(fit_rmax)
+            if not r[0] < fr < r[-1]:
+                raise ValueError(f"fit_rmax must lie inside the data ({r[0]} .. {r[-1]})")
+            sig = np.where(r > fr + 1e-9, 1e6, sig)
         path = Path(path)
         with path.open("w", encoding="ascii") as f:
             for x, y, s in zip(r, g, sig):
@@ -290,20 +301,27 @@ class PdfFit(Step):
 
     ``model`` (a :class:`PdfCalc`) gives the calculation settings (radiation, weights, qmax, boundary, density,
     Gaussian peaks); its ``rmax``/``dr`` are replaced by the data's and its ``output`` is the file the fitted G(r)
-    is saved to (``save pdf`` after ``run``). ``moves``, ``select``, ``tries``, ``sigma``, ``display``,
-    ``fit_scale``/``scale`` and ``min_distances`` are those of :class:`~discuspdf.discus_rmc.RmcFit` and are written
-    the same way (``pdf set`` forwards them to the RMC settings). ``fit_range`` is ``set frange``.
+    is saved to (``save pdf`` after ``run``, from ``fit_rmin`` to the data's rmax). ``moves``, ``select``, ``tries``,
+    ``sigma``, ``display``, ``fit_scale``/``scale`` and ``min_distances`` are those of
+    :class:`~discuspdf.discus_rmc.RmcFit` and are checked and written by the same code (``pdf set`` forwards them to
+    the RMC settings). ``fit_rmin`` is the lower end of the fit window (``set frange``).
 
-    Probed on the stock engine (2026-11-05, ``tools/probes/pdf_fit_probes.py``):
+    Facts (stock engine, probed 2026-11-05 with ``tools/probes/pdf_fit_probes.py``, and the source):
 
     * after ``reset all`` (or in a fresh session) ``data`` fails with "Too many points in PDF": the arrays are
       sized to exactly the number of lines and the read loop needs one more (pdf.f90:944-981). The step therefore
       runs one ``calc`` over ``rmax + 1`` first, which sizes them;
+    * ``set frange`` cannot lower the upper end of the window: pdf_setup takes the larger of the user's and the
+      file's rmax (pdf.f90:393-394). To leave out the top of the range, give those points a huge sigma
+      (``PdfData.write(..., fit_rmax=...)``). Near rmax every Gaussian lacks its partners beyond rmax, so the model
+      falls off within about 0.5 A of rmax: use ``fit_rmax = rmax - 0.5`` with Gaussian peaks;
     * the log has the RMC format (:func:`discuspdf.discus_rmc.parse_rmc_log`); a swap fit of random Cu0.75Au0.25
       (108 atoms, 2000 tries) to the L1_2 G(r) reached alpha1 = -0.318;
     * the G(r) saved after ``run`` (DISCUS's per-pair route) and ``calc`` on the fitted crystal differ by 8e-4 of
-      max |G| (two code paths); and every Gaussian near rmax lacks its partners beyond rmax, so the model falls
-      off within about 0.5 A of rmax. ``fit_range`` defaults to (dr, rmax - 0.5) for that reason.
+      max |G| (two code paths);
+    * ``run`` stores the fitted scale, which a later ``calc`` in the session would apply (pdf.f90:187, :2015), and
+      minimum distances persist from earlier RMC settings; the step resets the RMC settings first (``rmc``,
+      ``reset``) and sets the scale back to fixed 1 after saving.
     """
 
     model: PdfCalc
@@ -316,12 +334,12 @@ class PdfFit(Step):
     fit_scale: bool = True
     scale: float = 1.0
     min_distances: dict = field(default_factory=dict)
-    fit_range: tuple | None = None
+    fit_rmin: float | None = None
 
     uses_random_numbers = True
 
     def __post_init__(self) -> None:
-        from .discus_rmc import RmcShift, RmcSwap, _atom, _int, _real
+        from .discus_rmc import _real, check_fit_settings
 
         if not isinstance(self.model, PdfCalc):
             raise TypeError("model must be a PdfCalc (its settings are used)")
@@ -332,47 +350,12 @@ class PdfFit(Step):
         smooth = self.model.thermal or self.model.qalpha > 0 or self.model.qmax > 0
         if self.data.dr > 0.001 + 1e-12 and not smooth:
             raise ValueError("data step > 0.001 A needs thermal, qalpha or qmax in the model (see PdfCalc)")
-        moves = tuple(self.moves)
-        if not moves or not all(isinstance(mv, (RmcShift, RmcSwap)) for mv in moves):
-            raise ValueError("moves must be a non-empty tuple of RmcShift / RmcSwap")
-        if len({type(mv) for mv in moves}) != len(moves):
-            raise ValueError("give each move type once")
-        object.__setattr__(self, "moves", moves)
-        if isinstance(self.select, str):
-            if self.select != "all":
-                raise ValueError("select must be 'all' or a tuple of atom names")
-            if any(isinstance(mv, RmcShift) for mv in moves):
-                raise ValueError("with RmcShift, name the selected types so each gets its sigma")
-        else:
-            sel = tuple(_atom("select", x) for x in self.select)
-            if not sel:
-                raise ValueError("select must name at least one atom type")
-            if any(isinstance(mv, RmcSwap) for mv in moves) and len(set(sel)) < 2:
-                raise ValueError("swaps need at least two selected types")
-            for mv in moves:
-                if isinstance(mv, RmcShift) and set(mv.sigma) != set(sel):
-                    raise ValueError("RmcShift needs a sigma for exactly the selected types")
-            object.__setattr__(self, "select", sel)
-        _int("tries", self.tries)
-        if _real("sigma", self.sigma) < 0:
-            raise ValueError("sigma must be >= 0 (0 accepts downhill moves only)")
-        _int("display", self.display)
-        if not isinstance(self.fit_scale, bool):
-            raise TypeError("fit_scale must be True or False")
-        if _real("scale", self.scale) <= 0:
-            raise ValueError("scale must be positive")
-        md = {}
-        for pair, d in dict(self.min_distances).items():
-            a, b = pair
-            if _real("min distance", d) < 0:
-                raise ValueError("min distances must be >= 0")
-            md[(_atom("min distance type", a), _atom("min distance type", b))] = float(d)
-        object.__setattr__(self, "min_distances", md)
-        fr = (self.data.dr, max(self.data.dr * 2, self.data.rmax - 0.5)) if self.fit_range is None else tuple(
-            float(_real("fit_range", x)) for x in self.fit_range)
-        if len(fr) != 2 or not self.data.dr - 1e-9 <= fr[0] < fr[1] <= self.data.rmax + 1e-9:
-            raise ValueError(f"fit_range must be (rmin, rmax) inside the data ({self.data.dr} .. {self.data.rmax})")
-        object.__setattr__(self, "fit_range", fr)
+        check_fit_settings(self)
+        if self.fit_rmin is not None:
+            v = float(_real("fit_rmin", self.fit_rmin))
+            if not self.data.dr - 1e-9 <= v < self.data.rmax:
+                raise ValueError(f"fit_rmin must lie inside the data ({self.data.dr} .. {self.data.rmax})")
+            object.__setattr__(self, "fit_rmin", v)
 
     def input_names(self) -> tuple[str, ...]:
         return (self.data.file,)
@@ -387,29 +370,20 @@ class PdfFit(Step):
                              f"{self.data.dr}, {self.data.rmax}")
 
     def apply(self, m: Macro) -> None:
-        from .discus_rmc import _MODE_WORDS, _MOVES
+        from .discus_rmc import write_fit_settings
 
+        with m.menu("rmc"):
+            m.command("reset")  # clears selections, move probabilities and minimum distances left in the session
         with m.menu("pdf"):
             self.model.settings(m, rmax=round(self.data.rmax + 1.0, 6), dr=self.data.dr)
             m.command("calc")  # sizes the arrays so that 'data' can read the file (see the class notes)
             m.command("data", self.data.file)
-            m.command("set", "frange", *self.fit_range)
-            m.command("dese", "all")
-            m.command("sele", *(("all",) if self.select == "all" else self.select))
-            used = {type(mv) for mv in self.moves}
-            for kind in _MOVES:
-                if kind not in used:
-                    m.command("set", "mode", 0, _MODE_WORDS[kind], "all")
-            for mv in self.moves:
-                mv.apply(m)
-            for (a, b), d in self.min_distances.items():
-                m.command("set", "mdis", a, b, d)
-            m.command("set", "scal", "on" if self.fit_scale else "off", self.scale)
-            m.command("set", "sigm", self.sigma)
-            m.command("set", "cycl", self.tries)
-            m.command("set", "disp", self.display)
+            if self.fit_rmin is not None:
+                m.command("set", "frange", self.fit_rmin, self.data.rmax)
+            write_fit_settings(m, self)
             m.command("run")
             m.command("save", "pdf", self.model.output)
+            m.command("set", "scal", "off", 1)  # 'run' keeps the fitted scale for later 'calc's (pdf.f90:2015, :187)
 
 
 def run_pdf_fit(job, runner, inputs=None, **kw):

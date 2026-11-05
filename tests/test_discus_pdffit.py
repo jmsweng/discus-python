@@ -28,6 +28,15 @@ def test_pdfdata_write_and_read(data):
     assert first[0] == "0.010000" and first[2] == "0.0" and first[3] == "0.1"
 
 
+def test_pdfdata_fit_rmax_gives_huge_sigma_above(tmp_path):
+    r = np.arange(1, 801) * 0.01
+    PdfData.write(tmp_path / "w.dat", r, np.zeros(800), sigma=0.1, fit_rmax=7.5)
+    sig = np.array([float(l.split()[3]) for l in (tmp_path / "w.dat").read_text().splitlines()])
+    assert np.all(sig[r <= 7.5 + 1e-9] == 0.1) and np.all(sig[r > 7.5 + 1e-9] == 1e6)
+    with pytest.raises(ValueError, match="fit_rmax"):
+        PdfData.write(tmp_path / "w.dat", r, np.zeros(800), fit_rmax=9.0)
+
+
 def test_pdfdata_needs_first_r_equal_step(tmp_path):
     with pytest.raises(ValueError, match="first r = dr"):
         PdfData.write(tmp_path / "x.dat", np.arange(0, 800) * 0.01, np.zeros(800))
@@ -46,7 +55,10 @@ def test_pdffit_macro_has_the_working_order(data):
     lines = StructureJob(SRC, [ReplaceRandom("CU", "AU", 0.25), fit(data[0])], seed=SEED).macro().render().splitlines()
     i = {k: lines.index(k) for k in ("set range,9,0.01", "calc", "data t.dat", "run", "save pdf,fit.dat")}
     assert i["set range,9,0.01"] < i["calc"] < i["data t.dat"] < i["run"] < i["save pdf,fit.dat"]
-    assert "set frange,0.01,7.5" in lines and "set mode,0,shift,all" in lines and "set mode,1,swchem,all" in lines
+    assert not any(l.startswith("set frange") for l in lines)
+    assert "set mode,0,shift,all" in lines and "set mode,1,swchem,all" in lines
+    assert lines[lines.index("rmc") + 1] == "reset" and lines.index("rmc") < lines.index("pdf")
+    assert lines[lines.index("save pdf,fit.dat") + 1] == "set scal,off,1"
     assert lines.index("dese all") < lines.index("sele CU,AU")
     assert "set scal,on,1" in lines and "set sigm,0" in lines and "set cycl,100" in lines
 
@@ -55,8 +67,10 @@ def test_pdffit_refusals(data):
     d = data[0]
     with pytest.raises(ValueError, match="needs thermal"):
         fit(d, model=PdfCalc("fit.dat", radiation="xray"))
-    with pytest.raises(ValueError, match="fit_range"):
-        fit(d, fit_range=(0.01, 9.0))
+    with pytest.raises(ValueError, match="fit_rmin"):
+        fit(d, fit_rmin=8.0)
+    lines = StructureJob(SRC, [ReplaceRandom("CU", "AU", 0.25), fit(d, fit_rmin=1.5)], seed=SEED).macro().render()
+    assert "set frange,1.5,8" in lines.splitlines()
     with pytest.raises(ValueError, match="sigma for exactly"):
         fit(d, moves=(RmcShift({"CU": (0.01, 0.01, 0.01)}),))
     with pytest.raises(ValueError, match="two selected"):
@@ -82,7 +96,7 @@ def test_partials_selections_and_files():
     assert p.selections() == [("AU",), ("CU",), ("AU", "CU"), ("AG",), ("AG", "AU")]
     lines = StructureJob(SRC, [p], readback="none").macro().render().splitlines()
     assert lines.count("calc") == 5 and lines[-5:-3] == ["isele all", "jsele all"]
-    assert "jsele AU,CU" in lines and "save pdf,partial_AU_CU.dat" in lines
+    assert "jsele AU,CU" in lines and "save pdf,partial_AU_CU_union.dat" in lines and "save pdf,partial_AU_AU.dat" in lines
     with pytest.raises(ValueError, match="twice"):
         PdfPartials(PdfCalc("x.dat", radiation="neutron"), (("AU", "CU"), ("CU", "AU")))
 

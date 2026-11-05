@@ -309,6 +309,72 @@ class RmcLots:
         return ["lots", self.shape, *self.size, self.count, "yes" if self.periodic else "no"]
 
 
+# ----------------------------------------------------------------------------------------- shared by RmcFit and PdfFit
+def check_fit_settings(fit) -> None:
+    """Validate and normalise the settings RmcFit and discus_pdfmenu.PdfFit share: moves, select, tries, sigma,
+    display, fit_scale/scale, min_distances (the step must be a frozen dataclass with these fields)."""
+    moves = tuple(fit.moves)
+    if not moves or not all(isinstance(mv, _MOVES) for mv in moves):
+        raise ValueError("moves must be a non-empty tuple of RmcShift / RmcSwap")
+    if len({type(mv) for mv in moves}) != len(moves):
+        raise ValueError("give each move type once")
+    object.__setattr__(fit, "moves", moves)
+    if isinstance(fit.select, str):
+        if fit.select != "all":
+            raise ValueError("select must be 'all' or a tuple of atom names")
+        if any(isinstance(mv, RmcShift) for mv in moves):
+            raise ValueError("with RmcShift, name the selected types so each gets its sigma")
+    else:
+        sel = tuple(_atom("select", s) for s in fit.select)
+        if not sel:
+            raise ValueError("select must name at least one atom type")
+        object.__setattr__(fit, "select", sel)
+        if any(isinstance(mv, RmcSwap) for mv in moves) and len(set(sel)) < 2:
+            raise ValueError("swaps need at least two selected types (DISCUS error -11)")
+        for mv in moves:
+            if isinstance(mv, RmcShift) and set(mv.sigma) != set(sel):
+                raise ValueError("RmcShift needs a sigma for exactly the selected types (DISCUS's "
+                                 f"default is 0.2 cell fractions): selected {sorted(set(sel))}, "
+                                 f"sigma for {sorted(mv.sigma)}")
+    _int("tries", fit.tries)
+    if _real("sigma", fit.sigma) < 0:
+        raise ValueError("sigma must be >= 0 (0 accepts downhill moves only)")
+    _int("display", fit.display)
+    if not isinstance(fit.fit_scale, bool):
+        raise TypeError("fit_scale must be True or False")
+    if _real("scale", fit.scale) <= 0:
+        raise ValueError("scale must be positive")
+    md = {}
+    for pair, d in dict(fit.min_distances).items():
+        a, b = pair
+        if _real("min distance", d) < 0:
+            raise ValueError("min distances must be >= 0")
+        md[(_atom("min distance type", a), _atom("min distance type", b))] = float(d)
+    object.__setattr__(fit, "min_distances", md)
+
+
+def write_fit_settings(m: Macro, fit, extra=None) -> None:
+    """The selection, move, distance, scale and run-control lines shared by RmcFit and PdfFit (written inside the
+    ``rmc`` or ``pdf`` menu; ``pdf set`` forwards them to the RMC settings). ``extra(m)`` adds lines before
+    ``set sigm``."""
+    m.command("dese", "all")
+    m.command("sele", *(("all",) if fit.select == "all" else fit.select))
+    used = {type(mv) for mv in fit.moves}
+    for kind in _MOVES:  # move probabilities persist in a session; clear the unused ones
+        if kind not in used:
+            m.command("set", "mode", 0, _MODE_WORDS[kind], "all")
+    for mv in fit.moves:
+        mv.apply(m)
+    for (a, b), d in fit.min_distances.items():
+        m.command("set", "mdis", a, b, d)
+    m.command("set", "scal", "on" if fit.fit_scale else "off", fit.scale)
+    if extra is not None:
+        extra(m)
+    m.command("set", "sigm", fit.sigma)
+    m.command("set", "cycl", fit.tries)
+    m.command("set", "disp", fit.display)
+
+
 # ----------------------------------------------------------------------------------------- the fit
 @dataclass(frozen=True)
 class RmcFit(Step):
@@ -359,47 +425,12 @@ class RmcFit(Step):
             raise ValueError("planes must be a tuple of one RmcPlane: with several planes DISCUS 6.23.01 uses "
                              "the first plane's sin(theta)/lambda table for all of them (see the module notes)")
         object.__setattr__(self, "planes", planes)
-        moves = tuple(self.moves)
-        if not moves or not all(isinstance(mv, _MOVES) for mv in moves):
-            raise ValueError("moves must be a non-empty tuple of RmcShift / RmcSwap")
-        if len({type(mv) for mv in moves}) != len(moves):
-            raise ValueError("give each move type once")
-        object.__setattr__(self, "moves", moves)
-        if isinstance(self.select, str):
-            if self.select != "all":
-                raise ValueError("select must be 'all' or a tuple of atom names")
-            if any(isinstance(mv, RmcShift) for mv in moves):
-                raise ValueError("with RmcShift, name the selected types so each gets its sigma")
-        else:
-            sel = tuple(_atom("select", s) for s in self.select)
-            if not sel:
-                raise ValueError("select must name at least one atom type")
-            object.__setattr__(self, "select", sel)
-            if any(isinstance(mv, RmcSwap) for mv in moves) and len(set(sel)) < 2:
-                raise ValueError("swaps need at least two selected types (DISCUS error -11)")
-            for mv in moves:
-                if isinstance(mv, RmcShift) and set(mv.sigma) != set(sel):
-                    raise ValueError("RmcShift needs a sigma for exactly the selected types (DISCUS's "
-                                     f"default is 0.2 cell fractions): selected {sorted(set(sel))}, "
-                                     f"sigma for {sorted(mv.sigma)}")
-        _int("tries", self.tries)
-        if _real("sigma", self.sigma) < 0:
-            raise ValueError("sigma must be >= 0 (0 accepts downhill moves only)")
-        _int("display", self.display)
-        for k in ("fit_scale", "fit_background", "debye_waller", "symmetry"):
+        check_fit_settings(self)
+        for k in ("fit_background", "debye_waller", "symmetry"):
             if not isinstance(getattr(self, k), bool):
                 raise TypeError(f"{k} must be True or False")
-        if _real("scale", self.scale) <= 0:
-            raise ValueError("scale must be positive")
         if _real("background", self.background) < 0:
             raise ValueError("background must be >= 0 (DISCUS replaces a fitted value <= 0 by it)")
-        md = {}
-        for pair, d in dict(self.min_distances).items():
-            a, b = pair
-            if _real("min distance", d) < 0:
-                raise ValueError("min distances must be >= 0")
-            md[(_atom("min distance type", a), _atom("min distance type", b))] = float(d)
-        object.__setattr__(self, "min_distances", md)
         if not 0 <= _real("average_percent", self.average_percent) <= 100:
             raise ValueError("average_percent must be in [0, 100]")
         if self.lots is not None and not isinstance(self.lots, RmcLots):
@@ -417,26 +448,15 @@ class RmcFit(Step):
                 m.command("set", "dbw", "on")
             if self.symmetry:
                 m.command("set", "sym", "on")
-            m.command("dese", "all")
-            m.command("sele", *(("all",) if self.select == "all" else self.select))
-            used = {type(mv) for mv in self.moves}
-            for kind in _MOVES:  # move probabilities persist in a session; clear the unused ones
-                if kind not in used:
-                    m.command("set", "mode", 0, _MODE_WORDS[kind], "all")
-            for mv in self.moves:
-                mv.apply(m)
-            for (a, b), d in self.min_distances.items():
-                m.command("set", "mdis", a, b, d)
-            m.command("set", "scal", "on" if self.fit_scale else "off", self.scale)
-            m.command("set", "back", "on" if self.fit_background else "off", self.background)
-            if self.average_percent:
-                m.command("set", "aver", self.average_percent)
-            if self.lots is not None:
-                m.command("set", *self.lots.params())
-            m.command("set", "sigm", self.sigma)
-            m.command("set", "cycl", self.tries)
-            m.command("set", "disp", self.display)
+            write_fit_settings(m, self, extra=self._extra_lines)
             m.command("run")
+
+    def _extra_lines(self, m: Macro) -> None:
+        m.command("set", "back", "on" if self.fit_background else "off", self.background)
+        if self.average_percent:
+            m.command("set", "aver", self.average_percent)
+        if self.lots is not None:
+            m.command("set", *self.lots.params())
 
     def check_inputs(self, paths: Mapping[str, Path | str]) -> None:
         """Check every plane file against its grid."""
