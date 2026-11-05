@@ -19,7 +19,23 @@ F6 partials (neutron, periodic, no Gaussian, qmax 0, range 8, 0.001) on the orde
    pair count of the selected pairs, both orders) and prints a, b and the residual; no prediction of a, b.
 F7 selection state (pitfall 15): Au-Au computed after Au-Cu in the same session equals Au-Au in a fresh session.
 
-Usage: python tools/probes/pdf_fit_probes.py WORKDIR
+Round 1 result (2026-11-05, 2d92218): F1 as predicted. F2 failed at ``data``: "Too many points in PDF" (-1). Code
+(pdf.f90:944-981): after ``reset all`` PDF_MAXDAT is 1 (:3568), ``data`` allocates exactly n_dat points, and the read loop
+tests ``ip > PDF_MAXDAT`` before the read that meets the end of file, so a file of n lines needs room for n + 1.
+F6 (neutron weights w_ab = b_a b_b / <b>^2: w_AuAu 0.9829, w_AuCu 0.9943): Au-Au a = 0.98292 = w_AuAu, b/(-4 pi rho0)
+= 0.06143 = c_Au^2 w_AuAu; Au-Cu a = 0.49713 = w_AuCu / 2 against the pair count of both orders, b/(-4 pi rho0)
+= 0.37285 = 2 c_Au c_Cu w_AuCu. So the cross partial carries half the pairs its baseline assumes (residuals 1e-13).
+F7: no state leaks between selections.
+
+Round 2 (``--round 2``, predictions written before running, 2026-11-05):
+F2b-F4b as F2-F4, with ``set range, 9, 0.01`` and one ``calc`` before ``data`` (allocates more than 800 + 1 points;
+   uncertain). F2b: the log parses, no uphill, chi2 never rises; F3b: run vs calc within 1e-5 of max |G| (uncertain);
+   F4b: alpha1 falls.
+F8 sum rule (neutron, as F6): G_total - (G_AuAu + G_CuCu + G_AuCu) equals w_AuCu H_AuCu / (2 N dr r) (the missing half
+   of the cross pairs, H_AuCu over both orders) within 1e-6 of max |G_total|, and G_CuCu has a = w_CuCu and
+   b/(-4 pi rho0) = c_Cu^2 w_CuCu.
+
+Usage: python tools/probes/pdf_fit_probes.py WORKDIR [--round 2]
 """
 from __future__ import annotations
 
@@ -190,5 +206,79 @@ def main(work: str) -> None:
               f"(predicted 0); Au-Cu in that session vs fresh: {np.max(np.abs(g1 - g1f)) / np.max(np.abs(g1f)):.3e}")
 
 
+def round2(work: str) -> None:
+    runner = SuiteRunner(Path(work), live_engine(900))
+    cu = {"cu_b05.cll": CU}
+    t = run(runner, "target", StructureJob(SRC, [ORDER, Lines(("pdf", *COMMON_X, "set range, 8, 0.01", "calc",
+                                                                "save pdf, target.dat", "exit"), ("target.dat",))],
+                                            seed=SEED, readback="none"), cu)
+    if t is None:
+        return
+    target = t.run.output("target.dat")
+    _, g0 = read_cols(target)
+    start = run(runner, "F4b start", StructureJob(SRC, [RANDOM], seed=SEED), cu)
+    fit_lines = ("pdf", *COMMON_X, "set range, 9, 0.01", "calc", "data target.dat", "dese all", "sele CU, AU",
+                 "set mode, 0, shift, all", "set mode, 1, swchem, all", "set scal, off, 1", "set sigm, 0",
+                 "set cycl, 2000", "set disp, 200", "run", "save pdf, fit.dat", "calc", "save pdf, recalc.dat", "exit")
+    fit = run(runner, "F2b fit", StructureJob(SRC, [RANDOM, Lines(fit_lines, ("fit.dat", "recalc.dat"), ("target.dat",),
+                                                                  random=True)], seed=SEED),
+              {**cu, "target.dat": target})
+    if fit is not None:
+        text = fit.run.log.read_text(errors="replace")
+        log = parse_rmc_log(text)
+        chi = [p.chi2 for p in log.progress]
+        print(f"    F2b: {len(log.progress)} blocks, final {log.final}, uphill {[p.accepted_uphill for p in log.progress]}")
+        print(f"    F2b: chi2 {chi}; never rises: {all(b <= a for a, b in zip(chi, chi[1:]))}; delta {log.delta_chi2}")
+        print("    F2b log lines: " + " || ".join(l.strip() for l in text.splitlines()
+                                                 if any(k in l for k in ("Gen:", "Final", "Delta", "Data", "data"))][:30])
+        rf, gf = read_cols(fit.run.output("fit.dat"))
+        rc, gc = read_cols(fit.run.output("recalc.dat"))
+        n = min(len(gf), len(gc))
+        print(f"    F3b: fit.dat {len(gf)} pts r {rf[0]:.3f}..{rf[-1]:.3f}; recalc {len(gc)} pts r {rc[0]:.3f}..{rc[-1]:.3f}; "
+              f"max|dG|/max|G| = {np.max(np.abs(gf[:n] - gc[:n])) / np.max(np.abs(gc)):.3e} (predicted < 1e-5)")
+        n2 = min(len(gf), len(g0))
+        print(f"    fit vs target: max|dG|/max|G| = {np.max(np.abs(gf[:n2] - g0[:n2])) / np.max(np.abs(g0)):.3e}")
+        if start is not None:
+            print(f"    F4b: alpha1 start {alpha1(start.structure):.4f}, fitted {alpha1(fit.structure):.4f}; "
+                  f"Au start {sum(str(x).upper() == 'AU' for x in start.structure.species)}, "
+                  f"fitted {sum(str(x).upper() == 'AU' for x in fit.structure.species)}")
+    print("== F8")
+    sels = {"AuAu": ("idese all", "isele AU", "jdese all", "jsele AU"),
+            "CuCu": ("idese all", "isele CU", "jdese all", "jsele CU"),
+            "AuCu": ("idese all", "isele AU", "jdese all", "jsele CU"),
+            "total": ()}
+    lines = ["pdf", *COMMON_N, "calc", "save pdf, total.dat"]  # total first, then the partials
+    for k in ("AuAu", "CuCu", "AuCu"):
+        lines += [*sels[k], "calc", f"save pdf, {k}.dat"]
+    outs = [f"{k}.dat" for k in sels]
+    res = run(runner, "F8 partials", StructureJob(SRC, [ORDER, Lines((*lines, "exit"), tuple(outs))], seed=SEED,
+                                                  readback="none"), cu)
+    if res is None:
+        return
+    g = {k: read_cols(res.run.output(f"{k}.dat")) for k in sels}
+    r = g["total"][0]
+    rh, H, n = pair_hist(("AU", "CU"))
+    idx = np.rint(r / 0.001).astype(int)
+    b = {"CU": 7.718, "AU": 7.63}
+    mean = (3 * b["CU"] + b["AU"]) / 4
+    w = b["AU"] * b["CU"] / mean ** 2
+    sel = (r > 0.5) & (r <= 7.9)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        missing = w * H[idx] / (2 * n * 0.001 * r)
+    diff = g["total"][1] - (g["AuAu"][1] + g["CuCu"][1] + g["AuCu"][1])
+    top = np.max(np.abs(g["total"][1][sel]))
+    print(f"    F8: max|G_total - sum| / max|G_total| = {np.max(np.abs(diff[sel])) / top:.3e}; after adding the "
+          f"missing half: {np.max(np.abs(diff[sel] - missing[sel])) / top:.3e} (predicted < 1e-6); b_Cu, b_Au assumed "
+          f"{b['CU']}, {b['AU']}")
+    rh, Hc, _ = pair_hist(("CU", "CU"))
+    X = np.c_[Hc[idx[sel]] / (n * 0.001 * r[sel]), r[sel]]
+    (a, bb), *_ = np.linalg.lstsq(X, g["CuCu"][1][sel], rcond=None)
+    print(f"    F8 Cu-Cu: a = {a:.6g} (w_CuCu {b['CU'] ** 2 / mean ** 2:.6g}), b/(-4 pi rho0) = "
+          f"{bb / (-4 * np.pi * n / (NC * A) ** 3):.6g} (c_Cu^2 w_CuCu {0.5625 * b['CU'] ** 2 / mean ** 2:.6g})")
+
+
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "pdf_fit_probes")
+    if "--round" in sys.argv and sys.argv[-1] == "2":
+        round2(sys.argv[1])
+    else:
+        main(sys.argv[1] if len(sys.argv) > 1 else "pdf_fit_probes")
