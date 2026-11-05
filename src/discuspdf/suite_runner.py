@@ -19,7 +19,6 @@ the numbers are physically right.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 import subprocess
@@ -29,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, Mapping
 
+from ._runrecord import changed_inputs, sha256_file, write_status
 from .engine import Engine, EngineChoiceError, engine_error_in, engine_warnings_in, fork_reasons
 from .macro import Macro
 from .suite_catalogue import load_catalogue
@@ -38,8 +38,7 @@ RUN_FORMAT = "discuspdf.suite_run"
 
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+_sha256 = sha256_file
 
 
 def _plain_name(name: str, what: str) -> str:
@@ -151,11 +150,8 @@ class SuiteRunner:
         engine = self.engine if record["engine"]["label"] == "stock" else self.fork
         if engine is None or list(engine.launcher) != record["engine"]["launcher"]:
             self._fail(run, "the engine recorded at prepare() is not this runner's", engine_started=False)
-        for name, digest in record["sha256"].items():
-            path = run.directory / name
-            if not path.is_file() or _sha256(path) != digest:
-                self._fail(run, f"staged {name} is missing or was modified after prepare()",
-                           engine_started=False)
+        for name, _ in changed_inputs(run.directory, record["sha256"]):
+            self._fail(run, f"staged {name} is missing or was modified after prepare()", engine_started=False)
         for path in run.outputs:
             if path.exists():
                 self._fail(run, f"output {path.name} exists already; prepare a new run", engine_started=False)
@@ -201,8 +197,7 @@ class SuiteRunner:
 
     @staticmethod
     def _status(run: SuiteRun, state: str, **details) -> None:
-        (run.directory / "status.json").write_text(json.dumps({"status": state, **details}, indent=2) + "\n",
-                                                   encoding="utf-8")
+        write_status(run.directory, state, details)
 
     def _fail(self, run: SuiteRun, reason: str, **details):
         self._status(run, "failed", reason=reason, **details)
