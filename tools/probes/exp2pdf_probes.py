@@ -35,6 +35,20 @@ Y2 a Cu crystal read, then exp2pdf with ``composition comp:current``; Y3 both; Y
 ``radiation neutron``; Y5 exp2pdf alone with ``radiation xray`` (no lambda); Y6 as Y5 without ``reset``.
 No prediction of which finish; each line reports complete or the error.
 
+Round 2 result (2026-11-05, 88b0bed): only Y3 finished (G(r) first peak at 2.550 A; Cu a/sqrt2 = 2.556). Y1:
+"Unknown element, no Fourier calculated" (-20; the synthetic crystal of ``composition <string>`` is broken, XR:315-355);
+Y2: SIGABRT; Y4-Y6: -169 as in round 1. So a run needs a crystal read, a powder calculation in the same session,
+then ``composition comp:current``.
+
+Round 3 (``--round 3``, predictions written before running, 2026-11-05), all with the Y3 set-up:
+Z1 on the Cu fcc 2x2x2 crystal: X3, X4, X6 (with ``limits inst:[1.0,17.0], fourier:[1.2,16.5]``), X7, X8 as in
+   round 1, and X5 (electron 200 vs 300 keV) and a neutron run (completes; first G peak within 0.02 of 2.556).
+Z2 composition from a small P1 crystal (cell 20 A): 3 Cu + 1 Au atoms -> the G(r) header's composition line
+   gives Cu 0.75, Au 0.25 (or 3 and 1); 1 Cu (occupancy 0.75) + 1 Au (0.25) -> the same G(r) within 1e-6 of
+   max |G| (code-read: <f>^2 comes from powder_run on the current crystal, which weights by occupancy; uncertain).
+Z3 the powder calculation on the Cu crystal, then ``read`` of the Z2 crystal, then exp2pdf: the same G(r) as Z2
+   (3 Cu + 1 Au) within 1e-6 of max |G| (uncertain: whether a new read keeps the phases set-up).
+
 Usage (from a discus-python checkout with DISCUS; Windows through WSL as in the live tests):
 
     python tools/probes/exp2pdf_probes.py WORKDIR [--round 2]
@@ -202,7 +216,115 @@ def round2(work: str) -> None:
             print(f"{label}: FAILED: {exc}")
 
 
+def comp_stru(atoms) -> str:
+    """A P1 crystal, cell 20 A, atoms (name, occupancy) far apart along x."""
+    lines = ["title exp2pdf composition crystal", "spcgr P1",
+             "cell    20.000000,  20.000000,  20.000000, 90.000000, 90.000000, 90.000000",
+             f"ncell        1,        1,        1,       {len(atoms)}", "format numbers,XYZBPMMOS",
+             "atoms      x,              y,              z,             Biso,    Property,  MoleNo,  MoleAt,   Occ,"
+             "     St,  Sh,  Sk,  Sl"]
+    for k, (name, occ) in enumerate(atoms):
+        lines.append(f"{name:<10} {0.2 * k:.6f},       0.000000,       0.000000,      0.000000,       1,       0,"
+                     f"       0,   {occ:.6f}, _,   0,   0,   0")
+    return "\n".join(lines) + "\n"
+
+
+def round3(work: str) -> None:
+    work = Path(work)
+    runner = SuiteRunner(work, live_engine(600))
+    step = PowderPattern((("I(Q)", "i.dat"),), qmin=0.5, qmax=17.9, dq=0.01, radiation="xray",
+                         wavelength=0.5, stepr=0.001)
+    pr = StructureJob(SRC, [step], readback="none").run(runner, {"cu_b05.cll": CU})
+    q, i = read_powder_file(pr.run.output("i.dat"))
+    files = work / "inputs3"
+    files.mkdir(parents=True, exist_ok=True)
+    b = 0.05 * i.mean() * (1 + 0.1 * q)
+    np.savetxt(files / "i.xy", np.c_[q, i])
+    np.savetxt(files / "ib.xy", np.c_[q, i + 2 * b])
+    np.savetxt(files / "b.xy", np.c_[q, b])
+    np.savetxt(files / "i3.xy", np.c_[q, i, np.sqrt(np.abs(i))], header="Q I dI")
+    (files / "c31.stru").write_text(comp_stru([("Cu", 1), ("Cu", 1), ("Cu", 1), ("Au", 1)]))
+    (files / "cocc.stru").write_text(comp_stru([("Cu", 0.75), ("Au", 0.25)]))
+    inp = {n: files / n for n in ("i.xy", "ib.xy", "b.xy", "i3.xy", "c31.stru", "cocc.stru")}
+    inp["cu_b05.cll"] = CU
+    powder_cu = POWDER_BLOCK
+    powder_on = lambda stru: ["read", f"stru {stru}"] + POWDER_BLOCK[2:]  # noqa: E731
+
+    def go(label, prefix, data="i.xy", back=None, rad="radiation xray, lambda:0.1", extra=(), gr="g.dat",
+           fmt=", format:stan", outs=("g.dat", "f.dat")):
+        lines = list(prefix) + ["exp2pdf", "reset", f"data xy, {data}"] + ([back] if back else []) + [
+            "composition comp:current", rad, *extra,
+            f"outfile gr:{gr}, rmin:0.5, rmax:20.0, rstep:0.01{fmt}, fq:f.dat", "run mode:silent"]
+        text = "discus\n" + "\n".join(lines) + "\nexit\nexit\n"
+        try:
+            r = runner.run(text, inp, list(outs))
+            print(f"{label}: complete, {r.directory}")
+            return r
+        except RuntimeError as exc:
+            print(f"{label}: FAILED: {exc}")
+            return None
+
+    def g_of(r):
+        return read_text_xy(r.output("g.dat"))
+
+    def rel(a, b):
+        n = min(len(a), len(b))
+        return np.max(np.abs(a[:n] - b[:n])) / np.max(np.abs(b))
+
+    print("== Z1")
+    base = go("Z1 base", powder_cu)
+    lim = go("Z1 X4/X6 limits", powder_cu, extra=("limits inst:[1.0,17.0], fourier:[1.2,16.5]",))
+    h5 = go("Z1 X3 default format", powder_cu, gr="g.h5", fmt="", outs=("g.h5", "f.dat"))
+    if h5:
+        print(f"    X3 first bytes {h5.output('g.h5').read_bytes()[:8]!r} (predicted b'\\x89HDF...')")
+    if lim:
+        qf, f = read_text_xy(lim.output("f.dat"))
+        r, g = g_of(lim)
+        dq = np.median(np.diff(qf))
+        n0 = int(round(qf[0] / dq))
+        qq = np.concatenate([np.arange(1, n0) * dq, qf])
+        ff = np.concatenate([np.arange(1, n0) * dq * f[0] / qf[0], f])
+        pred = 2 / np.pi * dq * (ff[None] * np.sin(qq[None] * r[:, None])).sum(axis=1)
+        print(f"    X4: max|G - pred| / max|G| = {np.max(np.abs(g - pred)) / np.max(np.abs(g)):.3e} (predicted < 1e-2)"
+              f"; F file dq {dq:.4g}, {len(qf)} points")
+        print(f"    X6: F(Q) file Q range {qf[0]:.4f} .. {qf[-1]:.4f} (predicted 1.2 .. 16.5 within 0.01)")
+        head = [l for l in lim.output("g.dat").read_text().splitlines() if l.startswith("#")]
+        print("    G(r) header:\n      " + "\n      ".join(head[:40]))
+    bg = go("Z1 X7 background x2", powder_cu, data="ib.xy", back="back xy, b.xy, scale:2")
+    c3 = go("Z1 X8 three columns", powder_cu, data="i3.xy")
+    e2 = go("Z1 X5 electron 200", powder_cu, rad="radiation electron, energy:200")
+    e3 = go("Z1 X5 electron 300", powder_cu, rad="radiation electron, energy:300")
+    ne = go("Z1 neutron", powder_cu, rad="radiation neutron")
+    if base:
+        r0, g0 = g_of(base)
+        print(f"    base: first peak r = {r0[np.argmax(g0)]:.3f}, max|G| {np.max(np.abs(g0)):.4g}")
+        for label, rr in (("X7", bg), ("X8", c3)):
+            if rr:
+                print(f"    {label}: max|dG|/max|G| = {rel(g_of(rr)[1], g0):.3e} (predicted < 1e-6)")
+    if e2 and e3:
+        print(f"    X5: max|dG|/max|G| = {rel(g_of(e3)[1], g_of(e2)[1]):.3e} (predicted < 1e-9)")
+    if ne:
+        rn, gn = g_of(ne)
+        print(f"    neutron: first peak r = {rn[np.argmax(gn)]:.3f} (predicted 2.556 within 0.02)")
+
+    print("== Z2 / Z3")
+    z31 = go("Z2 3 Cu + 1 Au", powder_on("c31.stru"))
+    zoc = go("Z2 occupancies", powder_on("cocc.stru"))
+    z3 = go("Z3 powder on Cu, then read 3Cu+1Au", powder_cu + ["read", "stru c31.stru"])
+    for label, rr in (("Z2 3+1", z31), ("Z2 occ", zoc), ("Z3", z3)):
+        if rr:
+            comp = [l for l in rr.output("g.dat").read_text().splitlines() if "composition" in l.lower()]
+            print(f"    {label} header: {comp}")
+    if z31 and zoc:
+        print(f"    Z2: occupancy vs atoms max|dG|/max|G| = {rel(g_of(zoc)[1], g_of(z31)[1]):.3e} (predicted < 1e-6)")
+    if z31 and z3:
+        print(f"    Z3: max|dG|/max|G| = {rel(g_of(z3)[1], g_of(z31)[1]):.3e} (predicted < 1e-6)")
+
+
 if __name__ == "__main__":
+    if "--round" in sys.argv and sys.argv[-1] == "3":
+        round3(sys.argv[1])
+        sys.exit()
     args = [a for a in sys.argv[1:] if a != "--round"]
     if "--round" in sys.argv and args[-1] == "2":
         round2(args[0])
