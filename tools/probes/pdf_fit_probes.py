@@ -35,7 +35,19 @@ F8 sum rule (neutron, as F6): G_total - (G_AuAu + G_CuCu + G_AuCu) equals w_AuCu
    of the cross pairs, H_AuCu over both orders) within 1e-6 of max |G_total|, and G_CuCu has a = w_CuCu and
    b/(-4 pi rho0) = c_Cu^2 w_CuCu.
 
-Usage: python tools/probes/pdf_fit_probes.py WORKDIR [--round 2]
+Round 2 result (2026-11-05, abe3fc5): F2b ran (31 blocks, final 2000 tries, 45 downhill, 0 uphill, chi2 never rose,
+0.576 -> 0.206); F4b alpha1 0.036 -> -0.318 (perfect L1_2 -1/3), Au count kept. F3b NOT as predicted: ``save pdf`` after
+``run`` and ``calc`` + ``save pdf`` differ by 0.60 of max |G| (and ``fit.dat`` differs from the target by 0.51 while chi2
+is 0.21); to be understood from the files. F8 as predicted: G_total - (G_AuAu + G_CuCu + G_AuCu) is exactly the missing
+half of the cross pairs (1.9e-9 of max |G|); Cu-Cu a = w_CuCu, b = c_Cu^2 w_CuCu.
+
+Round 3 (``--round 3``, written before running, 2026-11-05): ternary Cu2AuAg (Au on site 1, Ag on site 2), neutron,
+no Gaussian, qmax 0. For the cross partials Au-Cu and Au-Ag, and for the selection {Au, Cu} on both sides, the script
+prints the residual (of max |G|) against two hypotheses: H_half, G = w_ab P_ab / (2 N dr r) - 2 c_a c_b w_ab 4 pi r rho0
+(P_ab both orders), predicted < 1e-6 from round 2; H_union, G_{Au,Cu} - G_AuAu - G_CuCu = the full cross partial
+w P / (N dr r) - 2 c c w 4 pi r rho0 (uncertain).
+
+Usage: python tools/probes/pdf_fit_probes.py WORKDIR [--round 2|3]
 """
 from __future__ import annotations
 
@@ -277,8 +289,75 @@ def round2(work: str) -> None:
           f"{bb / (-4 * np.pi * n / (NC * A) ** 3):.6g} (c_Cu^2 w_CuCu {0.5625 * b['CU'] ** 2 / mean ** 2:.6g})")
 
 
+TERNARY_SITES = ("AU", "AG", "CU", "CU")
+B_N = {"CU": 7.718, "AU": 7.63, "AG": 5.922}
+
+
+def hist_sites(a, b, dr=0.001, rmax=8.0):
+    basis = np.array([[0, 0, 0], [0, .5, .5], [.5, 0, .5], [.5, .5, 0]])
+    cells = np.array(list(itertools.product(range(NC), repeat=3)))
+    xyz = ((cells[:, None, :] + basis[None]).reshape(-1, 3)) * A
+    sp = np.array(TERNARY_SITES * len(cells))
+    L = NC * A
+    H = np.zeros(int(rmax / dr) + 2)
+    si, sj = sp == a, sp == b
+    for sh in itertools.product((-1, 0, 1), repeat=3):
+        d = np.linalg.norm(xyz[:, None] - (xyz[None] + np.array(sh) * L), axis=2)
+        m = (si[:, None] & sj[None]) | (sj[:, None] & si[None])
+        keep = m & (d > 1e-6) & (d <= rmax)
+        np.add.at(H, np.floor((d[keep] + dr / 2) / dr).astype(int), 1)
+    return H, len(xyz)
+
+
+def round3(work: str) -> None:
+    runner = SuiteRunner(Path(work), live_engine(900))
+    sels = {"AuAu": ("AU", "AU"), "CuCu": ("CU", "CU"), "AuCu": ("AU", "CU"), "AuAg": ("AU", "AG")}
+    lines = ["pdf", *COMMON_N]
+    for k, (a, b) in sels.items():
+        lines += ["idese all", f"isele {a}", "jdese all", f"jsele {b}", "calc", f"save pdf, {k}.dat"]
+    lines += ["idese all", "isele AU, CU", "jdese all", "jsele AU, CU", "calc", "save pdf, union.dat", "exit"]
+    outs = tuple(f"{k}.dat" for k in sels) + ("union.dat",)
+    job = StructureJob(SRC, [ReplaceRandom("CU", "AU", 1.0, site=1), ReplaceRandom("CU", "AG", 1.0, site=2),
+                             Lines(tuple(lines), outs)], seed=SEED, readback="none")
+    res = run(runner, "G2 ternary partials", job, {"cu_b05.cll": CU})
+    if res is None:
+        return
+    g = {k: read_cols(res.run.output(f"{k}.dat")) for k in (*sels, "union")}
+    r = g["AuAu"][0]
+    idx = np.rint(r / 0.001).astype(int)
+    sel = (r > 0.5) & (r <= 7.9)
+    conc = {"AU": 0.25, "AG": 0.25, "CU": 0.5}
+    mean = sum(conc[x] * B_N[x] for x in conc)
+    n = 108
+    rho0 = n / (NC * A) ** 3
+
+    def full(a, b):
+        H, _ = hist_sites(a, b)
+        w = B_N[a] * B_N[b] / mean ** 2
+        with np.errstate(divide="ignore", invalid="ignore"):
+            pair = w * H[idx] / (n * 0.001 * r)
+        base = (1 if a == b else 2) * conc[a] * conc[b] * w * 4 * np.pi * r * rho0
+        return pair, base
+
+    for k, (a, b) in sels.items():
+        pair, base = full(a, b)
+        top = np.max(np.abs(g[k][1][sel]))
+        if a == b:
+            print(f"    {k}: residual vs full model {np.max(np.abs(g[k][1] - (pair - base))[sel]) / top:.3e}")
+        else:
+            print(f"    {k}: residual vs H_half {np.max(np.abs(g[k][1] - (pair / 2 - base))[sel]) / top:.3e}; "
+                  f"vs full {np.max(np.abs(g[k][1] - (pair - base))[sel]) / top:.3e}")
+    pair, base = full("AU", "CU")
+    cross = g["union"][1] - g["AuAu"][1] - g["CuCu"][1]
+    top = np.max(np.abs(cross[sel]))
+    print(f"    H_union: union - AuAu - CuCu vs full Au-Cu: {np.max(np.abs(cross - (pair - base))[sel]) / top:.3e}; "
+          f"vs H_half: {np.max(np.abs(cross - (pair / 2 - base))[sel]) / top:.3e}")
+
+
 if __name__ == "__main__":
-    if "--round" in sys.argv and sys.argv[-1] == "2":
+    if "--round" in sys.argv and sys.argv[-1] == "3":
+        round3(sys.argv[1])
+    elif "--round" in sys.argv and sys.argv[-1] == "2":
         round2(sys.argv[1])
     else:
         main(sys.argv[1] if len(sys.argv) > 1 else "pdf_fit_probes")
