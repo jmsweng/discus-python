@@ -172,7 +172,7 @@ def strip_nipl_header(src, dst) -> Path:
     """Copy a NIPL file without its leading ``#`` lines (the patterson/inverse reader cannot skip them)."""
     lines = Path(src).read_text(encoding="utf-8", errors="replace").splitlines()
     dst = Path(dst)
-    dst.write_text("\n".join(l for l in lines if not l.lstrip().startswith("#")) + "\n", encoding="ascii")
+    dst.write_text("\n".join(l for l in lines if not l.lstrip().startswith("#")) + "\n", encoding="utf-8")
     return dst
 
 
