@@ -621,6 +621,32 @@ Main loop (P:1867-1999):
     FQ flags and Q-scale flags (XS:815-837) after every `run`, so `outfile iq:` etc.
     must be repeated.
 
+### 6.5 Probe results on the stock engine (2026-11-05, `tools/probes/exp2pdf_probes.py`)
+
+Three rounds (mailbox tasks 015-017). They settle what the code reading left open:
+
+- **`run` needs a set-up the help does not mention.** It finishes only after a crystal is read, a `powder`
+  calculation runs on it in the same session, and `composition comp:current` is used.
+  - `composition <string>` builds an internal crystal (XR:315-355) whose form factors are not found
+    ("Unknown element, no Fourier calculated", -20).
+  - Without a preceding powder run every `run` reports "Fractions add up to 0.000" (-169): `pha_frac(1)` is set
+    to 1 only inside a powder run that reaches its calculation (powder.f90:376-377), and exp2pdf does not check
+    the error code after its own `powder_run` (XR:429-437), so an earlier error surfaces as -169.
+  - `comp:current` without a preceding powder run aborts DISCUS (SIGABRT). A powder run on one crystal followed
+    by `read` of another, then exp2pdf, also aborts.
+  - The composition crystal may give the composition by whole atoms (3 Cu + 1 Au) or by occupancies (Cu 0.75,
+    Au 0.25): identical G(r).
+- **Composition strings**: `Cu`, `Cu3 Au1` parse; `Cu:3 Au:1` is an error (-12, read as an optional parameter
+  name), `Cu3Au` is an error (-1). (Only relevant to the broken string route.)
+- **`limits`**: `inst:` alone fails ("Lower fourier limit is less than lower instrumental limit"); both given
+  works. The Fourier Qmax is moved to a nearby zero of F(Q): 16.5 asked, 16.473 used (header `lim_four_app`).
+- **Format**: without `format:` the GR file is HDF5 (`\x89HDF`); `format:stan` gives the text header of 6.4 step 13.
+- **Transform**: G(r) equals (2/π) Σ dq F sin(Qr) over the written F(Q) plus the linear ramp, to 2.8e-4 of max |G|.
+- **Electron energy** 200 vs 300 keV, **sigma column** present or not: identical G(r). **Background** with
+  `scale:2` on data + 2B: equal to the background-free run to 1e-11.
+
+The wrapper (`discuspdf.discus_exp2pdf`) writes this set-up for every run.
+
 ---
 
 ## 7. Proposed deterministic live checks
@@ -771,7 +797,7 @@ values are not expected to match (empirical scale, pitfall 7).
 | `pdf set partial`, `iselect`/`jselect` | Later | Pitfalls 13-16. Test after fixes. |
 | `pdf show` | Yes | Read-only. |
 | `exp2pdf data`, `back`, `composition`, `radiation` | Yes | Inputs with clear defaults. |
-| `exp2pdf run` to G(r) | Yes, with `format:stan` | Empirical scale. Wrap as shape only, with T5 and T8. |
+| `exp2pdf run` to G(r) | Yes, with `format:stan` | Empirical scale. Wrapped as shape only (`discus_exp2pdf`), with the set-up of 6.5. |
 | `exp2pdf outfile fq/sq/iq` | Yes, with caveats | Scaled (pitfall 7); reset flags after each run (6.4 step 14). |
 | `exp2pdf limits`, `qscale`, `poly` | Later | Defects 6 and 9; fix before use. |
 | `exp2pdf faver` | Later | File-branch bug (8). |
