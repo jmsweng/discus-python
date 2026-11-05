@@ -17,6 +17,11 @@ gave a correlation of 0.998 and the same three peaks within 0.01 A):
 * L3 (composition is used): the same pattern reduced with composition ``Cu3 Au1`` gives a G(r) differing from the
   ``Cu`` one by more than 1 % of max |G|.
 
+* L4 (added 2026-11-05 after the owner's agent's code review, before its first run): data beyond the Q range of the
+  set-up powder calculation (0.5..17.9). I(Q) = N f(Q)^2 S(Q) of the same 500-atom Cu cluster computed here in Python
+  (Debye sum with exact sinc, Waasmaier Cu f, Q 0.5..25 step 0.01), no background: the reduction runs, the Fourier
+  limits used reach above 23, and the first three G(r) peaks are within 0.02 A of 2.556, 3.615 and 4.427.
+
 Engine-ran only: ``poly_order=5`` is accepted (header npoly 5); neutron and electron runs complete.
 
 Environment: DISCUS_LIVE=1; DISCUS_LIVE_WORK (default C:\\tmp\\e2plive or /tmp/e2plive); DISCUS_WSL_DISTRO.
@@ -125,3 +130,31 @@ def test_engine_ran_poly_neutron_electron(pattern):
                      background=files / "back.xy", rmin=0.5, rmax=20.0, outputs=())
         res = run_exp2pdf(cfg, runner(), files / f"in_{rad}")
         assert len(res.g) > 100 and np.isfinite(res.g).all()
+
+
+# Waasmaier Cu (lib_f90/element_data_mod.f90)
+WAAS_A = (14.014192, 4.784577, 5.056806, 1.457971, 6.932996)
+WAAS_B = (3.73828, 0.003744, 13.034982, 72.554793, 0.265666)
+WAAS_C = -3.254477
+
+
+def test_l4_data_beyond_the_setup_q_range():
+    import itertools
+    a, nc = 3.615, 5
+    basis = np.array([[0, 0, 0], [0, .5, .5], [.5, 0, .5], [.5, .5, 0]])
+    cells = np.array(list(itertools.product(range(nc), repeat=3)))
+    xyz = ((cells[:, None, :] + basis[None]).reshape(-1, 3)) * a
+    d = np.linalg.norm(xyz[:, None] - xyz[None], axis=2)[np.triu_indices(len(xyz), 1)]
+    u, c = np.unique(np.round(d, 6), return_counts=True)
+    q = np.arange(50, 2501) * 0.01
+    s = 1 + 2 / len(xyz) * (c[None] * np.sin(q[:, None] * u[None]) / (q[:, None] * u[None])).sum(axis=1)
+    s2 = (q / (4 * np.pi)) ** 2
+    f = WAAS_C + sum(x * np.exp(-y * s2) for x, y in zip(WAAS_A, WAAS_B))
+    files = WORK / "e2p_highq"
+    files.mkdir(parents=True, exist_ok=True)
+    np.savetxt(files / "hq.xy", np.c_[q, len(xyz) * f ** 2 * s])
+    res = run_exp2pdf(ExpPdf(files / "hq.xy", "Cu", rmin=0.5, rmax=20.0, outputs=()), runner(), files / "in")
+    lo, hi = res.fourier_limits
+    assert hi > 23, (lo, hi)
+    peaks = [peak(res.r, res.g, x) for x in (2.556, 3.615, 4.427)]
+    assert all(abs(p - x) <= 0.02 for p, x in zip(peaks, (2.556, 3.615, 4.427))), peaks

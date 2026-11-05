@@ -44,7 +44,9 @@ RADIATIONS = ("xray", "neutron", "electron")
 DATA_NAME, BACK_NAME, COMP_NAME = "e2p_data.xy", "e2p_back.xy", "e2p_comp.stru"
 GR_NAME, FQ_NAME, SQ_NAME, IQ_NAME = "e2p_gr.dat", "e2p_fq.dat", "e2p_sq.dat", "e2p_iq.dat"
 # The powder calculation that sets DISCUS up for exp2pdf (round 2/3 set-up; its own settings are overwritten
-# by exp2pdf, XR:395-427).
+# by exp2pdf, which sets pow_qmin/pow_qmax/pow_deltaq from the data before its own powder_run (XR:395-427), and the
+# powder arrays are sized again in each run (powder.f90:1960, :1989), so this Q range does not limit the data's;
+# test_exp2pdf_live.py L4 runs data to Q 25 A^-1.
 _POWDER = ("powder", "reset", "xray", "set wvle,0.5", "set calc,debye", "set qmin,0.5", "set qmax,17.9",
            "set dq,0.01", "set stepr,0.001", "set profile,off", "set lpcor,none", "set temp,ignore",
            "set disp,off", "set period,off", "run", "exit")
@@ -112,7 +114,8 @@ def _composition(comp) -> tuple[tuple[str, float], ...]:
 
 
 def _comp_stru(fractions) -> str:
-    """A P1 crystal (cell 20 A) with one atom per species, occupancy = its fraction (round 3 layout)."""
+    """A P1 crystal (cell 20 A) with one atom per species, occupancy = its fraction (round 3 layout). The atoms sit
+    on a 5 x 5 x 5 grid of 0.2 cell steps (125 places; ExpPdf allows at most 99 species)."""
     lines = ["title discuspdf exp2pdf composition crystal", "spcgr P1",
              "cell    20.000000,  20.000000,  20.000000, 90.000000, 90.000000, 90.000000",
              f"ncell        1,        1,        1,       {len(fractions)}", "format numbers,XYZBPMMOS",
@@ -143,7 +146,7 @@ class ExpPdf:
     composition: str | Mapping[str, float]
     radiation: str = "xray"
     axis: str = "q"
-    wavelength: float | None = None
+    wavelength: float | None = None  # A; needed for 2-theta data; for Q data it does not change G(r) (round 3)
     energy: float | None = None
     background: Path | str | None = None
     background_scale: float = 1.0
