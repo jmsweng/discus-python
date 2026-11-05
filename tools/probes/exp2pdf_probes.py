@@ -22,9 +22,22 @@ X7 background (XL:52, XR:166): data I + 2 B with ``back xy, b.xy, scale:2`` give
 X8 loader: a data file with a '#' first line and three columns (Q, I, dI) loads; the G(r) equals the two-column
    run's within 1e-6 of max |G| (sigma does not enter the unit-weight poly fit, XR:515).
 
+Round 1 result (2026-11-05, 2cee59e): X1 inst-only failed as predicted (message: "Lower fourier limit is less
+than lower instrumental limit"); X2 composition parse: ``Cu`` -> Cu 1 and ``Cu3 Au1`` -> Cu 3, Au 1 as predicted,
+``Cu:3 Au:1`` -> error -12 (not as predicted: "Cu:3" is read as an optional parameter name), ``Cu3Au`` -> error as
+predicted. Every ``run`` then failed with -169 "Fractions add up to 0.000" (phases_average), so X3-X8 gave nothing.
+
+Round 2 (``--round 2``, written before running, 2026-11-05): which set-up lets ``run`` finish. Code-read: the
+fraction is set to 1 in powder_run only when powder_run reaches its calculation (powder.f90:376-377); exp2pdf does
+not check the error code after powder_run (XR:429-437), so an earlier powder_run error shows up as -169.
+Y1 a ``powder`` calculation of a Cu crystal earlier in the same session, then exp2pdf (``composition Cu``);
+Y2 a Cu crystal read, then exp2pdf with ``composition comp:current``; Y3 both; Y4 exp2pdf alone with
+``radiation neutron``; Y5 exp2pdf alone with ``radiation xray`` (no lambda); Y6 as Y5 without ``reset``.
+No prediction of which finish; each line reports complete or the error.
+
 Usage (from a discus-python checkout with DISCUS; Windows through WSL as in the live tests):
 
-    python tools/probes/exp2pdf_probes.py WORKDIR
+    python tools/probes/exp2pdf_probes.py WORKDIR [--round 2]
 """
 from __future__ import annotations
 
@@ -148,5 +161,50 @@ def main(work: str) -> None:
                       f"(predicted < 1e-6); lengths {len(ref)}, {len(other)}")
 
 
+POWDER_BLOCK = ["read", "cell cu_b05.cll,2,2,2", "powder", "reset", "xray", "set wvle,0.5", "set calc,debye",
+                "set qmin,0.5", "set qmax,17.9", "set dq,0.01", "set stepr,0.001", "set profile,off",
+                "set lpcor,none", "set temp,ignore", "set disp,off", "set period,off", "run", "exit"]
+READ_ONLY = ["read", "cell cu_b05.cll,2,2,2"]
+
+
+def round2(work: str) -> None:
+    work = Path(work)
+    runner = SuiteRunner(work, live_engine(600))
+    step = PowderPattern((("I(Q)", "i.dat"),), qmin=0.5, qmax=17.9, dq=0.01, radiation="xray",
+                         wavelength=0.5, stepr=0.001)
+    pr = StructureJob(SRC, [step], readback="none").run(runner, {"cu_b05.cll": CU})
+    q, i = read_powder_file(pr.run.output("i.dat"))
+    files = work / "inputs2"
+    files.mkdir(parents=True, exist_ok=True)
+    np.savetxt(files / "i.xy", np.c_[q, i])
+    inp = {"i.xy": files / "i.xy", "cu_b05.cll": CU}
+
+    def e2p(comp="Cu", rad="radiation xray, lambda:0.1", reset=True):
+        return ((["reset"] if reset else []) + ["data xy, i.xy", f"composition {comp}", rad,
+                "outfile gr:g.dat, rmin:0.5, rmax:20.0, rstep:0.01, format:stan, fq:f.dat", "run mode:silent"])
+
+    cases = {
+        "Y1 powder first": POWDER_BLOCK + ["exp2pdf"] + e2p(),
+        "Y2 comp:current": READ_ONLY + ["exp2pdf"] + e2p(comp="comp:current"),
+        "Y3 powder first + comp:current": POWDER_BLOCK + ["exp2pdf"] + e2p(comp="comp:current"),
+        "Y4 neutron": ["exp2pdf"] + e2p(rad="radiation neutron"),
+        "Y5 xray no lambda": ["exp2pdf"] + e2p(rad="radiation xray"),
+        "Y6 no reset": ["exp2pdf"] + e2p(rad="radiation xray", reset=False),
+    }
+    for label, lines in cases.items():
+        text = "discus\n" + "\n".join(lines) + "\nexit\nexit\n"
+        try:
+            r = runner.run(text, inp, ["g.dat", "f.dat"])
+            rr, g = read_text_xy(r.output("g.dat"))
+            print(f"{label}: complete, {r.directory}; G(r) {len(g)} points, r {rr[0]:.2f}..{rr[-1]:.2f}, "
+                  f"max|G| {np.max(np.abs(g)):.4g}, first peak at r = {rr[np.argmax(g)]:.3f}")
+        except RuntimeError as exc:
+            print(f"{label}: FAILED: {exc}")
+
+
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "exp2pdf_probes")
+    args = [a for a in sys.argv[1:] if a != "--round"]
+    if "--round" in sys.argv and args[-1] == "2":
+        round2(args[0])
+    else:
+        main(args[0] if args else "exp2pdf_probes")
