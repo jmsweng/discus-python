@@ -455,6 +455,25 @@ Main loop (P:1867-1999):
 - CAT lists a `format` optional for `save` (`menus/discus/pdf/commands[12]`), but
   `pdf_save` parses no format keyword (UNCONFIRMED: ignored).
 
+### 3.5 Probe results: fit and partials (2026-11-05, `tools/probes/pdf_fit_probes.py`, tasks 019-021)
+
+- **`data` after `reset all` (or in a fresh session) fails** with "Too many points in PDF" (-1): `reset` sets
+  PDF_MAXDAT = 1 (P:3568), `data` allocates exactly n lines (P:944-951) and the read loop tests `ip > PDF_MAXDAT`
+  before the read that meets the end of the file (P:978-981). A `calc` over a larger range first sizes the arrays.
+- A `save pdf` file of `calc` starts at r = dr and is valid `data` input as it stands.
+- The fit log has the RMC format (`Gen: … try: … acc: (good/bad): … s2x2:`, "Final configuration", "Delta Chi").
+  Swaps of random Cu0.75Au0.25 (108 atoms, 2000 tries, σ 0) against the L1_2 G(r): χ² 0.576 → 0.206, never rising,
+  α1 0.036 → −0.318, Au count kept.
+- `save pdf` after `run` and `calc` + `save pdf` on the fitted crystal differ by 8e-4 of max |G| for r ≤ 7.5
+  (pitfall 18: two accumulation paths). Near rmax every Gaussian lacks its partners beyond rmax, so a model on a
+  range ending at rmax falls off within ~0.5 Å of it (0.2–0.6 of max |G| at 7.8–8.0 Å for B = 0.5).
+- **Partials** (neutron, periodic, no Gaussian; binary Cu3Au and ternary Cu2AuAg; residuals ~1e-8):
+  - (a, a): G = w_aa P_aa/(N dr r) − c_a² w_aa 4πrρ0 (P over both orders);
+  - `isele a; jsele b`, a ≠ b: G = w_ab P_ab/(2 N dr r) − 2 c_a c_b w_ab 4πrρ0, half the pairs its baseline assumes,
+    so G_total ≠ G_aa + G_bb + G_ab (the difference is exactly the missing half);
+  - {a, b} on both sides counts the cross pairs in full: G_{a,b} − G_aa − G_bb is the correct cross partial;
+  - no selection state leaks between `calc`s in one session.
+
 ---
 
 ## 4. Random numbers

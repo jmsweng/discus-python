@@ -585,16 +585,22 @@ class RmcOutcome:
 def run_rmc(job: StructureJob, runner, inputs: Mapping[str, Path | str] | None = None, **kw) -> RmcOutcome:
     """Run a job containing one :class:`RmcFit` and parse its log. The plane files are checked
     against their grids first. Raises RuntimeError when the log has no final block."""
-    fits = [s for s in job.steps if isinstance(s, RmcFit)]
+    return run_logged_fit(job, runner, inputs, RmcFit, **kw)
+
+
+def run_logged_fit(job: StructureJob, runner, inputs, fit_type, **kw) -> RmcOutcome:
+    """Shared by :func:`run_rmc` and :func:`discuspdf.discus_pdfmenu.run_pdf_fit`: the job must hold one step of
+    ``fit_type``; its input files are checked (``check_inputs``), the job is run and the RMC-format log parsed."""
+    fits = [s for s in job.steps if isinstance(s, fit_type)]
     if len(fits) != 1:
-        raise ValueError("run_rmc needs a job with exactly one RmcFit step")
+        raise ValueError(f"the job needs exactly one {fit_type.__name__} step")
     paths = dict(inputs or {})
-    missing = [p.file for p in fits[0].planes if p.file not in paths]
+    missing = [n for n in fits[0].input_names() if n not in paths]
     if missing:
         raise ValueError(f"inputs must contain {missing}")
     fits[0].check_inputs(paths)
     result = job.run(runner, paths, **kw)
     log = parse_rmc_log(result.run.log.read_text(errors="replace") if result.run.log.is_file() else "")
     if log.final is None:
-        raise RuntimeError(f"the RMC log has no final configuration; see {result.run.directory}")
+        raise RuntimeError(f"the fit log has no final configuration; see {result.run.directory}")
     return RmcOutcome(result, log)
